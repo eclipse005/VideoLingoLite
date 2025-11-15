@@ -19,7 +19,6 @@
     "Subtitles Settings": "Paramètres des sous-titres",
     "Target Lang": "Langue cible",
     "Input any language in natural language, as long as llm can understand": "Saisissez n'importe quelle langue en langage naturel, tant que le LLM peut la comprendre",
-    "Vocal separation enhance": "Amélioration de la séparation vocale",
     "Burn-in Subtitles": "Incruster les sous-titres",
     "Whether to burn subtitles into the video, will increase processing time": "Pour incruster les sous-titres dans la vidéo, cela augmentera le temps de traitement",
     "Video Resolution": "Résolution vidéo",

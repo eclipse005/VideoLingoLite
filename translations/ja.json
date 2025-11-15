@@ -19,7 +19,6 @@
     "Subtitles Settings": "字幕設定",
     "Target Lang": "目標言語",
     "Input any language in natural language, as long as llm can understand": "LLMが理解できる限り、自然言語で任意の言語を入力してください",
-    "Vocal separation enhance": "音声分離強化",
     "Burn-in Subtitles": "字幕を焼き付け",
     "Whether to burn subtitles into the video, will increase processing time": "字幕を動画に焼き付けるかどうか、処理時間が増加します",
     "Video Resolution": "動画解像度",
