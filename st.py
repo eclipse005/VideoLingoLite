@@ -61,13 +61,17 @@ def process_text():
     st.success(t("Subtitle processing complete! 🎉"))
     st.balloons()
 
+@st.fragment
+def welcome_section():
+    st.markdown(button_style, unsafe_allow_html=True)
+    welcome_text = t("Hello, welcome to VideoLingo. If you encounter any issues, feel free to get instant answers with our Free QA Agent <a href=\"https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh\" target=\"_blank\">here</a>! You can also try out our SaaS website at <a href=\"https://videolingo.io\" target=\"_blank\">videolingo.io</a> for free!")
+    st.markdown(f"<p style='font-size: 20px; color: #808080;'>{welcome_text}</p>", unsafe_allow_html=True)
+
 def main():
     # logo_col, _ = st.columns([1,1])
     # with logo_col:
     #     st.image("docs/logo.png", use_column_width=True)
-    st.markdown(button_style, unsafe_allow_html=True)
-    welcome_text = t("Hello, welcome to VideoLingo. If you encounter any issues, feel free to get instant answers with our Free QA Agent <a href=\"https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh\" target=\"_blank\">here</a>! You can also try out our SaaS website at <a href=\"https://videolingo.io\" target=\"_blank\">videolingo.io</a> for free!")
-    st.markdown(f"<p style='font-size: 20px; color: #808080;'>{welcome_text}</p>", unsafe_allow_html=True)
+    welcome_section()
     # add settings
     with st.sidebar:
         page_setting()
