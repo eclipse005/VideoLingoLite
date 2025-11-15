@@ -12,6 +12,7 @@ st.set_page_config(page_title="VideoLingo", page_icon="docs/logo.svg")
 
 SUB_VIDEO = "output/output_sub.mp4"
 
+@st.fragment
 def text_processing_section():
     st.header(t("b. Translate and Generate Subtitles"))
     with st.container(border=True):

@@ -10,18 +10,8 @@ def config_input(label, key, help=None):
         update_key(key, val)
     return val
 
-def page_setting():
-
-    display_language = st.selectbox("Display Language 🌐",
-                                  options=list(DISPLAY_LANGUAGES.keys()),
-                                  index=list(DISPLAY_LANGUAGES.values()).index(load_key("display_language")))
-    if DISPLAY_LANGUAGES[display_language] != load_key("display_language"):
-        update_key("display_language", DISPLAY_LANGUAGES[display_language])
-        st.rerun()
-
-    # with st.expander(t("Youtube Settings"), expanded=True):
-    #     config_input(t("Cookies Path"), "youtube.cookies_path")
-
+@st.fragment
+def llm_config_section():
     with st.expander(t("LLM Configuration"), expanded=True):
         # API功能选择
         api_channel = st.selectbox(
@@ -61,6 +51,9 @@ def page_setting():
         if llm_support_json != load_key(f"{current_api_prefix}.llm_support_json"):
             update_key(f"{current_api_prefix}.llm_support_json", llm_support_json)
             st.rerun()
+
+@st.fragment
+def subtitle_settings_section():
     with st.expander(t("Subtitles Settings"), expanded=True):
         c1, c2 = st.columns(2)
         with c1:
@@ -107,6 +100,21 @@ def page_setting():
         if burn_subtitles != load_key("burn_subtitles"):
             update_key("burn_subtitles", burn_subtitles)
             st.rerun()
+
+def page_setting():
+
+    display_language = st.selectbox("Display Language 🌐",
+                                  options=list(DISPLAY_LANGUAGES.keys()),
+                                  index=list(DISPLAY_LANGUAGES.values()).index(load_key("display_language")))
+    if DISPLAY_LANGUAGES[display_language] != load_key("display_language"):
+        update_key("display_language", DISPLAY_LANGUAGES[display_language])
+        st.rerun()
+
+    # with st.expander(t("Youtube Settings"), expanded=True):
+    #     config_input(t("Cookies Path"), "youtube.cookies_path")
+
+    llm_config_section()
+    subtitle_settings_section()
 
 def check_api(api_prefix="api"):
     try:

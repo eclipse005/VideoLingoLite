@@ -11,6 +11,7 @@ from translations.translations import translate as t
 
 OUTPUT_DIR = "output"
 
+@st.fragment
 def download_video_section():
     st.header(t("a. Download or Upload Video"))
     with st.container(border=True):
@@ -50,11 +51,11 @@ def download_video_section():
                 if os.path.exists(OUTPUT_DIR):
                     shutil.rmtree(OUTPUT_DIR)
                 os.makedirs(OUTPUT_DIR, exist_ok=True)
-                
+
                 raw_name = uploaded_file.name.replace(' ', '_')
                 name, ext = os.path.splitext(raw_name)
                 clean_name = re.sub(r'[^\w\-_\.]', '', name) + ext.lower()
-                    
+
                 with open(os.path.join(OUTPUT_DIR, clean_name), "wb") as f:
                     f.write(uploaded_file.getbuffer())
 
