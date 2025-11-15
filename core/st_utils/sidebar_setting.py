@@ -50,7 +50,50 @@ def llm_config_section():
         llm_support_json = st.toggle(t("LLM JSON Format Support"), value=load_key(f"{current_api_prefix}.llm_support_json"), help=t("Enable if your LLM supports JSON mode output"))
         if llm_support_json != load_key(f"{current_api_prefix}.llm_support_json"):
             update_key(f"{current_api_prefix}.llm_support_json", llm_support_json)
-            st.rerun()
+
+@st.fragment
+def subtitle_settings_section():
+    with st.expander(t("Subtitles Settings"), expanded=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            langs = {
+                "🇺🇸 English": "en",
+                "🇨🇳 简体中文": "zh",
+                "🇪🇸 Español": "es",
+                "🇷🇺 Русский": "ru",
+                "🇫🇷 Français": "fr",
+                "🇩🇪 Deutsch": "de",
+                "🇮🇹 Italiano": "it",
+                "🇯🇵 日本語": "ja"
+            }
+            lang = st.selectbox(
+                t("Recog Lang"),
+                options=list(langs.keys()),
+                index=list(langs.values()).index(load_key("whisper.language"))
+            )
+            if langs[lang] != load_key("whisper.language"):
+                update_key("whisper.language", langs[lang])
+
+        runtime = st.selectbox(t("WhisperX Runtime"), options=["local", "cloud", "elevenlabs"], index=["local", "cloud", "elevenlabs"].index(load_key("whisper.runtime")), help=t("Local runtime requires >8GB GPU, cloud runtime requires 302ai API key, elevenlabs runtime requires ElevenLabs API key"))
+        if runtime != load_key("whisper.runtime"):
+            update_key("whisper.runtime", runtime)
+        if runtime == "cloud":
+            config_input(t("WhisperX 302ai API"), "whisper.whisperX_302_api_key")
+        if runtime == "elevenlabs":
+            config_input(("ElevenLabs API"), "whisper.elevenlabs_api_key")
+
+        with c2:
+            target_language = st.text_input(t("Target Lang"), value=load_key("target_language"), help=t("Input any language in natural language, as long as llm can understand"))
+            if target_language != load_key("target_language"):
+                update_key("target_language", target_language)
+
+        demucs = st.toggle(t("Vocal separation enhance"), value=load_key("demucs"), help=t("Recommended for videos with loud background noise, but will increase processing time"))
+        if demucs != load_key("demucs"):
+            update_key("demucs", demucs)
+
+        burn_subtitles = st.toggle(t("Burn-in Subtitles"), value=load_key("burn_subtitles"), help=t("Whether to burn subtitles into the video, will increase processing time"))
+        if burn_subtitles != load_key("burn_subtitles"):
+            update_key("burn_subtitles", burn_subtitles)
 
 def page_setting():
 

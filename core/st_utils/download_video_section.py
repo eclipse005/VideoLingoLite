@@ -11,7 +11,6 @@ from translations.translations import translate as t
 
 OUTPUT_DIR = "output"
 
-@st.fragment
 def download_video_section():
     st.header(t("a. Download or Upload Video"))
     with st.container(border=True):
@@ -23,6 +22,7 @@ def download_video_section():
                 if os.path.exists(OUTPUT_DIR):
                     shutil.rmtree(OUTPUT_DIR)
                 sleep(1)
+                # 删除后重新运行以显示上传选项
                 st.rerun()
             return True
         except:
@@ -44,6 +44,7 @@ def download_video_section():
                 if url:
                     with st.spinner("Downloading video..."):
                         download_video_ytdlp(url, resolution=res)
+                    # 下载完成后重新运行以显示视频
                     st.rerun()
 
             uploaded_file = st.file_uploader(t("Or upload video"), type=load_key("allowed_video_formats") + load_key("allowed_audio_formats"))
@@ -61,6 +62,7 @@ def download_video_section():
 
                 if ext.lower() in load_key("allowed_audio_formats"):
                     convert_audio_to_video(os.path.join(OUTPUT_DIR, clean_name))
+                # 上传完成后重新运行以显示视频
                 st.rerun()
             else:
                 return False
