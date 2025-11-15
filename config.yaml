@@ -11,10 +11,10 @@ display_language: "zh-CN"
 
 # API settings
 api:
-  key: '123'
+  key: '5'
   base_url: 'http://localhost:8088'
   model: 'your_model_name'
-  llm_support_json: false
+  llm_support_json: true
 
 # API settings for different functions
 api_split:
@@ -57,14 +57,14 @@ whisper:
   language: 'en'
   detected_language: 'en'
   # Whisper running mode ["local", "cloud", "elevenlabs"]. Specifies where to run, cloud uses 302.ai API
-  runtime: 'local'
+  runtime: 'cloud'
   # 302.ai API key
   whisperX_302_api_key: 'your_302_api_key'
   # ElevenLabs API key (experimental)
   elevenlabs_api_key: 'your_elevenlabs_api_key'
 
 # Whether to burn subtitles into the video
-burn_subtitles: true
+burn_subtitles: false
 
 ## ======================== Advanced Settings ======================== ##
 # *🔬 h264_nvenc GPU acceleration for ffmpeg, make sure your GPU supports it
