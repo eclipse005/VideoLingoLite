@@ -3,8 +3,6 @@ import json
 import concurrent.futures
 from core.translate_lines import translate_lines
 from core._4_1_summarize import search_things_to_note_in_prompt
-from core._8_1_audio_task import check_len_then_trim
-from core._6_gen_sub import align_timestamp
 from core.utils import *
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -94,18 +92,9 @@ def translate_all():
             
         trans_text.extend(best_match[0][2].split('\n'))
     
-    # Trim long translation text
-    df_text = pd.read_excel(_2_CLEANED_CHUNKS)
-    df_text['text'] = df_text['text'].str.strip('"').str.strip()
+    # Save translation results
     df_translate = pd.DataFrame({'Source': src_text, 'Translation': trans_text})
-    subtitle_output_configs = [('trans_subs_for_audio.srt', ['Translation'])]
-    df_time = align_timestamp(df_text, df_translate, subtitle_output_configs, output_dir=None, for_display=False)
-    console.print(df_time)
-    # apply check_len_then_trim to df_time['Translation'], only when duration > MIN_TRIM_DURATION.
-    df_time['Translation'] = df_time.apply(lambda x: check_len_then_trim(x['Translation'], x['duration']) if x['duration'] > load_key("min_trim_duration") else x['Translation'], axis=1)
-    console.print(df_time)
-    
-    df_time.to_excel(_4_2_TRANSLATION, index=False)
+    df_translate.to_excel(_4_2_TRANSLATION, index=False)
     console.print("[bold green]✅ Translation completed and results saved.[/bold green]")
 
 if __name__ == '__main__':

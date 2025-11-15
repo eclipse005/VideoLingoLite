@@ -16,10 +16,6 @@ SUBTITLE_OUTPUT_CONFIGS = [
     ('trans_src.srt', ['Translation', 'Source'])
 ]
 
-AUDIO_SUBTITLE_OUTPUT_CONFIGS = [
-    ('src_subs_for_audio.srt', ['Source']),
-    ('trans_subs_for_audio.srt', ['Translation'])
-]
 
 def convert_to_srt_format(start_time, end_time):
     """Convert time (in seconds) to the format: hours:minutes:seconds,milliseconds"""
@@ -231,12 +227,6 @@ def align_timestamp_main():
     align_timestamp(df_text, df_translate, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR)
     console.print(Panel("[bold green]🎉📝 Subtitles generation completed! Please check in the `output` folder 👀[/bold green]"))
 
-    # for audio
-    df_translate_for_audio = pd.read_excel(_5_REMERGED) # use remerged file to avoid unmatched lines when dubbing
-    df_translate_for_audio['Translation'] = df_translate_for_audio['Translation'].apply(clean_translation)
-    
-    align_timestamp(df_text, df_translate_for_audio, AUDIO_SUBTITLE_OUTPUT_CONFIGS, _AUDIO_DIR)
-    console.print(Panel(f"[bold green]🎉📝 Audio subtitles generation completed! Please check in the `{_AUDIO_DIR}` folder 👀[/bold green]"))
     # 合并空字幕
     merge_empty_subtitle()
 
@@ -322,8 +312,7 @@ def merge_empty_subtitle():
     
     # 定义字幕文件对
     subtitle_pairs = [
-        (os.path.join(_OUTPUT_DIR, 'trans.srt'), os.path.join(_OUTPUT_DIR, 'src.srt')),
-        (os.path.join(_AUDIO_DIR, 'trans_subs_for_audio.srt'), os.path.join(_AUDIO_DIR, 'src_subs_for_audio.srt'))
+        (os.path.join(_OUTPUT_DIR, 'trans.srt'), os.path.join(_OUTPUT_DIR, 'src.srt'))
     ]
     
     console.print(Panel("[bold blue]🔍 开始检查并合并空字幕...[/bold blue]"))
