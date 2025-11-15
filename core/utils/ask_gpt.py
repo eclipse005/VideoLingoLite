@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from threading import Lock
 import json_repair
 from openai import OpenAI
@@ -13,6 +14,22 @@ from core.utils.decorator import except_handler
 
 LOCK = Lock()
 GPT_LOG_FOLDER = 'output/gpt_log'
+
+# Mapping of log_title to specific API configurations
+LOG_TITLE_TO_API = {
+    # 分割功能
+    'llm_sentence_segmentation': 'api_split',
+    'split_single_sentence': 'api_split',
+
+    # 总结功能
+    'summary': 'api_summary',
+
+    # 翻译功能
+    'translate_faithfulness': 'api_translate',
+
+    # 反思功能
+    'translate_expressiveness': 'api_reflection',
+}
 
 def _save_cache(model, prompt, resp_content, resp_type, resp, message=None, log_title="default"):
     with LOCK:
@@ -36,28 +53,54 @@ def _load_cache(prompt, resp_type, log_title):
                         return item["resp"]
         return False
 
+def _get_api_config_for_log_title(log_title):
+    """根据 log_title 获取对应的API配置前缀"""
+    # 检查精确匹配
+    if log_title in LOG_TITLE_TO_API:
+        return LOG_TITLE_TO_API[log_title]
+
+    # 检查是否是翻译相关的（如 translate_faithfulness, translate_expressiveness）
+    if log_title.startswith('translate_'):
+        if 'faith' in log_title:
+            return 'api_translate'
+        elif 'express' in log_title:
+            return 'api_reflection'
+        else:
+            return 'api_translate'  # 默认翻译
+
+    # 如果没有找到匹配项，返回默认API配置
+    return 'api'
+
 # ------------
 # ask gpt once
 # ------------
 
 @except_handler("GPT request failed", retry=5)
 def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
-    if not load_key("api.key"):
-        raise ValueError("API key is not set")
+    # 根据 log_title 确定使用的API配置
+    api_config_prefix = _get_api_config_for_log_title(log_title)
+
+    # 检查API密钥是否设置
+    api_key = load_key(f"{api_config_prefix}.key")
+    if not api_key:
+        raise ValueError(f"API key for {api_config_prefix} is not set")
+
     # check cache
     cached = _load_cache(prompt, resp_type, log_title)
     if cached:
         rprint("use cache response")
         return cached
 
-    model = load_key("api.model")
-    base_url = load_key("api.base_url")
+    model = load_key(f"{api_config_prefix}.model")
+    base_url = load_key(f"{api_config_prefix}.base_url")
+    llm_support_json = load_key(f"{api_config_prefix}.llm_support_json")
+
     if 'ark' in base_url:
         base_url = "https://ark.cn-beijing.volces.com/api/v3" # huoshan base url
     elif 'v1' not in base_url:
         base_url = base_url.strip('/') + '/v1'
-    client = OpenAI(api_key=load_key("api.key"), base_url=base_url)
-    response_format = {"type": "json_object"} if resp_type == "json" and load_key("api.llm_support_json") else None
+    client = OpenAI(api_key=api_key, base_url=base_url)
+    response_format = {"type": "json_object"} if resp_type == "json" and llm_support_json else None
 
     messages = [{"role": "user", "content": prompt}]
 
@@ -75,7 +118,7 @@ def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
         resp = json_repair.loads(resp_content)
     else:
         resp = resp_content
-    
+
     # check if the response format is valid
     if valid_def:
         valid_resp = valid_def(resp)

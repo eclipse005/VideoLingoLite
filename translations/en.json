@@ -106,5 +106,11 @@
     "No NVIDIA GPU detected": "No NVIDIA GPU detected",
     "No NVIDIA GPU detected or NVIDIA drivers not properly installed": "No NVIDIA GPU detected or NVIDIA drivers not properly installed",
     "LLM JSON Format Support": "LLM JSON Format Support",
-    "Enable if your LLM supports JSON mode output": "Enable if your LLM supports JSON mode output"
+    "Enable if your LLM supports JSON mode output": "Enable if your LLM supports JSON mode output",
+    "Process": "Process",
+    "Other": "Other",
+    "Split": "Split",
+    "Summary": "Summary",
+    "Translate": "Translation",
+    "Reflection": "Reflection"
 }
