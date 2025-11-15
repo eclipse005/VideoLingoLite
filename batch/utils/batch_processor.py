@@ -70,9 +70,8 @@ def process_batch():
             original_source_lang, original_target_lang = record_and_update_config(source_language, target_language)
             
             try:
-                dubbing = 0 if pd.isna(row['Dubbing']) else int(row['Dubbing'])
                 is_retry = not pd.isna(row['Status']) and 'Error' in str(row['Status'])
-                status, error_step, error_message = process_video(video_file, dubbing, is_retry)
+                status, error_step, error_message = process_video(video_file, False, is_retry)
                 status_msg = "Done" if status else f"Error: {error_step} - {error_message}"
             except Exception as e:
                 status_msg = f"Error: Unhandled exception - {str(e)}"

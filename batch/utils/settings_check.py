@@ -6,7 +6,6 @@ from rich.panel import Panel
 # Constants
 SETTINGS_FILE = 'batch/tasks_setting.xlsx'
 INPUT_FOLDER = os.path.join('batch', 'input')
-VALID_DUBBING_VALUES = [0, 1]
 
 console = Console()
 
@@ -32,7 +31,6 @@ def check_settings():
     for index, row in df.iterrows():
         video_file = row['Video File']
         source_language = row['Source Language']
-        dubbing = row['Dubbing']
 
         if video_file.startswith('http'):
             url_tasks += 1
@@ -41,11 +39,6 @@ def check_settings():
         else:
             console.print(Panel(f"Invalid video file or URL 「{video_file}」", title=f"[bold red]Error in row {index + 2}", expand=False))
             all_passed = False
-
-        if not pd.isna(dubbing):
-            if int(dubbing) not in VALID_DUBBING_VALUES:
-                console.print(Panel(f"Invalid dubbing value 「{dubbing}」", title=f"[bold red]Error in row {index + 2}", expand=False))
-                all_passed = False
 
     if all_passed:
         console.print(Panel(f"✅ All settings passed the check!\nDetected {local_video_tasks} local video tasks and {url_tasks} URL tasks.", title="[bold green]Success", expand=False))

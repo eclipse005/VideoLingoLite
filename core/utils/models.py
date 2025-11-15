@@ -10,7 +10,6 @@ _4_2_TRANSLATION = "output/log/translation_results.xlsx"
 _5_SPLIT_SUB = "output/log/translation_results_for_subtitles.xlsx"
 _5_REMERGED = "output/log/translation_results_remerged.xlsx"
 
-_8_1_AUDIO_TASK = "output/audio/tts_tasks.xlsx"
 
 
 # ------------------------------------------
@@ -37,7 +36,6 @@ __all__ = [
     "_4_2_TRANSLATION",
     "_5_SPLIT_SUB",
     "_5_REMERGED",
-    "_8_1_AUDIO_TASK",
     "_OUTPUT_DIR",
     "_AUDIO_DIR",
     "_RAW_AUDIO_FILE",

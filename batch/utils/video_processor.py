@@ -19,7 +19,7 @@ YTB_RESOLUTION_KEY = "ytb_resolution"
 def process_video(file, dubbing=False, is_retry=False):
     if not is_retry:
         prepare_output_folder(OUTPUT_DIR)
-    
+
     text_steps = [
         ("🎥 Processing input file", partial(process_input_file, file)),
         ("🎙️ Transcribing with Whisper", partial(_2_asr.transcribe)),
@@ -28,16 +28,6 @@ def process_video(file, dubbing=False, is_retry=False):
         ("⚡ Processing and aligning subtitles", process_and_align_subtitles),
         ("🎬 Merging subtitles to video", _7_sub_into_vid.merge_subtitles_to_video),
     ]
-    
-    if dubbing:
-        dubbing_steps = [
-            ("🔊 Generating audio tasks", gen_audio_tasks),
-            ("🎵 Extracting reference audio", _9_refer_audio.extract_refer_audio_main),
-            ("🗣️ Generating audio", _10_gen_audio.gen_audio),
-            ("🔄 Merging full audio", _11_merge_audio.merge_full_audio),
-            ("🎞️ Merging dubbing to video", _12_dub_to_vid.merge_video_audio),
-        ]
-        text_steps.extend(dubbing_steps)
     
     current_step = ""
     for step_name, step_func in text_steps:
