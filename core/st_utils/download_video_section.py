@@ -5,14 +5,14 @@ import subprocess
 from time import sleep
 
 import streamlit as st
-from core._1_ytdlp import download_video_ytdlp, find_video_files
+from core._1_ytdlp import find_video_files
 from core.utils import *
 from translations.translations import translate as t
 
 OUTPUT_DIR = "output"
 
-def download_video_section():
-    st.header(t("a. Download or Upload Video"))
+def upload_video_section():
+    st.header(t("a. Upload Video"))
     with st.container(border=True):
         try:
             video_file = find_video_files()
@@ -26,28 +26,12 @@ def download_video_section():
                 st.rerun()
             return True
         except:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                url = st.text_input(t("Enter YouTube link:"))
-            with col2:
-                res_dict = {
-                    "360p": "360",
-                    "1080p": "1080",
-                    "Best": "best"
-                }
-                target_res = load_key("ytb_resolution")
-                res_options = list(res_dict.keys())
-                default_idx = list(res_dict.values()).index(target_res) if target_res in res_dict.values() else 0
-                res_display = st.selectbox(t("Resolution"), options=res_options, index=default_idx)
-                res = res_dict[res_display]
-            if st.button(t("Download Video"), key="download_button", use_container_width=True):
-                if url:
-                    with st.spinner("Downloading video..."):
-                        download_video_ytdlp(url, resolution=res)
-                    # 下载完成后重新运行以显示视频
-                    st.rerun()
+            # 只显示文件上传功能，移除YouTube下载功能
+            uploaded_file = st.file_uploader(
+                t("Upload video file"),
+                type=load_key("allowed_video_formats") + load_key("allowed_audio_formats")
+            )
 
-            uploaded_file = st.file_uploader(t("Or upload video"), type=load_key("allowed_video_formats") + load_key("allowed_audio_formats"))
             if uploaded_file:
                 if os.path.exists(OUTPUT_DIR):
                     shutil.rmtree(OUTPUT_DIR)
@@ -77,3 +61,7 @@ def convert_audio_to_video(audio_file: str) -> str:
         # delete audio file
         os.remove(audio_file)
     return output_video
+
+# 保持向后兼容的别名
+def download_video_section():
+    return upload_video_section()
