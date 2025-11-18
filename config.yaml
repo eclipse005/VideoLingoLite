@@ -14,32 +14,27 @@ api:
   key: '5'
   base_url: 'http://localhost:8088'
   model: 'your_model_name'
-  llm_support_json: false
 
 # API settings for different functions
 api_split:
   key: '55'
   base_url: 'http://localhost:8088'
   model: 'your_model_name'
-  llm_support_json: false
 
 api_summary:
   key: 'YOUR_API_KEY_HERE'
   base_url: 'http://localhost:8088'
   model: 'your_model_name'
-  llm_support_json: false
 
 api_translate:
   key: '123'
   base_url: 'http://localhost:8088'
   model: 'your_model_name'
-  llm_support_json: false
 
 api_reflection:
   key: 'YOUR_API_KEY_HERE'
   base_url: 'http://localhost:8088'
   model: 'your_model_name'
-  llm_support_json: false
 
 # *Number of LLM multi-threaded accesses, set to 1 if using local LLM
 max_workers: 4

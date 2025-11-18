@@ -1,6 +1,7 @@
 import streamlit as st
 import os, sys
 from core.st_utils.imports_and_utils import *
+from core.st_utils.upload_media_section import upload_media_section
 from core import *
 from core.utils.ask_gpt import get_token_usage
 
@@ -81,7 +82,7 @@ def main():
     with st.sidebar:
         page_setting()
         st.markdown(give_star_button, unsafe_allow_html=True)
-    download_video_section()
+    upload_media_section()
     text_processing_section()
 
 if __name__ == "__main__":

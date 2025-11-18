@@ -101,21 +101,18 @@ def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
 
     model = load_key(f"{api_config_prefix}.model")
     base_url = load_key(f"{api_config_prefix}.base_url")
-    llm_support_json = load_key(f"{api_config_prefix}.llm_support_json")
 
     if 'ark' in base_url:
         base_url = "https://ark.cn-beijing.volces.com/api/v3" # huoshan base url
     elif 'v1' not in base_url:
         base_url = base_url.strip('/') + '/v1'
     client = OpenAI(api_key=api_key, base_url=base_url)
-    response_format = {"type": "json_object"} if resp_type == "json" and llm_support_json else None
 
     messages = [{"role": "user", "content": prompt}]
 
     params = dict(
         model=model,
         messages=messages,
-        response_format=response_format,
         timeout=300
     )
     resp_raw = client.chat.completions.create(**params)

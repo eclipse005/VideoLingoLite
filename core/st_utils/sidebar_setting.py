@@ -47,9 +47,6 @@ def llm_config_section():
             if st.button("📡", key=f"api_{current_api_prefix}"):
                 st.toast(t("API Key is valid") if check_api(current_api_prefix) else t("API Key is invalid"),
                         icon="✅" if check_api(current_api_prefix) else "❌")
-        llm_support_json = st.toggle(t("LLM JSON Format Support"), value=load_key(f"{current_api_prefix}.llm_support_json"), help=t("Enable if your LLM supports JSON mode output"))
-        if llm_support_json != load_key(f"{current_api_prefix}.llm_support_json"):
-            update_key(f"{current_api_prefix}.llm_support_json", llm_support_json)
 
 @st.fragment
 def subtitle_settings_section():
