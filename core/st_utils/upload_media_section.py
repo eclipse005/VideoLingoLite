@@ -11,7 +11,7 @@ from translations.translations import translate as t
 
 OUTPUT_DIR = "output"
 
-def upload_video_section():
+def upload_media_section():
     st.header(t("a. Upload Video"))
     with st.container(border=True):
         try:
@@ -64,4 +64,4 @@ def convert_audio_to_video(audio_file: str) -> str:
 
 # 保持向后兼容的别名
 def download_video_section():
-    return upload_video_section()
+    return upload_media_section()
