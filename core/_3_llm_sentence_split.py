@@ -374,25 +374,6 @@ def llm_sentence_split():
         for sentence in final_sentences:
             f.write(sentence + '\n')
 
-    # Display summary table
-    table = Table(title="Sentence Segmentation Summary (difflib-aligned)")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="green")
-
-    total_words = len(original_total_words_list)
-    total_sentences = len(final_sentences)
-    avg_words_per_sentence = total_words / total_sentences if total_sentences > 0 else 0
-
-    table.add_row("Total Words", str(total_words))
-    table.add_row("Total Sentences", str(total_sentences))
-    table.add_row("Avg Words/Sentence", f"{avg_words_per_sentence:.1f}")
-    table.add_row("Max Length Threshold", str(max_length))
-    table.add_row("Validation Status", "[green]PASSED (difflib aligned)[/green]")
-    table.add_row("Word Coverage", "100.00%")
-
-    console.print(table)
-    console.print('[green]✅ LLM-based sentence segmentation completed with validation![/green]')
-
     return final_sentences
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ import streamlit as st
 import os, sys
 from core.st_utils.imports_and_utils import *
 from core import *
+from core.utils.ask_gpt import get_token_usage
 
 # SET PATH
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,6 +61,14 @@ def process_text():
 
     st.success(t("Subtitle processing complete! 🎉"))
     st.balloons()
+
+    # Print token usage statistics to console
+    token_usage = get_token_usage()
+    print(f"\n--- GPT Token Usage Statistics ---")
+    print(f"Total Prompt Tokens: {token_usage['prompt_tokens']}")
+    print(f"Total Completion Tokens: {token_usage['completion_tokens']}")
+    print(f"Total Tokens: {token_usage['total_tokens']}")
+    print(f"--- End of Token Usage ---\n")
 
 def main():
     # logo_col, _ = st.columns([1,1])

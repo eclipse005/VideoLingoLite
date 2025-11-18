@@ -15,6 +15,13 @@ from core.utils.decorator import except_handler
 LOCK = Lock()
 GPT_LOG_FOLDER = 'output/gpt_log'
 
+# Global variables for token usage tracking
+TOTAL_TOKENS = {
+    'prompt_tokens': 0,
+    'completion_tokens': 0,
+    'total_tokens': 0
+}
+
 # Mapping of log_title to specific API configurations
 LOG_TITLE_TO_API = {
     # 分割功能
@@ -89,6 +96,7 @@ def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
     cached = _load_cache(prompt, resp_type, log_title)
     if cached:
         rprint("use cache response")
+        # Return cached result without incrementing token usage
         return cached
 
     model = load_key(f"{api_config_prefix}.model")
@@ -114,6 +122,13 @@ def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
 
     # process and return full result
     resp_content = resp_raw.choices[0].message.content
+
+    # Extract and accumulate token usage
+    if hasattr(resp_raw, 'usage') and resp_raw.usage is not None:
+        with LOCK:
+            TOTAL_TOKENS['prompt_tokens'] += resp_raw.usage.prompt_tokens
+            TOTAL_TOKENS['completion_tokens'] += resp_raw.usage.completion_tokens
+            TOTAL_TOKENS['total_tokens'] += resp_raw.usage.total_tokens
     if resp_type == "json":
         resp = json_repair.loads(resp_content)
     else:
@@ -130,8 +145,27 @@ def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
     return resp
 
 
+def get_token_usage():
+    """
+    Get the accumulated token usage statistics
+    Returns a dictionary with prompt_tokens, completion_tokens, and total_tokens
+    """
+    with LOCK:
+        return TOTAL_TOKENS.copy()
+
+
+def reset_token_usage():
+    """
+    Reset the accumulated token usage statistics to zero
+    """
+    with LOCK:
+        TOTAL_TOKENS['prompt_tokens'] = 0
+        TOTAL_TOKENS['completion_tokens'] = 0
+        TOTAL_TOKENS['total_tokens'] = 0
+
+
 if __name__ == '__main__':
     from rich import print as rprint
-    
+
     result = ask_gpt("""test respond ```json\n{\"code\": 200, \"message\": \"success\"}\n```""", resp_type="json")
     rprint(f"Test json output result: {result}")
