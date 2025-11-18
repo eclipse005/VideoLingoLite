@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import io, zipfile
-from core.st_utils.upload_media_section import upload_media_section, download_video_section
+from core.st_utils.upload_media_section import download_video_section
 from core.st_utils.sidebar_setting import page_setting
 from translations.translations import translate as t
 
