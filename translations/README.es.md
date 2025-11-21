@@ -17,7 +17,7 @@ VideoLingo es una herramienta todo en uno para traducción, localización y dobl
 Características principales:
 - 🎥 Descarga de videos de YouTube mediante yt-dlp
 
-- **🎙️ Reconocimiento de subtítulos a nivel de palabra y baja ilusión con WhisperX**
+- **🎙️ Reconocimiento de subtítulos a nivel de palabra y baja ilusión con ASR**
 
 - **📝 Segmentación de subtítulos impulsada por NLP e IA**
 
@@ -71,7 +71,7 @@ https://github.com/user-attachments/assets/47d965b2-b4ab-4a0b-9d08-b49a7bf3508c
 
 🇺🇸 Inglés 🤩 | 🇷🇺 Ruso 😊 | 🇫🇷 Francés 🤩 | 🇩🇪 Alemán 🤩 | 🇮🇹 Italiano 🤩 | 🇪🇸 Español 🤩 | 🇯🇵 Japonés 😐 | 🇨🇳 Chino* 😊
 
-> *El chino utiliza un modelo whisper mejorado con puntuación por ahora...
+> *El chino utiliza un modelo ASR mejorado con puntuación por ahora...
 
 **La traducción admite todos los idiomas, mientras que el idioma del doblaje depende del método TTS elegido.**
 
@@ -122,30 +122,30 @@ docker run -d -p 8501:8501 --gpus all videolingo
 ## APIs
 VideoLingo admite formato de API similar a OpenAI y varias interfaces TTS:
 - LLM: `claude-3-5-sonnet`, `gpt-4.1`, `deepseek-v3`, `gemini-2.0-flash`, ... (ordenados por rendimiento, ten cuidado con gemini-2.5-flash...)
-- WhisperX: Ejecuta whisperX localmente o usa la API de 302.ai
+- ASR: Use el servicio ASR de Gemini para transcripción
 - TTS: `azure-tts`, `openai-tts`, `siliconflow-fishtts`, **`fish-tts`**, `GPT-SoVITS`, `edge-tts`, `*custom-tts`(¡Puedes modificar tu propio TTS en custom_tts.py!)
 
-> **Nota:** VideoLingo funciona con **[302.ai](https://gpt302.saaslink.net/C2oHR9)** - una clave API para todos los servicios (LLM, WhisperX, TTS). ¡O ejecútalo localmente con Ollama y Edge-TTS gratis, sin necesidad de API!
+> **Nota:** VideoLingo funciona con varios servicios - una clave API para todos los servicios (LLM, ASR, TTS). ¡O ejecútalo localmente con Ollama y Edge-TTS gratis, sin necesidad de API!
 
 Para instrucciones detalladas de instalación, configuración de API y modo por lotes, consulta la documentación: [English](/docs/pages/docs/start.en-US.md) | [中文](/docs/pages/docs/start.zh-CN.md)
 
 ## Limitaciones Actuales
 
-1. El rendimiento de transcripción de WhisperX puede verse afectado por el ruido de fondo del video, ya que utiliza el modelo wav2vac para la alineación. Para videos con música de fondo fuerte, activa la Mejora de Separación de Voz. Además, los subtítulos que terminan con números o caracteres especiales pueden truncarse temprano debido a la incapacidad de wav2vac para mapear caracteres numéricos (por ejemplo, "1") a su forma hablada ("uno").
+1. El rendimiento de transcripción ASR puede verse afectado por el ruido de fondo del video. Para videos con música de fondo fuerte, active la Mejora de Separación de Voz.
 
 2. El uso de modelos más débiles puede provocar errores durante los procesos intermedios debido a los estrictos requisitos de formato JSON para las respuestas. Si ocurre este error, elimina la carpeta `output` y vuelve a intentarlo con un LLM diferente, de lo contrario, la ejecución repetida leerá la respuesta errónea anterior causando el mismo error.
 
 3. La función de doblaje puede no ser 100% perfecta debido a las diferencias en las velocidades de habla y entonación entre idiomas, así como al impacto del paso de traducción. Sin embargo, este proyecto ha implementado un extenso procesamiento de ingeniería para las velocidades de habla para garantizar los mejores resultados posibles de doblaje.
 
-4. **El reconocimiento de transcripción de video multilingüe solo mantendrá el idioma principal**. Esto se debe a que whisperX utiliza un modelo especializado para un solo idioma al alinear forzosamente los subtítulos a nivel de palabra, y eliminará los idiomas no reconocidos.
+4. **El reconocimiento de transcripción de video multilingüe solo mantendrá el idioma principal**. Esto se debe a que los sistemas ASR utilizan típicamente un modelo especializado para un solo idioma al procesar subtítulos, y eliminarán los idiomas no reconocidos.
 
-5. **No se pueden doblar múltiples personajes por separado**, ya que la capacidad de distinción de hablantes de whisperX no es suficientemente confiable.
+5. **No se pueden doblar múltiples personajes por separado**, ya que la capacidad de distinción de hablantes ASR no es suficientemente confiable.
 
 ## 📄 Licencia
 
 Este proyecto está licenciado bajo la Licencia Apache 2.0. Un agradecimiento especial a los siguientes proyectos de código abierto por sus contribuciones:
 
-[whisperX](https://github.com/m-bain/whisperX), [yt-dlp](https://github.com/yt-dlp/yt-dlp), [json_repair](https://github.com/mangiucugna/json_repair), [BELLE](https://github.com/LianjiaTech/BELLE)
+[yt-dlp](https://github.com/yt-dlp/yt-dlp), [json_repair](https://github.com/mangiucugna/json_repair), [BELLE](https://github.com/LianjiaTech/BELLE)
 
 ## 📬 Contáctame
 

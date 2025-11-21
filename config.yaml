@@ -11,30 +11,30 @@ display_language: "zh-CN"
 
 # API settings
 api:
-  key: '5'
-  base_url: 'http://localhost:8088'
-  model: 'your_model_name'
+  key: '1'
+  base_url: 'http://localhost:8088/v1'
+  model: '1'
 
 # API settings for different functions
 api_split:
-  key: '55'
-  base_url: 'http://localhost:8088'
-  model: 'your_model_name'
+  key: '1'
+  base_url: 'http://localhost:8088/v1'
+  model: '1'
 
 api_summary:
-  key: 'YOUR_API_KEY_HERE'
-  base_url: 'http://localhost:8088'
-  model: 'your_model_name'
+  key: '1'
+  base_url: 'http://localhost:8088/v1'
+  model: '1'
 
 api_translate:
-  key: '123'
-  base_url: 'http://localhost:8088'
-  model: 'your_model_name'
+  key: '1'
+  base_url: 'http://localhost:8088/v1'
+  model: '1'
 
 api_reflection:
-  key: 'YOUR_API_KEY_HERE'
-  base_url: 'http://localhost:8088'
-  model: 'your_model_name'
+  key: '1'
+  base_url: 'http://localhost:8088/v1'
+  model: '1'
 
 # *Number of LLM multi-threaded accesses, set to 1 if using local LLM
 max_workers: 4
@@ -43,18 +43,12 @@ max_workers: 4
 target_language: '简体中文'
 
 
-whisper:
-  # ["large-v3", "large-v3-turbo"]. Note: for zh model will force to use Belle/large-v3
-  model: 'large-v3'
-  # Whisper specified recognition language ISO 639-1
+asr:
+  # ASR (Automatic Speech Recognition) specified recognition language ISO 639-1
   language: 'en'
   detected_language: 'en'
-  # Whisper running mode ["local", "cloud", "elevenlabs"]. Specifies where to run, cloud uses 302.ai API
-  runtime: 'elevenlabs'
-  # 302.ai API key
-  whisperX_302_api_key: 'your_302_api_key'
-  # ElevenLabs API key (experimental)
-  elevenlabs_api_key: 'your_elevenlabs_api_key'
+  # ASR running mode ["gemini"]. Specifies where to run
+  runtime: 'gemini'
 
 # Whether to burn subtitles into the video
 burn_subtitles: false

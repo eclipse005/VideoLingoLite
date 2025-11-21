@@ -17,16 +17,8 @@ def transcribe():
     
     # 4. Transcribe audio by clips
     all_results = []
-    runtime = load_key("whisper.runtime")
-    if runtime == "local":
-        from core.asr_backend.whisperX_local import transcribe_audio as ts
-        rprint("[cyan]🎤 Transcribing audio with local model...[/cyan]")
-    elif runtime == "cloud":
-        from core.asr_backend.whisperX_302 import transcribe_audio_302 as ts
-        rprint("[cyan]🎤 Transcribing audio with 302 API...[/cyan]")
-    elif runtime == "elevenlabs":
-        from core.asr_backend.gemini import transcribe_audio_gemini as ts
-        rprint("[cyan]🎤 Transcribing audio with gemini API...[/cyan]")
+    from core.asr_backend.gemini import transcribe_audio_gemini as ts
+    rprint("[cyan]🎤 Transcribing audio with Gemini API...[/cyan]")
 
     for start, end in segments:
         result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)

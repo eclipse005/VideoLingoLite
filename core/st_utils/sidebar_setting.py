@@ -66,18 +66,14 @@ def subtitle_settings_section():
             lang = st.selectbox(
                 t("Recog Lang"),
                 options=list(langs.keys()),
-                index=list(langs.values()).index(load_key("whisper.language"))
+                index=list(langs.values()).index(load_key("asr.language"))
             )
-            if langs[lang] != load_key("whisper.language"):
-                update_key("whisper.language", langs[lang])
+            if langs[lang] != load_key("asr.language"):
+                update_key("asr.language", langs[lang])
 
-        runtime = st.selectbox(t("WhisperX Runtime"), options=["local", "cloud", "elevenlabs"], index=["local", "cloud", "elevenlabs"].index(load_key("whisper.runtime")), help=t("Local runtime requires >8GB GPU, cloud runtime requires 302ai API key, elevenlabs runtime requires ElevenLabs API key"))
-        if runtime != load_key("whisper.runtime"):
-            update_key("whisper.runtime", runtime)
-        if runtime == "cloud":
-            config_input(t("WhisperX 302ai API"), "whisper.whisperX_302_api_key")
-        if runtime == "elevenlabs":
-            config_input(("ElevenLabs API"), "whisper.elevenlabs_api_key")
+        runtime = st.selectbox(t("ASR Runtime"), options=["gemini"], index=["gemini"].index(load_key("asr.runtime")), help=t("Select ASR service for transcription"))
+        if runtime != load_key("asr.runtime"):
+            update_key("asr.runtime", runtime)
 
         with c2:
             target_language = st.text_input(t("Target Lang"), value=load_key("target_language"), help=t("Input any language in natural language, as long as llm can understand"))

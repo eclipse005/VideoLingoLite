@@ -17,7 +17,7 @@ VideoLingo is an all-in-one video translation, localization, and dubbing tool ai
 Key features:
 - 🎥 YouTube video download via yt-dlp
 
-- **🎙️ Word-level and Low-illusion subtitle recognition with WhisperX**
+- **🎙️ Word-level and Low-illusion subtitle recognition with ASR**
 
 - **📝 NLP and AI-powered subtitle segmentation**
 
@@ -71,7 +71,7 @@ https://github.com/user-attachments/assets/47d965b2-b4ab-4a0b-9d08-b49a7bf3508c
 
 🇺🇸 English 🤩 | 🇷🇺 Russian 😊 | 🇫🇷 French 🤩 | 🇩🇪 German 🤩 | 🇮🇹 Italian 🤩 | 🇪🇸 Spanish 🤩 | 🇯🇵 Japanese 😐 | 🇨🇳 Chinese* 😊
 
-> *Chinese uses a separate punctuation-enhanced whisper model, for now...
+> *Chinese uses a separate punctuation-enhanced ASR model, for now...
 
 **Translation supports all languages, while dubbing language depends on the chosen TTS method.**
 
@@ -122,30 +122,30 @@ docker run -d -p 8501:8501 --gpus all videolingo
 ## APIs
 VideoLingo supports OpenAI-Like API format and various TTS interfaces:
 - LLM: `claude-3-5-sonnet`, `gpt-4.1`, `deepseek-v3`, `gemini-2.0-flash`, ... (sorted by performance, be cautious with gemini-2.5-flash...)
-- WhisperX: Run whisperX (large-v3) locally or use 302.ai API
+- ASR: Use Gemini ASR service for transcription
 - TTS: `azure-tts`, `openai-tts`, `siliconflow-fishtts`, **`fish-tts`**, `GPT-SoVITS`, `edge-tts`, `*custom-tts`(You can modify your own TTS in custom_tts.py!)
 
-> **Note:** VideoLingo works with **[302.ai](https://gpt302.saaslink.net/C2oHR9)** - one API key for all services (LLM, WhisperX, TTS). Or run locally with Ollama and Edge-TTS for free, no API needed!
+> **Note:** VideoLingo works with various services - one API key for all services (LLM, ASR, TTS). Or run locally with Ollama and Edge-TTS for free, no API needed!
 
 For detailed installation, API configuration, and batch mode instructions, please refer to the documentation: [English](/docs/pages/docs/start.en-US.md) | [中文](/docs/pages/docs/start.zh-CN.md)
 
 ## Current Limitations
 
-1. WhisperX transcription performance may be affected by video background noise, as it uses wav2vac model for alignment. For videos with loud background music, please enable Voice Separation Enhancement. Additionally, subtitles ending with numbers or special characters may be truncated early due to wav2vac's inability to map numeric characters (e.g., "1") to their spoken form ("one").
+1. ASR transcription performance may be affected by video background noise. For videos with loud background music, please enable Voice Separation Enhancement.
 
 2. Using weaker models can lead to errors during processes due to strict JSON format requirements for responses (tried my best to prompt llm😊). If this error occurs, please delete the `output` folder and retry with a different LLM, otherwise repeated execution will read the previous erroneous response causing the same error.
 
 3. The dubbing feature may not be 100% perfect due to differences in speech rates and intonation between languages, as well as the impact of the translation step. However, this project has implemented extensive engineering processing for speech rates to ensure the best possible dubbing results.
 
-4. **Multilingual video transcription recognition will only retain the main language**. This is because whisperX uses a specialized model for a single language when forcibly aligning word-level subtitles, and will delete unrecognized languages.
+4. **Multilingual video transcription recognition will only retain the main language**. This is because ASR systems typically use a specialized model for a single language when processing subtitles, and will delete unrecognized languages.
 
-5. **For now, cannot dub multiple characters separately**, as whisperX's speaker distinction capability is not sufficiently reliable.
+5. **For now, cannot dub multiple characters separately**, as ASR speaker distinction capability is not sufficiently reliable.
 
 ## 📄 License
 
 This project is licensed under the Apache 2.0 License. Special thanks to the following open source projects for their contributions:
 
-[whisperX](https://github.com/m-bain/whisperX), [yt-dlp](https://github.com/yt-dlp/yt-dlp), [json_repair](https://github.com/mangiucugna/json_repair), [BELLE](https://github.com/LianjiaTech/BELLE)
+[yt-dlp](https://github.com/yt-dlp/yt-dlp), [json_repair](https://github.com/mangiucugna/json_repair), [BELLE](https://github.com/LianjiaTech/BELLE)
 
 ## 📬 Contact Me
 

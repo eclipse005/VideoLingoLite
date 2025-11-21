@@ -17,7 +17,7 @@ VideoLingoは、Netflixクオリティの字幕を生成することを目的と
 主な機能：
 - 🎥 yt-dlpによるYouTube動画のダウンロード
 
-- **🎙️ WhisperXによる単語レベルの低誤認識字幕認識**
+- **🎙️ ASRによる単語レベルの低誤認識字幕認識**
 
 - **📝 NLPとAIを活用した字幕セグメンテーション**
 
@@ -71,7 +71,7 @@ https://github.com/user-attachments/assets/47d965b2-b4ab-4a0b-9d08-b49a7bf3508c
 
 🇺🇸 英語 🤩 | 🇷🇺 ロシア語 😊 | 🇫🇷 フランス語 🤩 | 🇩🇪 ドイツ語 🤩 | 🇮🇹 イタリア語 🤩 | 🇪🇸 スペイン語 🤩 | 🇯🇵 日本語 😐 | 🇨🇳 中国語* 😊
 
-> *中国語は現在、句読点強化されたwhisperモデルを使用しています。
+> *中国語は現在、句読点強化されたASRモデルを使用しています。
 
 **翻訳はすべての言語に対応していますが、吹き替えの言語は選択したTTS方式によって異なります。**
 
@@ -122,30 +122,30 @@ docker run -d -p 8501:8501 --gpus all videolingo
 ## API
 VideoLingoはOpenAIライクなAPI形式と様々なTTSインターフェースをサポートしています：
 - LLM: `claude-3-5-sonnet`, `gpt-4.1`, `deepseek-v3`, `gemini-2.0-flash`, ... (パフォーマンス順、gemini-2.5-flashには注意...)
-- WhisperX: ローカルでwhisperXを実行するか302.ai APIを使用
+- ASR: Gemini ASRサービスを使用して文字起こし
 - TTS: `azure-tts`, `openai-tts`, `siliconflow-fishtts`, **`fish-tts`**, `GPT-SoVITS`, `edge-tts`, `*custom-tts`(custom_tts.pyで独自のTTSを修正可能！)
 
-> **注意：** VideoLingoは**[302.ai](https://gpt302.saaslink.net/C2oHR9)**と連携しています - すべてのサービス（LLM、WhisperX、TTS）に1つのAPIキーで対応。またはOllamaとEdge-TTSを使用してローカルで無料で実行可能で、APIは不要です！
+> **注意：** VideoLingoは各種サービスと連携しています - すべてのサービス（LLM、ASR、TTS）に1つのAPIキーで対応。またはOllamaとEdge-TTSを使用してローカルで無料で実行可能で、APIは不要です！
 
 詳細なインストール方法、API設定、バッチモードの説明については、ドキュメントを参照してください：[English](/docs/pages/docs/start.en-US.md) | [中文](/docs/pages/docs/start.zh-CN.md)
 
 ## 現在の制限事項
 
-1. WhisperX文字起こしのパフォーマンスは、アライメントにwav2vacモデルを使用しているため、動画の背景ノイズの影響を受ける可能性があります。大きな背景音楽がある動画の場合は、音声分離強化を有効にしてください。また、wav2vacが数字文字（例：「1」）を発話形式（「one」）にマッピングできないため、数字や特殊文字で終わる字幕は早期に切り捨てられる可能性があります。
+1. ASR文字起こしのパフォーマンスは、動画の背景ノイズの影響を受ける可能性があります。大きな背景音楽がある動画の場合は、音声分離強化を有効にしてください。
 
 2. より弱いモデルを使用すると、レスポンスに厳密なJSON形式が要求されるため、中間プロセスでエラーが発生する可能性があります。このエラーが発生した場合は、`output`フォルダを削除して別のLLMで再試行してください。そうしないと、繰り返し実行時に前回の誤ったレスポンスを読み込んで同じエラーが発生します。
 
 3. 吹き替え機能は、言語間の発話速度やイントネーションの違い、および翻訳ステップの影響により、100%完璧ではない可能性があります。ただし、このプロジェクトでは発話速度に関する広範なエンジニアリング処理を実装し、可能な限り最高の吹き替え結果を確保しています。
 
-4. **多言語ビデオの文字起こし認識は主要言語のみを保持します**。これは、whisperXが単語レベルの字幕を強制的にアライメントする際に単一言語用の特殊モデルを使用し、認識されない言語を削除するためです。
+4. **多言語ビデオの文字起こし認識は主要言語のみを保持します**。これは、ASRシステムが字幕を処理する際に単一言語用の特殊モデルを使用し、認識されない言語を削除するためです。
 
-5. **複数のキャラクターを個別に吹き替えることはできません**。これは、whisperXの話者区別機能が十分に信頼できないためです。
+5. **複数のキャラクターを個別に吹き替えることはできません**。これは、ASRの話者区別機能が十分に信頼できないためです。
 
 ## 📄 ライセンス
 
 このプロジェクトはApache 2.0ライセンスの下で提供されています。以下のオープンソースプロジェクトの貢献に特別な感謝を表します：
 
-[whisperX](https://github.com/m-bain/whisperX), [yt-dlp](https://github.com/yt-dlp/yt-dlp), [json_repair](https://github.com/mangiucugna/json_repair), [BELLE](https://github.com/LianjiaTech/BELLE)
+[yt-dlp](https://github.com/yt-dlp/yt-dlp), [json_repair](https://github.com/mangiucugna/json_repair), [BELLE](https://github.com/LianjiaTech/BELLE)
 
 ## 📬 お問い合わせ
 

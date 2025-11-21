@@ -13,33 +13,12 @@ __     ___     _            _     _
 """
 
 def install_package(*packages):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
-
-def check_nvidia_gpu():
-    install_package("pynvml")
-    import pynvml
-    from translations.translations import translate as t
-    initialized = False
     try:
-        pynvml.nvmlInit()
-        initialized = True
-        device_count = pynvml.nvmlDeviceGetCount()
-        if device_count > 0:
-            print(t("Detected NVIDIA GPU(s)"))
-            for i in range(device_count):
-                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
-                name = pynvml.nvmlDeviceGetName(handle)
-                print(f"GPU {i}: {name}")
-            return True
-        else:
-            print(t("No NVIDIA GPU detected"))
-            return False
-    except pynvml.NVMLError:
-        print(t("No NVIDIA GPU detected or NVIDIA drivers not properly installed"))
-        return False
-    finally:
-        if initialized:
-            pynvml.nvmlShutdown()
+        subprocess.check_call(["uv", "pip", "install", *packages])
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Fallback to pip if uv is not available
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
+
 
 def check_ffmpeg():
     from rich.console import Console
@@ -76,6 +55,7 @@ def check_ffmpeg():
         raise SystemExit(t("FFmpeg is required. Please install it and run the installer again."))
 
 def main():
+    # Check if uv is available and install initial packages with uv or fallback to pip
     install_package("requests", "rich", "ruamel.yaml", "InquirerPy")
     from rich.console import Console
     from rich.panel import Panel
@@ -119,41 +99,16 @@ def main():
         from core.utils.pypi_autochoose import main as choose_mirror
         choose_mirror()
 
-    # Detect system and GPU
-    has_gpu = platform.system() != 'Darwin' and check_nvidia_gpu()
-    if has_gpu:
-        console.print(Panel(t("🎮 NVIDIA GPU detected, installing CUDA version of PyTorch..."), style="cyan"))
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.0", "torchaudio==2.0.0", "--index-url", "https://download.pytorch.org/whl/cu118"])
-    else:
-        system_name = "🍎 MacOS" if platform.system() == 'Darwin' else "💻 No NVIDIA GPU"
-        console.print(Panel(t(f"{system_name} detected, installing CPU version of PyTorch... Note: it might be slow during whisperX transcription."), style="cyan"))
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.1.2", "torchaudio==2.1.2"])
 
     @except_handler("Failed to install project")
     def install_requirements():
-        console.print(Panel(t("Installing project in editable mode using `pip install -e .`"), style="cyan"))
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", "."], env={**os.environ, "PIP_NO_CACHE_DIR": "0", "PYTHONIOENCODING": "utf-8"})
+        console.print(Panel(t("Installing project in editable mode using `uv pip install -e .`"), style="cyan"))
+        try:
+            subprocess.check_call(["uv", "pip", "install", "-e", "."], env={**os.environ, "PIP_NO_CACHE_DIR": "0", "PYTHONIOENCODING": "utf-8"})
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to pip if uv is not available
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", "."], env={**os.environ, "PIP_NO_CACHE_DIR": "0", "PYTHONIOENCODING": "utf-8"})
 
-    @except_handler("Failed to install Noto fonts")
-    def install_noto_font():
-        # Detect Linux distribution type
-        if os.path.exists('/etc/debian_version'):
-            # Debian/Ubuntu systems
-            cmd = ['sudo', 'apt-get', 'install', '-y', 'fonts-noto']
-            pkg_manager = "apt-get"
-        elif os.path.exists('/etc/redhat-release'):
-            # RHEL/CentOS/Fedora systems
-            cmd = ['sudo', 'yum', 'install', '-y', 'google-noto*']
-            pkg_manager = "yum"
-        else:
-            console.print("Warning: Unrecognized Linux distribution, please install Noto fonts manually", style="yellow")
-            return
-
-        subprocess.run(cmd, check=True)
-        console.print(f"✅ Successfully installed Noto fonts using {pkg_manager}", style="green")
-
-    if platform.system() == 'Linux':
-        install_noto_font()
     
     install_requirements()
     check_ffmpeg()
