@@ -1,12 +1,9 @@
 librosa==0.10.2.post1
-numpy==2.2.6
 openai==1.55.3
-openpyxl==3.1.5
 pandas==2.2.3
 pydub==0.25.1
 PyYAML==6.0.3
 requests==2.32.5
-resampy==0.4.3
 streamlit==1.38.0
 json-repair
 ruamel.yaml
