@@ -14,6 +14,8 @@
 
 VideoLingoLite is an streamlined video translation and localization tool focused on generating high-quality subtitles. This lite version removes some heavy features like video subtitle burning to provide a more lightweight and efficient solution. It eliminates stiff machine translations and multi-line subtitles, enabling global knowledge sharing across language barriers.
 
+**Note: VideoLingoLite is a streamlined version of the original [VideoLingo](https://github.com/Huanshere/VideoLingo) project.**
+
 Key features:
 - 🎥 YouTube video download via yt-dlp
 
