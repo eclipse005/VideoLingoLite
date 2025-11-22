@@ -50,12 +50,8 @@ asr:
   # ASR running mode ["gemini"]. Specifies where to run
   runtime: 'gemini'
 
-# Whether to burn subtitles into the video
-burn_subtitles: true
 
 ## ======================== Advanced Settings ======================== ##
-# *🔬 h264_nvenc GPU acceleration for ffmpeg, make sure your GPU supports it
-ffmpeg_gpu: true
 
 subtitle:
   # *Maximum length of each subtitle line in characters
