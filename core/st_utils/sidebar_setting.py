@@ -80,10 +80,6 @@ def subtitle_settings_section():
             if target_language != load_key("target_language"):
                 update_key("target_language", target_language)
 
-        burn_subtitles = st.toggle(t("Burn-in Subtitles"), value=load_key("burn_subtitles"), help=t("Whether to burn subtitles into the video, will increase processing time"))
-        if burn_subtitles != load_key("burn_subtitles"):
-            update_key("burn_subtitles", burn_subtitles)
-
 def page_setting():
 
     display_language = st.selectbox("Display Language 🌐",
