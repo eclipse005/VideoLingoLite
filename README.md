@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="/docs/logo.png" alt="VideoLingo Logo" height="140">
+<img src="/docs/logo.png" alt="VideoLingoLite Logo" height="140">
 
-# Connect the World, Frame by Frame
+# Connect the World, Frame by Frame (Lite Version)
 
-<a href="https://trendshift.io/repositories/12200" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12200" alt="Huanshere%2FVideoLingo | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/12200" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12200" alt="Huanshere%2FVideoLingoLite | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 [**English**](/README.md)｜[**简体中文**](/translations/README.zh.md)｜[**繁體中文**](/translations/README.zh-TW.md)｜[**日本語**](/translations/README.ja.md)｜[**Español**](/translations/README.es.md)｜[**Русский**](/translations/README.ru.md)｜[**Français**](/translations/README.fr.md)
 
@@ -12,7 +12,7 @@
 
 ## 🌟 Overview ([Try VL Now!](https://videolingo.io))
 
-VideoLingo is an all-in-one video translation, localization, and dubbing tool aimed at generating Netflix-quality subtitles. It eliminates stiff machine translations and multi-line subtitles while adding high-quality dubbing, enabling global knowledge sharing across language barriers.
+VideoLingoLite is an streamlined video translation and localization tool focused on generating high-quality subtitles. This lite version removes some heavy features like video subtitle burning to provide a more lightweight and efficient solution. It eliminates stiff machine translations and multi-line subtitles, enabling global knowledge sharing across language barriers.
 
 Key features:
 - 🎥 YouTube video download via yt-dlp
@@ -27,15 +27,13 @@ Key features:
 
 - **✅ Netflix-standard, Single-line subtitles Only**
 
-- **🗣️ Dubbing with GPT-SoVITS, Azure, OpenAI, and more**
-
 - 🚀 One-click startup and processing in Streamlit
 
 - 🌍 Multi-language support in Streamlit UI
 
 - 📝 Detailed logging with progress resumption
 
-Difference from similar projects: **Single-line subtitles only, superior translation quality, seamless dubbing experience**
+Difference from similar projects: **Single-line subtitles only, superior translation quality**
 
 ## 🎥 Demo
 
@@ -93,8 +91,8 @@ Meet any problem? Chat with our free online AI agent [**here**](https://share.fa
 1. Clone the repository
 
 ```bash
-git clone https://github.com/Huanshere/VideoLingo.git
-cd VideoLingo
+git clone https://github.com/Huanshere/VideoLingoLite.git
+cd VideoLingoLite
 ```
 
 2. Install dependencies(requires `python=3.10`)
@@ -129,6 +127,14 @@ VideoLingo supports OpenAI-Like API format and various TTS interfaces:
 
 For detailed installation, API configuration, and batch mode instructions, please refer to the documentation: [English](/docs/pages/docs/start.en-US.md) | [中文](/docs/pages/docs/start.zh-CN.md)
 
+## Differences from Full Version
+
+VideoLingoLite is a streamlined version of the original VideoLingo project with the following changes:
+- Removed video subtitle burning functionality
+- Removed GPU-accelerated video processing
+- Simplified dependencies for faster installation
+- Removed some advanced TTS features to focus on core translation functionality
+
 ## Current Limitations
 
 1. ASR transcription performance may be affected by video background noise. For videos with loud background music, please enable Voice Separation Enhancement.
@@ -149,14 +155,14 @@ This project is licensed under the Apache 2.0 License. Special thanks to the fol
 
 ## 📬 Contact Me
 
-- Submit [Issues](https://github.com/Huanshere/VideoLingo/issues) or [Pull Requests](https://github.com/Huanshere/VideoLingo/pulls) on GitHub
+- Submit [Issues](https://github.com/Huanshere/VideoLingoLite/issues) or [Pull Requests](https://github.com/Huanshere/VideoLingoLite/pulls) on GitHub
 - DM me on Twitter: [@Huanshere](https://twitter.com/Huanshere)
 - Email me at: team@videolingo.io
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Huanshere/VideoLingo&type=Timeline)](https://star-history.com/#Huanshere/VideoLingo&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=Huanshere/VideoLingoLite&type=Timeline)](https://star-history.com/#Huanshere/VideoLingoLite&Timeline)
 
 ---
 
-<p align="center">If you find VideoLingo helpful, please give me a ⭐️!</p>
+<p align="center">If you find VideoLingoLite helpful, please give me a ⭐️!</p>
