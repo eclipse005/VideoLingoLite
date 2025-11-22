@@ -1,167 +1,77 @@
-<div align="center">
+# VideoLingoLite
 
-<img src="/docs/logo.png" alt="VideoLingoLite Logo" height="140">
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-# Connect the World, Frame by Frame (Lite Version)
+**VideoLingoLite** 是“VideoLingo”的轻量化版本，仅保留了云端ASR（自动语音识别）和翻译功能，为需要音视频转写、自动翻译的用户提供了简洁高效的解决方案。
 
-<a href="https://trendshift.io/repositories/12200" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12200" alt="Huanshere%2FVideoLingoLite | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+## 项目简介
 
-[**English**](/README.md)｜[**简体中文**](/translations/README.zh.md)｜[**繁體中文**](/translations/README.zh-TW.md)｜[**日本語**](/translations/README.ja.md)｜[**Español**](/translations/README.es.md)｜[**Русский**](/translations/README.ru.md)｜[**Français**](/translations/README.fr.md)
+VideoLingoLite 专注于音视频内容的自动转写与翻译：
+- 支持音频、视频文件的批量自动转写为文本。
+- 内置云端ASR（自动语音识别）与翻译能力。
+- 提供术语自定义表（`custom_terms.xlsx`）以优化行业/领域专用词识别和翻译结果。
+- 精简化设计，部署和使用简单。
 
-</div>
+> 该项目针对有转写和翻译需求的科研、教学、媒体等场景，去除了原VideoLingo平台的多余组件，仅保留核心处理能力。
 
-## 🌟 Overview ([Try VL Now!](https://videolingo.io))
+## 主要功能
 
-VideoLingoLite is a streamlined video translation and localization tool focused on generating high-quality subtitles. This lite version removes heavy features like video subtitle burning and local Whisper ASR to provide a more lightweight and efficient solution. It eliminates stiff machine translations and multi-line subtitles, enabling global knowledge sharing across language barriers.
+- **云端ASR支持**：自动将音/视频中的语音转写为文本。
+- **自动翻译**：支持多语言翻译，提升音视频内容可达性。
+- **批量处理**：可通过 `batch` 目录批量处理文件。
+- **可扩展性**：自定义术语、灵活配置。
 
-**Note: VideoLingoLite is a streamlined version of the original [VideoLingo](https://github.com/Huanshere/VideoLingo) project.**
+## 目录结构
 
-Key features:
-- 🎥 YouTube video download via yt-dlp
-
-- **🎙️ Word-level and Low-illusion subtitle recognition with cloud ASR (Gemini)**
-
-- **📝 NLP and AI-powered subtitle segmentation**
-
-- **📚 Custom + AI-generated terminology for coherent translation**
-
-- **🔄 3-step Translate-Reflect-Adaptation for cinematic quality**
-
-- **✅ Netflix-standard, Single-line subtitles Only**
-
-- 🚀 One-click startup and processing in Streamlit
-
-- 🌍 Multi-language support in Streamlit UI
-
-- 📝 Detailed logging with progress resumption
-
-Difference from similar projects: **Single-line subtitles only, superior translation quality**
-
-## 🎥 Demo
-
-<table>
-<tr>
-<td width="33%">
-
-### Dual Subtitles
----
-https://github.com/user-attachments/assets/a5c3d8d1-2b29-4ba9-b0d0-25896829d951
-
-</td>
-<td width="33%">
-
-### Cosy2 Voice Clone
----
-https://github.com/user-attachments/assets/e065fe4c-3694-477f-b4d6-316917df7c0a
-
-</td>
-<td width="33%">
-
-### GPT-SoVITS with my voice
----
-https://github.com/user-attachments/assets/47d965b2-b4ab-4a0b-9d08-b49a7bf3508c
-
-</td>
-</tr>
-</table>
-
-### Language Support
-
-**Input Language Support(more to come):**
-
-🇺🇸 English 🤩 | 🇷🇺 Russian 😊 | 🇫🇷 French 🤩 | 🇩🇪 German 🤩 | 🇮🇹 Italian 🤩 | 🇪🇸 Spanish 🤩 | 🇯🇵 Japanese 😐 | 🇨🇳 Chinese* 😊
-
-> *Chinese uses a separate punctuation-enhanced ASR model, for now...
-
-**Translation supports all languages, while dubbing language depends on the chosen TTS method.**
-
-## Installation
-
-Meet any problem? Chat with our free online AI agent [**here**](https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh) to help you.
-
-> **Note:** FFmpeg is required. Please install it via package managers:
-> - Windows: ```choco install ffmpeg``` (via [Chocolatey](https://chocolatey.org/))
-> - macOS: ```brew install ffmpeg``` (via [Homebrew](https://brew.sh/))
-> - Linux: ```sudo apt install ffmpeg``` (Debian/Ubuntu)
-
-1. Clone the repository
-
-```bash
-git clone https://github.com/Huanshere/VideoLingoLite.git
-cd VideoLingoLite
+```
+.
+├── .claude/                # Claude相关配置
+├── .cursorrules            # 编辑相关规则
+├── .gitignore              # Git忽略规则
+├── .streamlit/             # Streamlit配置（可能用于界面）
+├── LICENSE                 # 开源许可证
+├── OneKeyStart.bat         # 一键启动脚本（Windows）
+├── README.md               # 项目说明文档
+├── batch/                  # 批量处理脚本或输入输出目录
+├── config.yaml             # 主要配置文件
+├── core/                   # 核心功能模块
+├── custom_terms.xlsx       # 自定义术语表
+├── install.py              # 安装脚本
+├── requirements.txt        # Python依赖列表
+├── setup.py                # 安装元数据
+├── st.py                   # 主要入口脚本
+└── translations/           # 翻译相关文件夹
 ```
 
-2. Install dependencies(requires `python=3.10`)
+## 快速开始
 
-```bash
-conda create -n videolingo python=3.10.0 -y
-conda activate videolingo
-python install.py
-```
+1. **环境准备**
 
-3. Start the application
+   建议使用Python 3.8及以上版本。
 
-```bash
-streamlit run st.py
-```
+   安装依赖：
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Docker
-Alternatively, you can use Docker (requires NVIDIA Driver version >550), see [Docker docs](/docs/pages/docs/docker.en-US.md):
+2. **运行项目**
 
-```bash
-docker build -t videolingo .
-docker run -d -p 8501:8501 --gpus all videolingo
-```
+   - Windows用户可直接双击 `OneKeyStart.bat`。
+   - 或运行主脚本：
+     ```bash
+     python st.py
+     ```
 
-## APIs
-VideoLingoLite supports OpenAI-Like API format and various TTS interfaces:
-- LLM: `claude-3-5-sonnet`, `gpt-4.1`, `deepseek-v3`, `gemini-2.0-flash`, ... (sorted by performance, be cautious with gemini-2.5-flash...)
-- ASR: Use Gemini ASR service for transcription *Note: No local Whisper support in Lite version*
-- TTS: `azure-tts`, `openai-tts`, `siliconflow-fishtts`, **`fish-tts`**, `GPT-SoVITS`, `edge-tts`, `*custom-tts`(You can modify your own TTS in custom_tts.py!)
+3. **自定义配置**
 
-> **Note:** VideoLingoLite works with various services - one API key for all services (LLM, ASR, TTS). No local processing required!
+   - 编辑 `config.yaml` 设置云端API、语言选项等参数。
+   - 修改或添加 `custom_terms.xlsx` 以适配专业术语。
 
-For detailed installation, API configuration, and batch mode instructions, please refer to the documentation: [English](/docs/pages/docs/start.en-US.md) | [中文](/docs/pages/docs/start.zh-CN.md)
+## 贡献与许可证
 
-## Differences from Full Version
+- 本项目遵循 [Apache 2.0](LICENSE) 协议。
+- 欢迎提交PR、反馈问题。
 
-VideoLingoLite is a streamlined version of the original VideoLingo project with the following changes:
-- Removed dubbing/voice cloning functionality (TTS features)
-- Removed local WhisperX speech recognition (uses only cloud ASR services)
-- Removed video subtitle burning functionality (video processing)
-- Removed GPU-accelerated video processing
-- Simplified dependencies for faster installation
-- Focuses on core translation and subtitle generation functionality
-- Lightweight interface for basic translation needs
+## 联系
 
-## Current Limitations
-
-1. ASR transcription performance may be affected by video background noise. For videos with loud background music, please enable Voice Separation Enhancement.
-
-2. Using weaker models can lead to errors during processes due to strict JSON format requirements for responses (tried my best to prompt llm😊). If this error occurs, please delete the `output` folder and retry with a different LLM, otherwise repeated execution will read the previous erroneous response causing the same error.
-
-3. The dubbing feature may not be 100% perfect due to differences in speech rates and intonation between languages, as well as the impact of the translation step. However, this project has implemented extensive engineering processing for speech rates to ensure the best possible dubbing results.
-
-4. **Multilingual video transcription recognition will only retain the main language**. This is because ASR systems typically use a specialized model for a single language when processing subtitles, and will delete unrecognized languages.
-
-5. **For now, cannot dub multiple characters separately**, as ASR speaker distinction capability is not sufficiently reliable.
-
-## 📄 License
-
-This project is licensed under the Apache 2.0 License. Special thanks to the following open source projects for their contributions:
-
-[yt-dlp](https://github.com/yt-dlp/yt-dlp), [json_repair](https://github.com/mangiucugna/json_repair), [BELLE](https://github.com/LianjiaTech/BELLE), [OpenAI](https://github.com/openai)
-
-## 📬 Contact Me
-
-- Submit [Issues](https://github.com/Huanshere/VideoLingoLite/issues) or [Pull Requests](https://github.com/Huanshere/VideoLingoLite/pulls) on GitHub
-- DM me on Twitter: [@Huanshere](https://twitter.com/Huanshere)
-- Email me at: team@videolingo.io
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Huanshere/VideoLingoLite&type=Timeline)](https://star-history.com/#Huanshere/VideoLingoLite&Timeline)
-
----
-
-<p align="center">If you find VideoLingoLite helpful, please give me a ⭐️!</p>
+详见[项目主页](https://github.com/eclipse005/VideoLingoLite)获取最新信息与交流方式。
