@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 st.set_page_config(page_title="VideoLingo", page_icon="docs/logo.svg")
 
-SUB_VIDEO = "output/output_sub.mp4"
+SUB_VIDEO = "output/src.srt"
 
 @st.fragment
 def text_processing_section():
