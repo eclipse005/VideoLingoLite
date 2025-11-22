@@ -37,7 +37,7 @@ api_reflection:
   model: '1'
 
 # *Number of LLM multi-threaded accesses, set to 1 if using local LLM
-max_workers: 4
+max_workers: 8
 
 # Language settings, written into the prompt, can be described in natural language
 target_language: '简体中文'
@@ -51,11 +51,11 @@ asr:
   runtime: 'gemini'
 
 # Whether to burn subtitles into the video
-burn_subtitles: false
+burn_subtitles: true
 
 ## ======================== Advanced Settings ======================== ##
 # *🔬 h264_nvenc GPU acceleration for ffmpeg, make sure your GPU supports it
-ffmpeg_gpu: false
+ffmpeg_gpu: true
 
 subtitle:
   # *Maximum length of each subtitle line in characters

@@ -33,12 +33,41 @@ OUTPUT_VIDEO = f"{OUTPUT_DIR}/output_sub.mp4"
 SRC_SRT = f"{OUTPUT_DIR}/src.srt"
 TRANS_SRT = f"{OUTPUT_DIR}/trans.srt"
     
-def check_gpu_available():
+def get_best_encoder():
+    """
+    自动检测可用的最佳硬件编码器
+    优先级: Intel (qsv) > NVIDIA (nvenc) > Mac (videotoolbox) > CPU (libx264)
+    """
     try:
-        result = subprocess.run(['ffmpeg', '-encoders'], capture_output=True, text=True)
-        return 'h264_nvenc' in result.stdout
-    except:
-        return False
+        # 获取 ffmpeg 支持的所有编码器列表
+        result = subprocess.run(['ffmpeg', '-encoders'], capture_output=True, text=True).stdout
+
+        # 检测编码器是否实际可用（测试编码器初始化）
+        def is_encoder_available(encoder_name):
+            try:
+                test_cmd = ['ffmpeg', '-f', 'lavfi', '-i', 'testsrc=size=320x240:rate=1',
+                           '-c:v', encoder_name, '-t', '1', '-f', 'null', 'NUL']
+                # 只保留错误输出，隐藏标准输出
+                test_result = subprocess.run(test_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+                return test_result.returncode == 0
+            except Exception:
+                return False
+
+        # 优先检测Intel QSV，因为它在你的系统上应该可用
+        if 'h264_qsv' in result and is_encoder_available('h264_qsv'):
+            return 'h264_qsv'         # Intel 核显 (支持 Ultra 系列)
+
+        # 然后检测NVIDIA，但要验证实际可用性
+        elif 'h264_nvenc' in result and is_encoder_available('h264_nvenc'):
+            return 'h264_nvenc'       # NVIDIA 显卡
+
+        elif 'h264_videotoolbox' in result:
+            return 'h264_videotoolbox' # Mac 系统
+    except Exception as e:
+        print(f"Encoder detection failed: {e}")
+        pass
+
+    return 'libx264' # 默认回落到 CPU
 
 def merge_subtitles_to_video():
     video_file = find_video_files()
@@ -67,6 +96,8 @@ def merge_subtitles_to_video():
     TARGET_HEIGHT = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     video.release()
     rprint(f"[bold green]Video resolution: {TARGET_WIDTH}x{TARGET_HEIGHT}[/bold green]")
+    
+    # 构建 FFmpeg 基础命令
     ffmpeg_cmd = [
         'ffmpeg', '-i', video_file,
         '-vf', (
@@ -81,22 +112,49 @@ def merge_subtitles_to_video():
         ).encode('utf-8'),
     ]
 
+    # 智能选择编码器
     ffmpeg_gpu = load_key("ffmpeg_gpu")
+    encoder = 'libx264' # 默认 CPU
+    
     if ffmpeg_gpu:
-        rprint("[bold green]will use GPU acceleration.[/bold green]")
-        ffmpeg_cmd.extend(['-c:v', 'h264_nvenc'])
+        detected_encoder = get_best_encoder()
+        if detected_encoder != 'libx264':
+            encoder = detected_encoder
+            rprint(f"[bold green]🚀 Will use GPU acceleration: {encoder}[/bold green]")
+        else:
+            rprint("[bold yellow]⚠️ GPU requested but no hardware encoder found. Falling back to CPU.[/bold yellow]")
+
+    ffmpeg_cmd.extend(['-c:v', encoder])
+
+    # 根据不同的编码器应用优化参数
+    if encoder == 'h264_nvenc':
+        ffmpeg_cmd.extend(['-preset', 'p4', '-cq', '23'])
+    elif encoder == 'h264_qsv':
+        # Intel QSV 参数：global_quality 类似 crf，look_ahead 提升画质
+        ffmpeg_cmd.extend(['-global_quality', '23', '-look_ahead', '1'])
+    elif encoder == 'h264_videotoolbox':
+        ffmpeg_cmd.extend(['-q:v', '50'])
+    else:
+        # CPU libx264 参数
+        ffmpeg_cmd.extend(['-preset', 'medium', '-crf', '23'])
+
     ffmpeg_cmd.extend(['-y', OUTPUT_VIDEO])
 
     rprint("🎬 Start merging subtitles to video...")
     start_time = time.time()
-    process = subprocess.Popen(ffmpeg_cmd)
+
+    # 打印完整命令以便调试
+    # print(" ".join([str(x) for x in ffmpeg_cmd]))
+
+    # 执行ffmpeg命令，隐藏详细输出，只在错误时显示
+    process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
     try:
-        process.wait()
+        stderr, _ = process.communicate()  # 等待进程完成并获取错误输出
         if process.returncode == 0:
             rprint(f"\n✅ Done! Time taken: {time.time() - start_time:.2f} seconds")
         else:
-            rprint("\n❌ FFmpeg execution error")
+            rprint(f"\n❌ FFmpeg execution error\nError output: {stderr.decode('utf-8', errors='ignore')}")
     except Exception as e:
         rprint(f"\n❌ Error occurred: {e}")
         if process.poll() is None:

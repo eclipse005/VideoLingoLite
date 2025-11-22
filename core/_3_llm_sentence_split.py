@@ -7,16 +7,11 @@ word sequence.
 
 This guarantees 100% preservation of the original ASR words while
 leveraging the LLM's semantic grouping capabilities.
-
-- Replaces the fragile word-search validation with robust sequence alignment.
-- Raises RuntimeError if LLM fails, but alignment logic is guaranteed
-  to preserve 100% of original batch words.
 """
 
 import pandas as pd
-import json
 import re
-import difflib  # <-- 新增：用于序列对齐
+import difflib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from core.prompts import get_sentence_segmentation_prompt, get_split_prompt
 from core.utils import check_file_exists
@@ -24,33 +19,21 @@ from core.utils.models import _2_CLEANED_CHUNKS, _3_2_SPLIT_BY_MEANING
 from core.utils.config_utils import load_key
 from core.utils.ask_gpt import ask_gpt
 from rich.console import Console
-from rich.table import Table
 
 console = Console()
 
-
 # ================================================================
-# 新增辅助函数 (Path 1: difflib)
+# Alignment Helper Functions (difflib)
 # ================================================================
 
 def clean_word(word):
-    """
-    Standardized word cleaner (lowercase, no punctuation) for alignment.
-    """
+    """Standardized word cleaner (lowercase, no punctuation) for alignment."""
     return re.sub(r'[^\w]', '', str(word).lower())
 
 def get_llm_words_and_splits(segmented_sentences):
     """
     Parses the LLM's sentence list to get its clean words and split indices.
-
-    Args:
-        segmented_sentences: List of sentences from LLM (e.g., ["Sent one.", "Sent two."])
-
-    Returns:
-        tuple: (
-            llm_clean_words: List of clean words (e.g., ["sent", "one", "sent", "two"]),
-            llm_split_indices: List of cumulative indices (e.g., [2, 4])
-        )
+    Returns: (llm_clean_words, llm_split_indices)
     """
     llm_clean_words = []
     llm_split_indices = []
@@ -62,7 +45,7 @@ def get_llm_words_and_splits(segmented_sentences):
             continue
             
         clean_words_in_sentence = [clean_word(w) for w in words]
-        clean_words_in_sentence = [w for w in clean_words_in_sentence if w] # Remove empty strings
+        clean_words_in_sentence = [w for w in clean_words_in_sentence if w] 
         
         current_word_count += len(clean_words_in_sentence)
         llm_clean_words.extend(clean_words_in_sentence)
@@ -73,62 +56,54 @@ def get_llm_words_and_splits(segmented_sentences):
 def map_llm_splits_to_original(original_clean_words, llm_clean_words, llm_split_indices):
     """
     Maps LLM's split indices back to the original word list indices using difflib.
-    This is the core of "Path 1".
+    Strategy: 'Next Block Start'. If a split occurs in a mismatch region (e.g., LLM changed words),
+    we snap the split to the *start* of the next matching block.
     """
-    # Use difflib to find matching blocks between Original (A) and LLM (B)
     s = difflib.SequenceMatcher(None, original_clean_words, llm_clean_words, autojunk=False)
-    # Get (a_start, b_start, length) tuples for matching blocks
     matching_blocks = s.get_matching_blocks()
     
     original_split_indices = []
     
     for llm_split_idx in llm_split_indices:
-        found_map = False
+        mapped_idx = -1
         
-        # 1. Check if the split is inside or at the end of a matching block
+        # 1. Check if the split is strictly INSIDE a matching block
         for a_start, b_start, length in matching_blocks:
             b_end = b_start + length
-            if b_start <= llm_split_idx <= b_end:
-                # Split is inside this 'equal' block or at its end
+            if b_start < llm_split_idx < b_end:
                 b_offset = llm_split_idx - b_start
-                original_split_indices.append(a_start + b_offset)
-                found_map = True
+                mapped_idx = a_start + b_offset
                 break
         
-        if found_map:
+        if mapped_idx != -1:
+            original_split_indices.append(mapped_idx)
             continue
 
-        # 2. If not, the split is in a "junk" (replace/insert/delete) section.
-        #    We find the *last* matching block *before* this split and map
-        #    to the end of its corresponding 'A' (original) block.
-        last_block_before = None
+        # 2. If not inside, find the START of the NEXT matching block
+        next_block_start_idx = None
         for a_start, b_start, length in matching_blocks:
-            b_end = b_start + length
-            if b_end <= llm_split_idx:
-                # This block ends before the split
-                last_block_before = (a_start, b_start, length)
-            else:
-                # We've gone past the split, stop.
+            if length == 0: continue
+            if b_start >= llm_split_idx:
+                next_block_start_idx = a_start
                 break
         
-        if last_block_before:
-            # Map to the end of the 'A' block
-            original_split_indices.append(last_block_before[0] + last_block_before[2])
+        if next_block_start_idx is not None:
+            original_split_indices.append(next_block_start_idx)
         else:
-            # Split is before *any* matching block (e.g., junk at the beginning)
-            original_split_indices.append(0)
-
-    # Ensure final split maps to the end of the original list
-    if llm_split_indices and llm_split_indices[-1] == len(llm_clean_words):
-         if len(original_clean_words) not in original_split_indices:
+            # Split is after all matches
             original_split_indices.append(len(original_clean_words))
 
-    return sorted(list(set(original_split_indices)))
+    original_split_indices = sorted(list(set(original_split_indices)))
+    
+    # Safety: Ensure we don't miss the final end if LLM implies it
+    if llm_split_indices and llm_split_indices[-1] == len(llm_clean_words):
+        if len(original_clean_words) not in original_split_indices:
+            original_split_indices.append(len(original_clean_words))
+
+    return original_split_indices
 
 def reconstruct_sentences(original_words, original_split_indices):
-    """
-    Rebuilds sentences using the *original* word list and the *mapped* split indices.
-    """
+    """Rebuilds sentences using the *original* word list and the *mapped* split indices."""
     final_sentences = []
     last_idx = 0
     for idx in original_split_indices:
@@ -136,14 +111,13 @@ def reconstruct_sentences(original_words, original_split_indices):
             sentence_words = original_words[last_idx:idx]
             final_sentences.append(' '.join(sentence_words))
         last_idx = idx
-        
     return final_sentences
 
 # ================================================================
-# 替换后的验证函数
+# Processing Functions
 # ================================================================
+
 def validate_segmentation_response(response_data):
-    """Simple validation to check if the LLM returned the expected JSON structure."""
     if not isinstance(response_data, dict):
         return {"status": "error", "message": "Response is not a dictionary"}
     sentences = response_data.get("sentences")
@@ -152,16 +126,7 @@ def validate_segmentation_response(response_data):
     return {"status": "success", "message": "Validation completed"}
 
 def _process_batch_threaded(batch_info):
-    """
-    线程池包装函数：处理单个batch
-    Args:
-        batch_info: tuple (batch_count, batch_words, batch_text, max_length)
-
-    Returns:
-        tuple: (batch_count, sentences) 或 (batch_count, None) 如果失败
-    """
     batch_count, batch_words, batch_text, max_length = batch_info
-
     try:
         sentences = process_sentence_chunk(batch_text, max_length)
         console.print(f"[green]✅ Batch {batch_count} completed[/green]")
@@ -170,67 +135,37 @@ def _process_batch_threaded(batch_info):
         console.print(f"[red]❌ Batch {batch_count} failed: {e}[/red]")
         return (batch_count, None)
 
-
-def ensure_sentence_ends_with_period(batch_words, sentences):
-    """Ensure the last sentence ends with a period. If not, add it."""
-    if not sentences:
-        return sentences
-
-    last_sentence = sentences[-1].strip()
-    if re.search(r'[.!?。！？]$', last_sentence):
-        return sentences
-
-    # Check if last word already contains a period
-    last_word = str(batch_words[-1])
-    if any(char in last_word for char in ['.', '。', '!', '？']):
-        return sentences  # Period already in last word
-
-    # Add period to last sentence
-    sentences[-1] = last_sentence + '.'
-    return sentences
-
 def process_sentence_chunk(words_text, max_length):
-    """
-    Process a chunk of words into sentences using LLM and difflib alignment.
-    """
-    # 1. 准备原始单词
-    # 这是此批次的 *原始* 单词列表 (带标点)
+    """Process a chunk of words into sentences using LLM and difflib alignment."""
     original_batch_words = words_text.split()
-    # 这是用于 difflib 对齐的 *干净* 列表
     original_batch_clean_words = [clean_word(w) for w in original_batch_words]
     
-    # 2. 调用 LLM
-    # (prompt 使用 `original_batch_words`, `get_sentence_segmentation_prompt` 内部会 `join` 它们)
     prompt = get_sentence_segmentation_prompt(original_batch_words, max_length)
 
     response_data = ask_gpt(
         prompt,
         resp_type='json',
-        valid_def=validate_segmentation_response, # 使用新的、简单的验证器
+        valid_def=validate_segmentation_response,
         log_title='llm_sentence_segmentation'
     )
 
     if response_data.get("status") == "error":
-        # (重试逻辑可以保留)
         console.print(f"[red]LLM 响应无效: {response_data.get('message')}[/red]")
         raise RuntimeError(f"LLM 响应无效: {response_data.get('message')}")
 
     llm_sentences = response_data.get("sentences", [words_text])
 
-    # 3. 解析 LLM 输出
-    # 获取 LLM 的 *干净* 单词列表及其 *自己的* 切分点
+    # Get LLM's clean words and split points
     llm_clean_words, llm_split_indices = get_llm_words_and_splits(llm_sentences)
 
-    # 4. (核心) 使用 difflib 映射切分点
-    # 将 LLM 的切分点映射回 *我们原始* 单词列表的索引
+    # Map split points back to original list
     original_split_indices = map_llm_splits_to_original(
         original_batch_clean_words,
         llm_clean_words,
         llm_split_indices
     )
 
-    # 5. 重建句子
-    # 使用 *原始* 单词和 *映射后* 的索引来重建句子
+    # Reconstruct sentences preserving original words
     final_sentences = reconstruct_sentences(
         original_batch_words,
         original_split_indices
@@ -242,6 +177,139 @@ def process_sentence_chunk(words_text, max_length):
 
     return final_sentences
 
+def map_br_to_original_sentence(original_sentence, llm_sentence_with_br):
+    """
+    将 LLM 返回句中的 [br] 映射回原句。
+    特性：
+    1. 修正 Difflib 对齐偏差导致的单词内切分 (解决 range [br] s 问题)。
+    2. 保护 CJK (中日韩) 语言的字符间切分。
+    3. 跳过标点符号。
+    """
+    if '[br]' not in llm_sentence_with_br:
+        return original_sentence
+
+    # --- 辅助函数 ---
+    def is_cjk(char):
+        """判断字符是否为中日韩字符"""
+        code = ord(char)
+        return (
+            (0x4E00 <= code <= 0x9FFF) or  # 汉字
+            (0x3040 <= code <= 0x309F) or  # 平假名
+            (0x30A0 <= code <= 0x30FF) or  # 片假名
+            (0xAC00 <= code <= 0xD7AF)     # 韩文
+        )
+
+    def get_clean_chars(text):
+        """只提取字母、数字、汉字等有效字符用于对齐"""
+        return [c for c in text if re.match(r'\w', c)]
+
+    # --- 1. 数据准备 ---
+    orig_clean_chars = get_clean_chars(original_sentence)
+    orig_clean_str = "".join(orig_clean_chars)
+
+    llm_text_no_br = llm_sentence_with_br.replace('[br]', '')
+    llm_clean_chars = get_clean_chars(llm_text_no_br)
+    llm_clean_str = "".join(llm_clean_chars)
+
+    # --- 2. 确定 LLM 中的切分点 (第 N 个有效字符后) ---
+    br_anchor_indices = [] 
+    parts = llm_sentence_with_br.split('[br]')
+    current_valid_char_count = 0
+    
+    for part in parts[:-1]:
+        part_clean_count = len(get_clean_chars(part))
+        current_valid_char_count += part_clean_count
+        br_anchor_indices.append(current_valid_char_count)
+
+    # --- 3. 使用 Diff 算法映射索引 ---
+    matcher = difflib.SequenceMatcher(None, orig_clean_str, llm_clean_str, autojunk=False)
+    matching_blocks = matcher.get_matching_blocks()
+    
+    mapped_clean_indices = []
+    
+    for llm_idx in br_anchor_indices:
+        best_match_idx = -1
+        # 尝试找到包含该 LLM 索引的匹配块
+        for a_start, b_start, length in matching_blocks:
+            b_end = b_start + length
+            if b_start <= llm_idx <= b_end:
+                offset = llm_idx - b_start
+                best_match_idx = a_start + offset
+                break
+        
+        # 如果落在差异区（比如 LLM 加了词导致索引偏移），找最近的前一个匹配块末尾
+        if best_match_idx == -1:
+            closest_preceding_match_end = 0
+            for a_start, b_start, length in matching_blocks:
+                b_end = b_start + length
+                if b_end <= llm_idx:
+                    closest_preceding_match_end = a_start + length
+                else:
+                    break 
+            best_match_idx = closest_preceding_match_end
+            
+        best_match_idx = min(best_match_idx, len(orig_clean_str))
+        mapped_clean_indices.append(best_match_idx)
+
+    # --- 4. 将 Clean 索引转回 Raw 索引 ---
+    raw_insert_positions = []
+    for target_clean_idx in mapped_clean_indices:
+        raw_idx = 0
+        clean_counter = 0
+        found = False
+        
+        for char in original_sentence:
+            if re.match(r'\w', char):
+                clean_counter += 1
+            raw_idx += 1
+            if clean_counter == target_clean_idx:
+                raw_insert_positions.append(raw_idx)
+                found = True
+                break
+        
+        if not found:
+             raw_insert_positions.append(len(original_sentence))
+
+    # --- 5. 插入标签并执行“边界保护” (关键步骤) ---
+    final_chars = list(original_sentence)
+    # 倒序插入，防止索引错乱
+    raw_insert_positions = sorted(list(set(raw_insert_positions)), reverse=True)
+    
+    for pos in raw_insert_positions:
+        current_pos = pos
+        
+        # === 核心修复逻辑 ===
+        # 检查当前插入点左右是否都是“单词字符”，且都不是 CJK。
+        # 如果是，说明切到了英文单词内部 (如 range|s)，必须强制向后滑。
+        while (current_pos > 0 and current_pos < len(final_chars)):
+            prev_char = final_chars[current_pos-1]
+            curr_char = final_chars[current_pos]
+            
+            is_prev_word = re.match(r'\w', prev_char) is not None
+            is_curr_word = re.match(r'\w', curr_char) is not None
+            
+            # 1. 如果遇到非单词字符（空格、标点），说明单词结束了，停止滑动
+            if not (is_prev_word and is_curr_word):
+                break
+            
+            # 2. 如果遇到了中文/日文/韩文，说明这是正常的紧凑语言，停止滑动
+            if is_cjk(prev_char) or is_cjk(curr_char):
+                break
+            
+            # 3. 既是单词字符，又不是CJK -> 说明切断了英文/拉丁文单词 -> 向后移！
+            current_pos += 1
+            
+        # === 标点跳过逻辑 ===
+        # 不要插在标点前面，比如 "word, [br]" 而不是 "word [br] ,"
+        while current_pos < len(final_chars) and final_chars[current_pos] in ",.!?;:，。！？；：":
+            current_pos += 1
+            
+        final_chars.insert(current_pos, " [br] ")
+
+    result = "".join(final_chars)
+    # 清理可能产生的多余空格
+    result = re.sub(r'\s*\[br\]\s*', ' [br] ', result)
+    return result.strip()
 
 def split_sentence(sentence, num_parts=2, word_limit=20, index=-1):
     """Split a single sentence into parts using LLM."""
@@ -253,7 +321,6 @@ def split_sentence(sentence, num_parts=2, word_limit=20, index=-1):
         if split_key not in response_data:
             return {"status": "error", "message": f"Missing required key: `{split_key}`"}
         if "[br]" not in response_data[split_key]:
-            # 允许 LLM 决定不切分
             return {"status": "success", "message": "Split not required by LLM."}
         return {"status": "success", "message": "Split completed"}
 
@@ -267,6 +334,11 @@ def split_sentence(sentence, num_parts=2, word_limit=20, index=-1):
     choice = response_data.get("choice", "1")
     best_split = response_data.get(f"split{choice}", sentence)
 
+    if '[br]' in best_split:
+        mapped_split = map_br_to_original_sentence(sentence, best_split)
+        if best_split.count('[br]') == mapped_split.count('[br]'):
+            best_split = mapped_split
+
     result = best_split.replace('[br]', '\n')
 
     if index != -1 and '\n' in result:
@@ -276,32 +348,23 @@ def split_sentence(sentence, num_parts=2, word_limit=20, index=-1):
 
 @check_file_exists(_3_2_SPLIT_BY_MEANING)
 def llm_sentence_split():
-    """
-    Main function for LLM-based sentence segmentation.
-    (此函数已修改，移除了 `final_validation`)
-    """
+    """Main function for LLM-based sentence segmentation."""
     console.print("[blue]🔍 Starting LLM sentence segmentation (difflib-aligned)[/blue]")
-
     console.print(f"[cyan]📖 Reading input from: {_2_CLEANED_CHUNKS}[/cyan]")
+    
     chunks = pd.read_excel(_2_CLEANED_CHUNKS)
     chunks.text = chunks.text.apply(lambda x: str(x).strip('"').strip())
-
-    # Join all chunks into continuous text
     words_text = ' '.join(chunks.text.to_list())
     original_total_words_list = words_text.split()
+    
     console.print(f"[green]✅ Loaded {len(chunks)} chunks, {len(original_total_words_list)} words total[/green]")
 
     max_length = load_key("max_split_length")
     max_workers = load_key("max_workers")
-    console.print(f"[cyan]🔧 Configuration: max_length={max_length}, max_workers={max_workers}[/cyan]")
-
-    # Process text in batches
+    
+    # Prepare batches
     words_list = original_total_words_list
     batch_size = 500
-    estimated_batches = (len(words_list) + batch_size - 1) // batch_size
-    console.print(f"[cyan]📝 Processing estimated {estimated_batches} batches with {max_workers} workers[/cyan]")
-
-    # 构建所有batch的列表
     batches = []
     batch_count = 0
     batch_idx = 0
@@ -310,8 +373,8 @@ def llm_sentence_split():
         batch_count += 1
         batch_end = min(batch_idx + batch_size, len(words_list))
         end_pos = batch_end
-
-        # (保持寻找句号的逻辑)
+        
+        # Adjust batch end to nearest sentence terminator
         for i in range(batch_end, min(batch_end + 50, len(words_list))):
             if '.' in words_list[i] or '。' in words_list[i]:
                 end_pos = i + 1
@@ -319,57 +382,42 @@ def llm_sentence_split():
 
         batch_words = words_list[batch_idx:end_pos]
         batch_text = ' '.join(batch_words)
-
         batches.append((batch_count, batch_words, batch_text, max_length))
         batch_idx = end_pos
 
     console.print(f"[cyan]🚀 Submitting {len(batches)} batches to thread pool[/cyan]")
 
-    # 使用线程池并行处理
-    all_sentences = [None] * len(batches)  # 预分配列表，按批次编号存储
+    all_sentences = [None] * len(batches)
     completed_batches = 0
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # 提交所有任务
         future_to_batch = {
             executor.submit(_process_batch_threaded, batch_info): batch_info[0]
             for batch_info in batches
         }
 
-        # 收集结果（失败则中断）
         for future in as_completed(future_to_batch):
             batch_count_result, sentences = future.result()
 
             if sentences:
-                all_sentences[batch_count_result - 1] = sentences  # 按batch编号存储
+                all_sentences[batch_count_result - 1] = sentences
                 completed_batches += 1
-
                 if completed_batches % 10 == 0 or completed_batches == len(batches):
                     console.print(f"[green]✅ Completed {completed_batches}/{len(batches)} batches[/green]")
             else:
-                # 失败处理：取消所有其他任务并中断
-                console.print(f"[red]❌ Batch {batch_count_result} failed - cancelling remaining tasks[/red]")
-
-                # 取消所有未完成的future
+                console.print(f"[red]❌ Batch {batch_count_result} failed - aborting[/red]")
                 for f in future_to_batch:
-                    if not f.done():
-                        f.cancel()
+                    if not f.done(): f.cancel()
+                raise RuntimeError(f"Batch {batch_count_result} processing failed")
 
-                # 抛出异常中断
-                raise RuntimeError(f"Batch {batch_count_result} processing failed - aborting")
-
-    # 按顺序合并所有批次的结果
     final_sentences = []
     for sentences in all_sentences:
         if sentences:
             final_sentences.extend(sentences)
 
-    # ** 已移除 **: `final_validation`
-    # difflib 方法保证了批次内的 100% 覆盖率，不再需要事后验证。
-    # 如果代码运行到这里，说明所有批次都成功了。
     console.print(f"[green]✅ All {len(batches)} batches processed successfully.[/green]")
-
     console.print(f"[cyan]💾 Saving results to: {_3_2_SPLIT_BY_MEANING}[/cyan]")
+    
     with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
         for sentence in final_sentences:
             f.write(sentence + '\n')
