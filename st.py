@@ -27,7 +27,6 @@ def text_processing_section():
             3. {t("Summarization and multi-step translation")}<br>
             4. {t("Cutting and aligning long subtitles")}<br>
             5. {t("Generating timeline and subtitles")}<br>
-            6. {t("Merging subtitles into the video")}
         """, unsafe_allow_html=True)
 
         if not os.path.exists(SUB_VIDEO):
@@ -35,8 +34,7 @@ def text_processing_section():
                 process_text()
                 st.rerun()
         else:
-            if load_key("burn_subtitles"):
-                st.video(SUB_VIDEO)
+            # Subtitle merging functionality has been removed
             download_subtitle_zip_button(text=t("Download All Srt Files"))
 
             if st.button(t("Archive to 'history'"), key="cleanup_in_text_processing"):
@@ -57,8 +55,6 @@ def process_text():
     with st.spinner(t("Processing and aligning subtitles...")):
         _5_split_sub.split_for_sub_main()
         _6_gen_sub.align_timestamp_main()
-    with st.spinner(t("Merging subtitles to video...")):
-        _7_sub_into_vid.merge_subtitles_to_video()
 
     st.success(t("Subtitle processing complete! 🎉"))
     st.balloons()
