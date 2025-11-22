@@ -215,6 +215,9 @@ config.local.yaml
 .env.*.local
 cookies.txt
 
+# ==================== Claude Code ====================
+.claude/
+
 # ==================== Project Specific ====================
 /output/*/log/
 /output/*/temp/
