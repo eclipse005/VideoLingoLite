@@ -7,8 +7,7 @@ try:
         _4_1_summarize,
         _4_2_translate,
         _5_split_sub,
-        _6_gen_sub,
-        _7_sub_into_vid
+        _6_gen_sub
     )
     from .utils import *
     from .utils.onekeycleanup import cleanup
@@ -26,6 +25,5 @@ __all__ = [
     '_4_1_summarize',
     '_4_2_translate',
     '_5_split_sub',
-    '_6_gen_sub',
-    '_7_sub_into_vid'
+    '_6_gen_sub'
 ]
