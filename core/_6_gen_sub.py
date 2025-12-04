@@ -267,28 +267,28 @@ def merge_empty_subtitle():
                     
                     # 计算时间间隔（毫秒转秒）
                     time_gap = (current_trans.start.ordinal - prev_trans.end.ordinal) / 1000.0
-                    
+
                     # 情况1: 空字幕
-                    if not current_text and time_gap < 0.3:
+                    if not current_text and time_gap < 0.5:
                         # 更新中文字幕前一个字幕的结束时间
                         prev_trans.end = current_trans.end
-                        
+
                         # 更新英文字幕前一个字幕的结束时间和内容
                         prev_src = src_subs[i-1]
                         current_src = src_subs[i]
                         prev_src.end = current_src.end
-                        
+
                         # 合并英文字幕内容（用空格连接）
                         prev_src.text = prev_src.text.strip() + " " + current_src.text.strip()
-                        
+
                         to_remove.append(i)
                         console.print(f"[dim]合并空字幕: 第{i+1}行 -> 第{i}行[/dim]")
-                    
+
                     # 情况2: 译文完全重复
-                    elif current_text == prev_text and time_gap < 0.3:
+                    elif current_text == prev_text and time_gap < 0.5:
                         # 更新中文字幕前一个字幕的结束时间
                         prev_trans.end = current_trans.end
-                        
+
                         # 原文不需要动（包括时间戳和内容）
                         to_remove.append(i)
                         console.print(f"[dim]合并重复字幕: 第{i+1}行 -> 第{i}行[/dim]")
