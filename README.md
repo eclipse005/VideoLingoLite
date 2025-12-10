@@ -46,24 +46,26 @@ VideoLingoLite 专注于音视频内容的自动转写与翻译：
 
 1. **环境准备**
 
-   建议使用Python 3.10 版本。
+   1. 安装 uv 包管理器（如果尚未安装）：
+      ```bash
+      # Windows 安装方式
+      # 从 GitHub releases 下载: https://github.com/astral-sh/uv/releases
+      # 或使用 pip 安装
+      pip install uv
 
-   首先安装 uv 包管理器（如果尚未安装）：
-   ```bash
-   # Windows 安装方式
-   # 从 GitHub releases 下载: https://github.com/astral-sh/uv/releases
-   # 或使用 pip 安装
-   pip install uv
+      # 更多安装方式请参考官方文档: https://docs.astral.sh/uv/
+      ```
 
-   # 更多安装方式请参考官方文档: https://docs.astral.sh/uv/
-   ```
+   2. 下载项目到本地：
+      ```bash
+      git clone https://github.com/eclipse005/VideoLingoLite.git
+      cd VideoLingoLite
+      ```
 
-   安装依赖：
-   ```bash
-   # 推荐使用 uv 创建虚拟环境并安装依赖
-   uv venv
-   uv pip sync pyproject.toml
-   ```
+   3. 项目目录运行 uv sync 安装依赖：
+      ```bash
+      uv sync
+      ```
 
 2. **运行项目**
 
