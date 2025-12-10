@@ -1,6 +1,6 @@
 import streamlit as st
 import os, sys
-from core.st_utils.imports_and_utils import *
+from core.st_utils.imports_and_utils import download_subtitle_zip_button, give_star_button, button_style
 from core.st_utils.upload_media_section import upload_media_section
 from core import *
 from core.utils.ask_gpt import get_token_usage
@@ -16,47 +16,47 @@ SUB_VIDEO = "output/src.srt"
 
 @st.fragment
 def text_processing_section():
-    st.header(t("b. Translate and Generate Subtitles"))
+    st.header("b. 翻译并生成字幕")
     with st.container(border=True):
         st.markdown(f"""
         <p style='font-size: 20px;'>
-        {t("This stage includes the following steps:")}
+        {"此阶段包含以下步骤:"}
         <p style='font-size: 20px;'>
-            1. {t("ASR transcription")}<br>
-            2. {t("Sentence segmentation using LLM")}<br>
-            3. {t("Summarization and multi-step translation")}<br>
-            4. {t("Cutting and aligning long subtitles")}<br>
-            5. {t("Generating timeline and subtitles")}<br>
+            1. {"语音识别转录"}<br>
+            2. {"使用LLM进行句子分段"}<br>
+            3. {"摘要和多步翻译"}<br>
+            4. {"切割和对齐长字幕"}<br>
+            5. {"生成时间轴和字幕"}<br>
         """, unsafe_allow_html=True)
 
         if not os.path.exists(SUB_VIDEO):
-            if st.button(t("Start Processing Subtitles"), key="text_processing_button"):
+            if st.button("开始处理字幕", key="text_processing_button"):
                 process_text()
                 st.rerun()
         else:
             # Subtitle merging functionality has been removed
-            download_subtitle_zip_button(text=t("Download All Srt Files"))
+            download_subtitle_zip_button(text="下载所有Srt文件")
 
-            if st.button(t("Archive to 'history'"), key="cleanup_in_text_processing"):
+            if st.button("归档到'history'", key="cleanup_in_text_processing"):
                 cleanup()
                 st.rerun()
             return True
 
 def process_text():
-    with st.spinner(t("Using ASR for transcription...")):
+    with st.spinner("正在使用语音识别进行转录..."):
         _2_asr.transcribe()
-    with st.spinner(t("Segmenting sentences with LLM...")):
+    with st.spinner("正在使用LLM进行句子分段..."):
         _3_llm_sentence_split.llm_sentence_split()
-    with st.spinner(t("Summarizing and translating...")):
+    with st.spinner("正在总结和翻译..."):
         _4_1_summarize.get_summary()
         if load_key("pause_before_translate"):
-            input(t("⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue..."))
+            input("⚠️ 翻译前暂停。请前往`output/log/terminology.json`编辑术语。然后按回车键继续...")
         _4_2_translate.translate_all()
-    with st.spinner(t("Processing and aligning subtitles...")):
+    with st.spinner("正在处理和对齐字幕..."):
         _5_split_sub.split_for_sub_main()
         _6_gen_sub.align_timestamp_main()
 
-    st.success(t("Subtitle processing complete! 🎉"))
+    st.success("字幕处理完成! 🎉")
     st.balloons()
 
     # Print token usage statistics to console
@@ -72,7 +72,7 @@ def main():
     # with logo_col:
     #     st.image("docs/logo.png", use_column_width=True)
     st.markdown(button_style, unsafe_allow_html=True)
-    welcome_text = t("Hello, welcome to VideoLingo. If you encounter any issues, feel free to get instant answers with our Free QA Agent <a href=\"https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh\" target=\"_blank\">here</a>! You can also try out our SaaS website at <a href=\"https://videolingo.io\" target=\"_blank\">videolingo.io</a> for free!")
+    welcome_text = "欢迎来到VideoLingo。如果遇到任何问题，随时可以通过我们的免费问答助手 <a href=\"https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh\" target=\"_blank\">here</a> 获取即时解答！还可以免费试用我们的SaaS网站 <a href=\"https://videolingo.io\" target=\"_blank\">videolingo.io</a>！"
     st.markdown(f"<p style='font-size: 20px; color: #808080;'>{welcome_text}</p>", unsafe_allow_html=True)
     # add settings
     with st.sidebar:

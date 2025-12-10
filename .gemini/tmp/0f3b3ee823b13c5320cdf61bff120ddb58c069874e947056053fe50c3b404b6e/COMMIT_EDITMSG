@@ -1,0 +1,4 @@
+feat: Update Chinese translation for ASR Runtime
+
+Updates the Chinese translation for "ASR Runtime" from "语音识别运行环境 (仅Gemini)"
+to "语音识别引擎" in translations/zh-CN.json.

@@ -7,17 +7,17 @@ from time import sleep
 import streamlit as st
 from core._1_ytdlp import find_video_files
 from core.utils import *
-from translations.translations import translate as t
+
 
 OUTPUT_DIR = "output"
 
 def upload_media_section():
-    st.header(t("a. Upload Video"))
+    st.header("a. 上传视频")
     with st.container(border=True):
         try:
             video_file = find_video_files()
             st.video(video_file)
-            if st.button(t("Delete and Reselect"), key="delete_video_button"):
+            if st.button("删除并重新选择", key="delete_video_button"):
                 os.remove(video_file)
                 if os.path.exists(OUTPUT_DIR):
                     shutil.rmtree(OUTPUT_DIR)
@@ -28,7 +28,7 @@ def upload_media_section():
         except:
             # 只显示文件上传功能，移除YouTube下载功能
             uploaded_file = st.file_uploader(
-                t("Upload video file"),
+                "上传视频文件",
                 type=load_key("allowed_video_formats") + load_key("allowed_audio_formats")
             )
 
