@@ -44,6 +44,7 @@ def llm_config_section():
         with c1:
             config_input(t("MODEL"), f"{current_api_prefix}.model", help=t("click to check API validity")+ " 👉")
         with c2:
+            st.write("") # Add a spacer
             if st.button("📡", key=f"api_{current_api_prefix}"):
                 st.toast(t("API Key is valid") if check_api(current_api_prefix) else t("API Key is invalid"),
                         icon="✅" if check_api(current_api_prefix) else "❌")
@@ -71,7 +72,7 @@ def subtitle_settings_section():
             if langs[lang] != load_key("asr.language"):
                 update_key("asr.language", langs[lang])
 
-        runtime = st.selectbox(t("ASR Runtime"), options=["gemini"], index=["gemini"].index(load_key("asr.runtime")), help=t("Select ASR service for transcription"))
+        runtime = st.selectbox(t("ASR Runtime"), options=["gemini", "whisperX"], index=["gemini", "whisperX"].index(load_key("asr.runtime")), help=t("Select ASR service for transcription"))
         if runtime != load_key("asr.runtime"):
             update_key("asr.runtime", runtime)
 

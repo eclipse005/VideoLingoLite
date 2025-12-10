@@ -14,22 +14,30 @@ def transcribe():
 
     # 3. Extract audio
     segments = split_audio(_RAW_AUDIO_FILE)
-    
-    # 4. Transcribe audio by clips
-    all_results = []
-    from core.asr_backend.gemini import transcribe_audio_gemini as ts
-    rprint("[cyan]🎤 Transcribing audio with Gemini API...[/cyan]")
 
+    # 4. Select ASR backend based on config
+    asr_runtime = load_key("asr.runtime")
+    if asr_runtime == "whisperX":
+        from core.asr_backend.whisperX_local import transcribe_audio as ts
+        rprint("[cyan]🎤 Transcribing audio with WhisperX...[/cyan]")
+    elif asr_runtime == "gemini":
+        from core.asr_backend.gemini import transcribe_audio_gemini as ts
+        rprint("[cyan]🎤 Transcribing audio with Gemini API...[/cyan]")
+    else:
+        raise ValueError(f"Unsupported ASR runtime: {asr_runtime}")
+
+    # 5. Transcribe audio by clips
+    all_results = []
     for start, end in segments:
         result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)
         all_results.append(result)
-    
-    # 5. Combine results
+
+    # 6. Combine results
     combined_result = {'segments': []}
     for result in all_results:
         combined_result['segments'].extend(result['segments'])
-    
-    # 6. Process df
+
+    # 7. Process df
     df = process_transcription(combined_result)
     save_results(df)
         

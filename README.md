@@ -2,13 +2,13 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-**VideoLingoLite** 是“VideoLingo”的轻量化版本，仅保留了云端ASR（自动语音识别）和翻译功能，为需要音视频转写、自动翻译的用户提供了简洁高效的解决方案。
+**VideoLingoLite** 是“VideoLingo”的轻量化版本，集成了云端与本地（WhisperX）ASR（自动语音识别）和翻译功能，为需要音视频转写、自动翻译的用户提供了灵活高效的解决方案。
 
 ## 项目简介
 
 VideoLingoLite 专注于音视频内容的自动转写与翻译：
 - 支持音频、视频文件的批量自动转写为文本。
-- 内置云端ASR（自动语音识别）与翻译能力。
+- 支持云端及本地（WhisperX）ASR（自动语音识别）与翻译能力。
 - 提供术语自定义表（`custom_terms.xlsx`）以优化行业/领域专用词识别和翻译结果。
 - 精简化设计，部署和使用简单。
 
@@ -16,7 +16,7 @@ VideoLingoLite 专注于音视频内容的自动转写与翻译：
 
 ## 主要功能
 
-- **云端ASR支持**：自动将音/视频中的语音转写为文本。
+- **混合ASR支持**：支持云端及高性能的本地（WhisperX）语音转写。
 - **自动翻译**：支持多语言翻译，提升音视频内容可达性。
 - **批量处理**：可通过 `batch` 目录批量处理文件。
 - **可扩展性**：自定义术语、灵活配置。
@@ -36,10 +36,9 @@ VideoLingoLite 专注于音视频内容的自动转写与翻译：
 ├── config.yaml             # 主要配置文件
 ├── core/                   # 核心功能模块
 ├── custom_terms.xlsx       # 自定义术语表
-├── install.py              # 安装脚本
-├── requirements.txt        # Python依赖列表
-├── setup.py                # 安装元数据
+├── pyproject.toml          # 项目配置与依赖管理 (uv)
 ├── st.py                   # 主要入口脚本
+├── uv.lock                 # uv锁文件
 └── translations/           # 翻译相关文件夹
 ```
 
@@ -47,11 +46,13 @@ VideoLingoLite 专注于音视频内容的自动转写与翻译：
 
 1. **环境准备**
 
-   建议使用Python 3.8及以上版本。
+   建议使用Python 3.10 版本。
 
    安装依赖：
    ```bash
-   pip install -r requirements.txt
+   # 推荐使用 uv 创建虚拟环境并安装依赖
+   uv venv
+   uv pip sync pyproject.toml
    ```
 
 2. **运行项目**
