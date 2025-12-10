@@ -84,12 +84,17 @@ def subtitle_settings_section():
                 update_key("asr.use_hotwords", use_hotwords)
 
             if use_hotwords:
-                hotwords = st.text_input(
+                # 定义on_change回调函数，只在用户确认输入后更新配置
+                def on_hotwords_change():
+                    update_key("asr.hotwords", st.session_state.asr_hotwords_input)
+                
+                st.text_input(
                     "热词", 
-                    value=load_key("asr.hotwords")
+                    value=load_key("asr.hotwords"),
+                    key="asr_hotwords_input",
+                    on_change=on_hotwords_change,
+                    help="输入需要重点识别的词汇，用逗号分隔"
                 )
-                if hotwords != load_key("asr.hotwords"):
-                    update_key("asr.hotwords", hotwords)
 
         with c2:
             target_language = st.text_input("目标语言", value=load_key("target_language"), help="用自然语言输入任何语言,只要LLM能理解即可")
