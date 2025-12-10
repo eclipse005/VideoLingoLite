@@ -1,6 +1,6 @@
 import streamlit as st
 import os, sys
-from core.st_utils.imports_and_utils import download_subtitle_zip_button, give_star_button, button_style
+from core.st_utils.imports_and_utils import download_subtitle_zip_button, give_star_button, button_style, page_setting
 from core.st_utils.upload_media_section import upload_media_section
 from core import *
 from core.utils.ask_gpt import get_token_usage
