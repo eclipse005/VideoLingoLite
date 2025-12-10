@@ -75,13 +75,22 @@ def subtitle_settings_section():
             update_key("asr.runtime", runtime)
 
         if runtime == "whisperX":
+            # 初始化session state中的热词开关状态
+            if "asr_use_hotwords" not in st.session_state:
+                st.session_state.asr_use_hotwords = load_key("asr.use_hotwords")
+            
+            # 定义on_change回调函数
+            def on_use_hotwords_change():
+                # 更新session state和配置文件
+                update_key("asr.use_hotwords", st.session_state.asr_use_hotwords)
+            
             use_hotwords = st.toggle(
                 "启用热词", 
-                value=load_key("asr.use_hotwords"), 
+                value=st.session_state.asr_use_hotwords, 
+                key="asr_use_hotwords",
+                on_change=on_use_hotwords_change,
                 help="提供逗号分隔的单词列表以提高识别准确性。"
             )
-            if use_hotwords != load_key("asr.use_hotwords"):
-                update_key("asr.use_hotwords", use_hotwords)
 
             if use_hotwords:
                 # 定义on_change回调函数，只在用户确认输入后更新配置
