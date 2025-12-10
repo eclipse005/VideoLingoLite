@@ -113,5 +113,8 @@
     "Split": "Split",
     "Summary": "Summary",
     "Translate": "Translation",
-    "Reflection": "Reflection"
+    "Reflection": "Reflection",
+    "Enable Hotwords": "Enable Hotwords",
+    "Hotwords": "Hotwords",
+    "Provide a comma-separated list of words to improve recognition accuracy.": "Provide a comma-separated list of words to improve recognition accuracy."
 }

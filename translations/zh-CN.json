@@ -118,6 +118,8 @@
     "Split": "分割",
     "Summary": "总结",
     "Translate": "直译",
-    "Reflection": "反思"
+    "Reflection": "反思",
+    "Enable Hotwords": "启用热词",
+    "Hotwords": "热词",
+    "Provide a comma-separated list of words to improve recognition accuracy.": "提供逗号分隔的单词列表以提高识别准确性。"
 }
-
