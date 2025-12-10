@@ -218,6 +218,9 @@ cookies.txt
 # ==================== Claude Code ====================
 .claude/
 
+# ==================== Gemini Code ====================
+.gemini/
+
 # ==================== Project Specific ====================
 /output/*/log/
 /output/*/temp/
