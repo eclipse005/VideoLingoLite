@@ -76,6 +76,23 @@ def subtitle_settings_section():
         if runtime != load_key("asr.runtime"):
             update_key("asr.runtime", runtime)
 
+        if runtime == "whisperX":
+            use_hotwords = st.toggle(
+                t("Enable Hotwords"), 
+                value=load_key("asr.use_hotwords"), 
+                help=t("Provide a comma-separated list of words to improve recognition accuracy.")
+            )
+            if use_hotwords != load_key("asr.use_hotwords"):
+                update_key("asr.use_hotwords", use_hotwords)
+
+            if use_hotwords:
+                hotwords = st.text_input(
+                    t("Hotwords"), 
+                    value=load_key("asr.hotwords")
+                )
+                if hotwords != load_key("asr.hotwords"):
+                    update_key("asr.hotwords", hotwords)
+
         with c2:
             target_language = st.text_input(t("Target Lang"), value=load_key("target_language"), help=t("Input any language in natural language, as long as llm can understand"))
             if target_language != load_key("target_language"):
