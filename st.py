@@ -72,8 +72,6 @@ def main():
     # with logo_col:
     #     st.image("docs/logo.png", use_column_width=True)
     st.markdown(button_style, unsafe_allow_html=True)
-    welcome_text = "欢迎来到VideoLingo。如果遇到任何问题，随时可以通过我们的免费问答助手 <a href=\"https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh\" target=\"_blank\">here</a> 获取即时解答！还可以免费试用我们的SaaS网站 <a href=\"https://videolingo.io\" target=\"_blank\">videolingo.io</a>！"
-    st.markdown(f"<p style='font-size: 20px; color: #808080;'>{welcome_text}</p>", unsafe_allow_html=True)
     # add settings
     with st.sidebar:
         page_setting()
