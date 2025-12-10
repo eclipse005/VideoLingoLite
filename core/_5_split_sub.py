@@ -45,8 +45,7 @@ def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], Lis
     tr_parts = [item[f'target_part_{i+1}'].strip() for i, item in enumerate(align_data)]
     
     asr_language = load_key("asr.language")
-    language = load_key("asr.detected_language") if asr_language == 'auto' else asr_language
-    joiner = get_joiner(language)
+    joiner = get_joiner(asr_language)
     tr_remerged = joiner.join(tr_parts)
     
     table = Table(title="🔗 Aligned parts")

@@ -4,7 +4,7 @@ from core.utils import *
 ## ================================================================
 # @ step4_splitbymeaning.py
 def get_split_prompt(sentence, num_parts = 2, word_limit = 20):
-    language = load_key("asr.detected_language")
+    language = load_key("asr.language")
     split_prompt = f"""
 ## Role
 You are a professional Netflix subtitle splitter in **{language}**.
@@ -47,7 +47,7 @@ Note: Start you answer with ```json and end with ```, do not add any other text.
 ## ================================================================
 # @ step4_1_summarize.py
 def get_summary_prompt(source_content, custom_terms_json=None):
-    src_lang = load_key("asr.detected_language")
+    src_lang = load_key("asr.language")
     tgt_lang = load_key("target_language")
     
     # add custom terms note
@@ -147,7 +147,7 @@ def get_prompt_faithfulness(lines, shared_prompt):
         json_dict[f"{i}"] = {"origin": line, "direct": f"direct {TARGET_LANGUAGE} translation {i}."}
     json_format = json.dumps(json_dict, indent=2, ensure_ascii=False)
 
-    src_language = load_key("asr.detected_language")
+    src_language = load_key("asr.language")
     prompt_faithfulness = f'''
 ## Role
 You are a professional Netflix subtitle translator, fluent in both {src_language} and {TARGET_LANGUAGE}, as well as their respective cultures. 
@@ -196,7 +196,7 @@ def get_prompt_expressiveness(faithfulness_result, lines, shared_prompt):
     }
     json_format = json.dumps(json_format, indent=2, ensure_ascii=False)
 
-    src_language = load_key("asr.detected_language")
+    src_language = load_key("asr.language")
     prompt_expressiveness = f'''
 ## Role
 You are a professional Netflix subtitle translator and language consultant.
@@ -247,7 +247,7 @@ Note: Start you answer with ```json and end with ```, do not add any other text.
 # @ step6_splitforsub.py
 def get_align_prompt(src_sub, tr_sub, src_part):
     targ_lang = load_key("target_language")
-    src_lang = load_key("asr.detected_language")
+    src_lang = load_key("asr.language")
     src_splits = src_part.split('\n')
     num_parts = len(src_splits)
     src_part = src_part.replace('\n', ' [br] ')
@@ -300,7 +300,7 @@ def get_sentence_segmentation_prompt(words_list, max_length=20):
     Generate a prompt for LLM-based sentence segmentation.
     This replaces the spaCy-based NLP approach with a unified LLM approach.
     """
-    src_lang = load_key("asr.detected_language")
+    src_lang = load_key("asr.language")
     words_text = ' '.join(words_list)
 
     prompt = f'''
