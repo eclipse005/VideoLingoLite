@@ -28,25 +28,48 @@ console = Console()
 
 def clean_word(word):
     """Standardized word cleaner (lowercase, no punctuation) for alignment."""
-    return re.sub(r'[^\w]', '', str(word).lower())
+    word = str(word).lower()
+    # Keep letters, numbers, and CJK characters (中文日文韩文)
+    cleaned = re.sub(r'[^a-z0-9\u4e00-\u9fff]', '', word)
+    return cleaned
 
 def get_llm_words_and_splits(segmented_sentences):
     """
     Parses the LLM's sentence list to get its clean words and split indices.
     Returns: (llm_clean_words, llm_split_indices)
+
+    Adaptive tokenization based on language type:
+    - Space-delimited languages (English): split by spaces
+    - CJK languages (Chinese, Japanese, Korean): smart tokenization
     """
+    # Get language setting for adaptive tokenization
+    asr_language = load_key("asr.language")
+    is_cjk = asr_language.lower() in ['zh', 'chinese', 'ja', 'japanese', 'ko', 'korean']
+
     llm_clean_words = []
     llm_split_indices = []
     current_word_count = 0
 
     for sentence in segmented_sentences:
-        words = str(sentence).split()
+        if is_cjk:
+            # For CJK languages: smart tokenization
+            # Keep English+number compound words intact, split Chinese by characters
+            # Pattern explanation:
+            # [a-zA-Z]+(?:[0-9]+\.?[0-9]*|[.-][0-9]+)*  matches English+digits (e.g., Python3.9, GPT-4, v2.0.1)
+            # [0-9]+(?:\.?[0-9]*)?  matches pure numbers (e.g., 2023, 99, 3.14)
+            # [^\s]  matches other characters (mainly Chinese single characters)
+            pattern = r'[a-zA-Z]+(?:[0-9]+\.?[0-9]*|[.-][0-9]+)*|[0-9]+(?:\.?[0-9]*)?|[^\s]'
+            words = re.findall(pattern, sentence.replace(' ', ''))
+        else:
+            # For space-delimited languages: split by spaces (original logic)
+            words = str(sentence).split()
+
         if not words:
             continue
-            
+
         clean_words_in_sentence = [clean_word(w) for w in words]
-        clean_words_in_sentence = [w for w in clean_words_in_sentence if w] 
-        
+        clean_words_in_sentence = [w for w in clean_words_in_sentence if w]
+
         current_word_count += len(clean_words_in_sentence)
         llm_clean_words.extend(clean_words_in_sentence)
         llm_split_indices.append(current_word_count)
