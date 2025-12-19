@@ -15,10 +15,15 @@ def upload_media_section():
     st.header("a. 上传视频")
     with st.container(border=True):
         try:
-            video_file = find_video_files()
-            st.video(video_file)
+            media_file = find_video_files()
+            # 根据文件扩展名决定显示方式
+            ext = os.path.splitext(media_file)[1][1:].lower()
+            if ext in load_key("allowed_audio_formats"):
+                st.audio(media_file)
+            else:
+                st.video(media_file)
             if st.button("删除并重新选择", key="delete_video_button"):
-                os.remove(video_file)
+                os.remove(media_file)
                 if os.path.exists(OUTPUT_DIR):
                     shutil.rmtree(OUTPUT_DIR)
                 sleep(1)
@@ -44,14 +49,19 @@ def upload_media_section():
                 with open(os.path.join(OUTPUT_DIR, clean_name), "wb") as f:
                     f.write(uploaded_file.getbuffer())
 
-                if ext.lower() in load_key("allowed_audio_formats"):
-                    convert_audio_to_video(os.path.join(OUTPUT_DIR, clean_name))
-                # 上传完成后重新运行以显示视频
+                # 音频文件直接处理，不再转换成MP4
+                # 后续的 convert_video_to_audio() 函数可以处理音频文件
+                # 上传完成后重新运行以显示文件
                 st.rerun()
             else:
                 return False
 
 def convert_audio_to_video(audio_file: str) -> str:
+    """
+    ⚠️ 此函数已不再使用
+    现在音频文件直接处理，无需转换为MP4
+    保留此函数以备将来需要生成带黑屏的视频
+    """
     output_video = os.path.join(OUTPUT_DIR, 'black_screen.mp4')
     if not os.path.exists(output_video):
         print(f"🎵➡️🎬 Converting audio to video with FFmpeg ......")
