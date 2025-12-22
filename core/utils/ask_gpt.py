@@ -132,13 +132,16 @@ def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
         resp = resp_content
 
     # check if the response format is valid
+    message = None
     if valid_def:
         valid_resp = valid_def(resp)
         if valid_resp['status'] != 'success':
             _save_cache(model, prompt, resp_content, resp_type, resp, log_title="error", message=valid_resp['message'])
             raise ValueError(f"❎ API response error: {valid_resp['message']}")
+        message = valid_resp['message']
 
-    _save_cache(model, prompt, resp_content, resp_type, resp, log_title=log_title)
+    # Save with message (could be None)
+    _save_cache(model, prompt, resp_content, resp_type, resp, log_title=log_title, message=message)
     return resp
 
 

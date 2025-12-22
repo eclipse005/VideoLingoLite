@@ -248,9 +248,9 @@ Note: Start you answer with ```json and end with ```, do not add any other text.
 def get_align_prompt(src_sub, tr_sub, src_part):
     targ_lang = load_key("target_language")
     src_lang = load_key("asr.language")
-    src_splits = src_part.split('\n')
+    src_splits = src_part.split('[br]')  # 直接按 [br] 拆分
     num_parts = len(src_splits)
-    src_part = src_part.replace('\n', ' [br] ')
+    # src_part 保持不变，因为已经是带 [br] 的格式
     align_parts_json = ','.join(
         f'''
         {{

@@ -63,6 +63,10 @@ subtitle:
   max_length: 75
   # *Translated subtitles are slightly larger than source subtitles, affecting the reference length for subtitle splitting
   target_multiplier: 1.2
+  # *Maximum pause duration between words in a batch (seconds)
+  max_pause_duration: 2
+  # *Enable pause duration check after LLM sentence reconstruction
+  enable_pause_check: true
 
 # *Summary length, set low to 2k if using local LLM
 summary_length: 8000
