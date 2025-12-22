@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import List, Tuple
 import concurrent.futures
+import math
 
 from core._3_llm_sentence_split import split_sentence
 from core.prompts import get_align_prompt
@@ -34,11 +35,40 @@ def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], Lis
     align_prompt = get_align_prompt(src_sub, tr_sub, src_part)
     
     def valid_align(response_data):
+        # 1. 检查response是字典
+        if not isinstance(response_data, dict):
+            return {"status": "error", "message": "Response must be a dictionary"}
+
+        # 2. 检查analysis字段存在
+        if 'analysis' not in response_data:
+            return {"status": "error", "message": "Missing required field: 'analysis'"}
+
+        # 3. 检查align字段存在
         if 'align' not in response_data:
-            return {"status": "error", "message": "Missing required key: `align`"}
+            return {"status": "error", "message": "Missing required field: 'align'"}
+
+        # 4. 检查align是列表
+        if not isinstance(response_data['align'], list):
+            return {"status": "error", "message": "Field 'align' must be a list"}
+
+        # 5. 检查align长度
         if len(response_data['align']) < 2:
-            return {"status": "error", "message": "Align does not contain more than 1 part as expected!"}
-        return {"status": "success", "message": "Align completed"}
+            return {"status": "error", "message": "Field 'align' must contain at least 2 items"}
+
+        # 6. 检查align数组内每个元素的字段结构
+        for i, item in enumerate(response_data['align']):
+            # 每个元素必须是字典
+            if not isinstance(item, dict):
+                return {"status": "error", "message": f"align[{i}] must be a dictionary"}
+
+            # 必须包含src_part_{i+1}和target_part_{i+1}字段
+            if f'src_part_{i+1}' not in item:
+                return {"status": "error", "message": f"Missing required field: 'src_part_{i+1}' in align[{i}]"}
+
+            if f'target_part_{i+1}' not in item:
+                return {"status": "error", "message": f"Missing required field: 'target_part_{i+1}' in align[{i}]"}
+
+        return {"status": "success", "message": "Align validation completed"}
     parsed = ask_gpt(align_prompt, resp_type='json', valid_def=valid_align, log_title='align_subs')
     align_data = parsed['align']
     src_parts = src_part.split('\n')
@@ -77,7 +107,22 @@ def split_align_subs(src_lines: List[str], tr_lines: List[str]):
     
     @except_handler("Error in split_align_subs")
     def process(i):
-        split_src = split_sentence(src_lines[i], num_parts=2).strip()
+        # Calculate the number of parts dynamically based on sentence length
+        # Support both English (word-based) and Chinese (character-based)
+        asr_language = load_key("asr.language")
+        is_cjk = asr_language.lower() in ['zh', 'chinese', 'ja', 'japanese', 'ko', 'korean']
+
+        if is_cjk:
+            # For CJK languages: use character count with weight
+            text_length = calc_len(src_lines[i])
+        else:
+            # For English and other space-delimited languages: use word count
+            text_length = len(src_lines[i].split())
+
+        max_split_length = load_key("max_split_length")
+        num_parts = max(2, math.ceil(text_length / max_split_length))
+
+        split_src = split_sentence(src_lines[i], num_parts=num_parts).strip()
         src_parts, tr_parts, tr_remerged = align_subs(src_lines[i], tr_lines[i], split_src)
         src_lines[i] = src_parts
         tr_lines[i] = tr_parts
