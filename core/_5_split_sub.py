@@ -71,8 +71,9 @@ def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], Lis
         return {"status": "success", "message": "Align validation completed"}
     parsed = ask_gpt(align_prompt, resp_type='json', valid_def=valid_align, log_title='align_subs')
     align_data = parsed['align']
-    src_parts = src_part.split('\n')
+    src_parts = src_part.split('[br]')
     tr_parts = [item[f'target_part_{i+1}'].strip() for i, item in enumerate(align_data)]
+
     
     asr_language = load_key("asr.language")
     joiner = get_joiner(asr_language)
@@ -123,7 +124,15 @@ def split_align_subs(src_lines: List[str], tr_lines: List[str]):
         num_parts = max(2, math.ceil(text_length / max_split_length))
 
         split_src = split_sentence(src_lines[i], num_parts=num_parts).strip()
-        src_parts, tr_parts, tr_remerged = align_subs(src_lines[i], tr_lines[i], split_src)
+
+        # 只有当 LLM 认为需要拆分时才调用 align_subs
+        if '[br]' in split_src:
+            src_parts, tr_parts, tr_remerged = align_subs(src_lines[i], tr_lines[i], split_src)
+        else:
+            # LLM 认为不需要拆分，直接使用原始句子
+            src_parts = [src_lines[i]]
+            tr_parts = [tr_lines[i]]
+            tr_remerged = tr_lines[i]
         src_lines[i] = src_parts
         tr_lines[i] = tr_parts
         remerged_tr_lines[i] = tr_remerged
