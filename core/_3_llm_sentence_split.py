@@ -125,7 +125,7 @@ def map_llm_splits_to_original(original_clean_words, llm_clean_words, llm_split_
 
     return original_split_indices
 
-def reconstruct_sentences(original_words, original_split_indices, batch_start_idx, chunks_df, max_pause, enable_pause_check):
+def reconstruct_sentences(original_words, original_split_indices):
     """Rebuilds sentences using the *original* word list and the *mapped* split indices."""
     final_sentences = []
     last_idx = 0
@@ -133,66 +133,9 @@ def reconstruct_sentences(original_words, original_split_indices, batch_start_id
         if idx > last_idx:
             sentence_words = original_words[last_idx:idx]
             sentence_text = ' '.join(sentence_words)
-
-            if enable_pause_check:
-                # 查找这个句子在原数据中的索引范围
-                sentence_start_idx = batch_start_idx + last_idx
-                sentence_end_idx = batch_start_idx + idx
-
-                # 检查句子内部是否有长停顿
-                split_sentence = split_sentence_by_pause(
-                    sentence_text,
-                    sentence_start_idx,
-                    sentence_end_idx,
-                    chunks_df,
-                    max_pause
-                )
-            else:
-                split_sentence = [sentence_text]
-
-            final_sentences.extend(split_sentence)
-
+            final_sentences.append(sentence_text)
         last_idx = idx
     return final_sentences
-
-def split_sentence_by_pause(sentence, start_idx, end_idx, chunks_df, max_pause):
-    """检查句子内部是否有超过阈值的停顿，如果有则拆分"""
-    words = sentence.split()
-    if len(words) <= 1:
-        return [sentence]
-
-    # 查找每个词在 chunks 中的实际位置
-    word_positions = []
-    for word in words:
-        # 在 chunks 中查找该词（需要处理引号）
-        word_clean = word.strip('"')
-        for i in range(start_idx, min(end_idx, len(chunks_df))):
-            if chunks_df.iloc[i]['text'].strip('"') == word_clean:
-                word_positions.append(i)
-                break
-
-    if len(word_positions) != len(words):
-        # 如果匹配失败，直接返回原句
-        return [sentence]
-
-    # 检查相邻词的停顿
-    for i in range(len(word_positions) - 1):
-        curr_idx = word_positions[i]
-        next_idx = word_positions[i + 1]
-
-        curr_end = chunks_df.iloc[curr_idx]['end']
-        next_start = chunks_df.iloc[next_idx]['start']
-        pause = next_start - curr_end
-
-        if pause > max_pause:
-            # 在这里拆分句子
-            first_part = ' '.join(words[:i+1])
-            second_part = ' '.join(words[i+1:])
-            console.print(f"[cyan]✂️ Split sentence due to {pause:.2f}s pause[/cyan]")
-            return [first_part, second_part]
-
-    # 没有长停顿，返回原句
-    return [sentence]
 
 # ================================================================
 # Processing Functions
@@ -207,16 +150,16 @@ def validate_segmentation_response(response_data):
     return {"status": "success", "message": "Validation completed"}
 
 def _process_batch_threaded(batch_info):
-    batch_count, batch_words, batch_text, max_length, batch_start_idx, chunks_df, enable_pause, max_pause = batch_info
+    batch_count, batch_words, batch_text, max_length, batch_start_idx = batch_info
     try:
-        sentences = process_sentence_chunk(batch_text, max_length, batch_start_idx, chunks_df, enable_pause, max_pause)
+        sentences = process_sentence_chunk(batch_text, max_length, batch_start_idx)
         console.print(f"[green]✅ Batch {batch_count} completed[/green]")
         return (batch_count, sentences)
     except Exception as e:
         console.print(f"[red]❌ Batch {batch_count} failed: {e}[/red]")
         return (batch_count, None)
 
-def process_sentence_chunk(words_text, max_length, batch_start_idx, chunks_df, enable_pause, max_pause):
+def process_sentence_chunk(words_text, max_length, batch_start_idx):
     """Process a chunk of words into sentences using LLM and difflib alignment."""
     original_batch_words = words_text.split()
     original_batch_clean_words = [clean_word(w) for w in original_batch_words]
@@ -247,14 +190,7 @@ def process_sentence_chunk(words_text, max_length, batch_start_idx, chunks_df, e
     )
 
     # Reconstruct sentences preserving original words
-    final_sentences = reconstruct_sentences(
-        original_batch_words,
-        original_split_indices,
-        batch_start_idx,
-        chunks_df,
-        max_pause,  # 传递停顿时长参数
-        enable_pause  # 传递开关参数
-    )
+    final_sentences = reconstruct_sentences(original_batch_words, original_split_indices)
 
     if not final_sentences:
         console.print("[yellow]警告: difflib 对齐未产生任何句子，将返回原始文本块[/yellow]")
@@ -445,9 +381,7 @@ def llm_sentence_split():
 
     max_length = load_key("max_split_length")
     max_workers = load_key("max_workers")
-    max_pause_duration = load_key("subtitle.max_pause_duration")
-    enable_pause_check = load_key("subtitle.enable_pause_check")
-    
+
     # Prepare batches
     words_list = original_total_words_list
     batch_size = 500
@@ -468,7 +402,7 @@ def llm_sentence_split():
 
         batch_words = words_list[batch_idx:end_pos]
         batch_text = ' '.join(batch_words)
-        batches.append((batch_count, batch_words, batch_text, max_length, batch_idx, chunks, enable_pause_check, max_pause_duration))
+        batches.append((batch_count, batch_words, batch_text, max_length, batch_idx))
         batch_idx = end_pos
 
     console.print(f"[cyan]🚀 Submitting {len(batches)} batches to thread pool[/cyan]")
