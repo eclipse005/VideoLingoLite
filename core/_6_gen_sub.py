@@ -62,112 +62,121 @@ def show_difference(str1, str2):
 def get_sentence_timestamps(df_words, df_sentences):
     """
     Get sentence timestamps using difflib-based fuzzy matching.
-    This function maps LLM-modified sentences back to the original word sequence to find time ranges.
+    Fixed: Uses index mapping to connect clean words back to original DataFrame indices.
     """
     time_stamp_list = []
 
-    # Prepare original clean word list (from df_words)
-    original_words = df_words['text'].tolist()
-    original_clean_words = [clean_word(w) for w in original_words]
-    original_clean_words = [w for w in original_clean_words if w]  # Remove empty strings
+    # 1. 预处理：建立 (清洗后的词 -> 原始DataFrame行号) 的映射
+    # 这样即使中间删除了符号，我们依然知道 "monthly" 原来是在第 502 行
+    original_clean_map = []
+    for idx, row in df_words.iterrows():
+        word = row['text']
+        cleaned = clean_word(word)
+        if cleaned:  # 只有清洗后非空的词才进入匹配列表
+            original_clean_map.append({
+                'text': cleaned,
+                'orig_idx': idx  # 记录它在 df_words 中的真实索引
+            })
+    
+    # 提取纯单词列表用于 difflib 匹配
+    original_clean_words_only = [item['text'] for item in original_clean_map]
 
-    # Track current position to avoid searching from the beginning each time
-    current_pos = 0
+    # 记录当前在 "过滤后列表" 中的位置，避免每次从头搜索
+    current_filtered_pos = 0
 
-    # Process each sentence
+    # 遍历每一句字幕
     for idx, sentence in df_sentences['Source'].items():
         sentence_words = str(sentence).split()
         sentence_clean_words = [clean_word(w) for w in sentence_words]
-        sentence_clean_words = [w for w in sentence_clean_words if w]  # Remove empty strings
+        sentence_clean_words = [w for w in sentence_clean_words if w]
 
+        # 如果句子为空（全是符号），为了保持时间连续性，使用上一句的结束时间
         if not sentence_clean_words:
-            # Empty sentence, skip
-            time_stamp_list.append((float(df_words['start'].iloc[-1]), float(df_words['end'].iloc[-1])))
+            if not time_stamp_list:
+                time_stamp_list.append((0.0, 0.0))
+            else:
+                last_end = time_stamp_list[-1][1]
+                time_stamp_list.append((last_end, last_end))
             continue
 
-        # Use difflib to find matching blocks between original and sentence
-        # Search only from the current position forward (intelligent starting position)
-        remaining_original = original_clean_words[current_pos:]
-        s = difflib.SequenceMatcher(None, remaining_original, sentence_clean_words, autojunk=False)
+        # 在剩余的清洗列表里进行模糊匹配
+        remaining_clean_words = original_clean_words_only[current_filtered_pos:]
+        
+        s = difflib.SequenceMatcher(None, remaining_clean_words, sentence_clean_words, autojunk=False)
         matching_blocks = s.get_matching_blocks()
 
-        # Find a match starting from the beginning of the sentence
-        match_start_idx = -1
+        match_start_rel_idx = -1
         match_length = 0
 
+        # 寻找匹配块：必须匹配句子的开头 (b_start == 0)
         for a_start, b_start, length in matching_blocks:
-            if b_start == 0:  # Block starts at the beginning of sentence
-                match_start_idx = a_start
+            if b_start == 0:  
+                match_start_rel_idx = a_start
                 match_length = length
                 break
 
-        # If no match found, fail immediately
-        if match_start_idx == -1:
+        if match_start_rel_idx == -1:
             print(f"\n⚠️ Warning: No close match found for sentence: {sentence}")
-            print(f"Expected: {''.join(sentence_clean_words)}")
-
-            # Show closest matches for debugging
-            close_matches = difflib.get_close_matches(
-                ''.join(sentence_clean_words),
-                [''.join(remaining_original[i:i+20]) for i in range(0, min(len(remaining_original), 100), 20)],
-                n=3,
-                cutoff=0.5
-            )
-            if close_matches:
-                print("Close matches found:")
-                for cm in close_matches:
-                    print(f"  - {cm}")
-
-            raise ValueError(f"❎ No match found for sentence: {sentence}")
-
-        # Map to original word indices
-        start_word_idx = current_pos + match_start_idx
-
-        # Find the end index
-        end_word_idx = start_word_idx + match_length - 1
-
-        # If we only matched part of the sentence, we need to find the rest
-        if match_length < len(sentence_clean_words):
-            # We need to find additional matching blocks to complete the sentence
-            found_words = match_length
-            temp_start = match_start_idx
-
-            # Look for subsequent matching blocks
-            for a_start, b_start, length in matching_blocks:
-                if a_start > temp_start:
-                    # Check if this block continues from where we left off
-                    if b_start == found_words:
-                        # This block matches the next part of the sentence
-                        additional_length = min(length, len(sentence_clean_words) - found_words)
-                        end_word_idx = current_pos + a_start + additional_length - 1
-                        found_words += additional_length
-
-                        if found_words >= len(sentence_clean_words):
-                            break
-
-                    temp_start = a_start
-
-        # Ensure we have valid indices
-        start_word_idx = max(0, min(start_word_idx, len(original_words) - 1))
-        end_word_idx = max(start_word_idx, min(end_word_idx, len(original_words) - 1))
-
-        # Get timestamps
-        start_time = float(df_words['start'].iloc[start_word_idx])
-        end_time = float(df_words['end'].iloc[end_word_idx])
-
-        # Verify timestamps are reasonable
-        if end_time <= start_time:
-            # Fallback: extend to next word
-            if end_word_idx < len(df_words) - 1:
-                end_time = float(df_words['end'].iloc[end_word_idx + 1])
+            # 兜底策略：沿用上一句时间
+            if time_stamp_list:
+                start_time = time_stamp_list[-1][1]
             else:
-                end_time = start_time + 1.0  # Default 1 second
+                start_time = 0.0
+            time_stamp_list.append((start_time, start_time + 1.0))
+            continue
+
+        # --- 核心修复逻辑 ---
+        
+        # 1. 计算匹配开始在 "过滤后列表" 中的绝对位置
+        absolute_start_filtered_idx = current_filtered_pos + match_start_rel_idx
+        
+        # 2. 计算匹配结束在 "过滤后列表" 中的绝对位置
+        # 初步结束位置
+        absolute_end_filtered_idx = absolute_start_filtered_idx + match_length - 1
+        
+        # 处理非连续匹配（difflib 可能把一句话切成几段匹配）
+        if match_length < len(sentence_clean_words):
+            found_words_count = match_length
+            
+            for a_start, b_start, length in matching_blocks:
+                if a_start <= match_start_rel_idx:
+                    continue # 跳过已经处理的第一块
+                
+                # 如果这一块接着上一块的句子内容
+                if b_start == found_words_count:
+                    additional_len = min(length, len(sentence_clean_words) - found_words_count)
+                    absolute_end_filtered_idx = current_filtered_pos + a_start + additional_len - 1
+                    found_words_count += additional_len
+                    
+                    if found_words_count >= len(sentence_clean_words):
+                        break
+
+        # 越界保护
+        max_idx = len(original_clean_map) - 1
+        absolute_start_filtered_idx = min(absolute_start_filtered_idx, max_idx)
+        absolute_end_filtered_idx = min(absolute_end_filtered_idx, max_idx)
+        # 确保结束不小于开始
+        absolute_end_filtered_idx = max(absolute_start_filtered_idx, absolute_end_filtered_idx)
+
+        # 3. 【关键】通过映射表，找回 df_words 中的真实索引
+        start_orig_idx = original_clean_map[absolute_start_filtered_idx]['orig_idx']
+        end_orig_idx = original_clean_map[absolute_end_filtered_idx]['orig_idx']
+
+        # 4. 从 df_words 获取真实时间
+        start_time = float(df_words.loc[start_orig_idx, 'start'])
+        end_time = float(df_words.loc[end_orig_idx, 'end'])
+
+        # 时间校验：如果结束时间小于开始时间，强制修正
+        if end_time <= start_time:
+             if end_orig_idx < len(df_words) - 1:
+                end_time = float(df_words.loc[end_orig_idx + 1, 'end'])
+             else:
+                end_time = start_time + 0.5
 
         time_stamp_list.append((start_time, end_time))
 
-        # Update current position to end of matched sentence
-        # (This ensures next sentence starts searching from here)
-        current_pos = end_word_idx + 1
+        # 更新指针：下一次搜索从当前句子结束词的下一个词开始
+        current_filtered_pos = absolute_end_filtered_idx + 1
 
     return time_stamp_list
 
