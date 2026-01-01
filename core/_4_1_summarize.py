@@ -23,6 +23,34 @@ def clean_text_for_comparison(text):
     text = re.sub(r'[^\w\s]', '', text)
     return text
 
+def expand_keywords(src):
+    """Expand term keywords, supporting both / and () splitting
+
+    Examples:
+        'FLIP/Fluid' -> ['FLIP', 'Fluid']
+        'FLIP (Fluid)' -> ['FLIP', 'Fluid']
+        'Fluid (FLIP)' -> ['Fluid', 'FLIP']
+        'FLIP' -> ['FLIP']
+    """
+    keywords = []
+    parts = src.split('/')
+
+    for part in parts:
+        part = part.strip()
+        match = re.match(r'^(.+?)\s*\(([^)]+)\)$', part)
+        if match:
+            outer = match.group(1).strip()
+            inner = match.group(2).strip()
+            if outer:
+                keywords.append(outer)
+            if inner:
+                keywords.append(inner)
+        else:
+            if part:
+                keywords.append(part)
+
+    return keywords
+
 def search_things_to_note_in_prompt(sentence):
     """Search for terms to note in the given sentence using cleaned text comparison"""
     with open(_4_1_TERMINOLOGY, 'r', encoding='utf-8') as file:
@@ -33,8 +61,8 @@ def search_things_to_note_in_prompt(sentence):
     
     things_to_note_list = []
     for term in things_to_note['terms']:
-        # Clean each keyword in the term's src
-        keywords = term['src'].split('/')
+        # Expand keywords from term src (supports / and () splitting)
+        keywords = expand_keywords(term['src'])
         for kw in keywords:
             cleaned_kw = clean_text_for_comparison(kw.strip())
             if cleaned_kw and cleaned_kw in cleaned_sentence:

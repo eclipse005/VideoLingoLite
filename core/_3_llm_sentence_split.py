@@ -381,10 +381,18 @@ def llm_sentence_split():
 
     max_length = load_key("max_split_length")
     max_workers = load_key("max_workers")
+    pause_threshold = load_key("pause_split_threshold")
+
+    # Build mapping: words_list position -> chunks row index
+    word_to_chunk_idx = []
+    for chunk_idx, text in enumerate(chunks.text):
+        words_in_cell = text.split()
+        for _ in words_in_cell:
+            word_to_chunk_idx.append(chunk_idx)
 
     # Prepare batches
     words_list = original_total_words_list
-    batch_size = 500
+    batch_size = 300
     batches = []
     batch_count = 0
     batch_idx = 0
@@ -394,18 +402,35 @@ def llm_sentence_split():
         batch_end = min(batch_idx + batch_size, len(words_list))
         end_pos = batch_end
 
-        # Adjust batch end to nearest sentence terminator
-        for i in range(batch_end, min(batch_end + 50, len(words_list))):
-            if '.' in words_list[i] or '。' in words_list[i]:
-                end_pos = i + 1
-                break
+        # Check for pause-based split (time gap > threshold)
+        if pause_threshold and pause_threshold > 0:
+            for i in range(batch_end - 1, max(batch_idx, batch_end - 50), -1):
+                chunk_i = word_to_chunk_idx[i]
+                chunk_next = word_to_chunk_idx[min(i + 1, len(word_to_chunk_idx) - 1)]
+                gap = float(chunks.iloc[chunk_next]['start']) - float(chunks.iloc[chunk_i]['end'])
+                if gap > pause_threshold:
+                    end_pos = i + 1
+                    console.print(f"[cyan]📍 Pause split at word {i} ({end_pos - batch_idx} words): {gap:.1f}s gap[/cyan]")
+                    break
+            else:
+                # No pause split found, use sentence terminator logic
+                for i in range(batch_end, min(batch_end + 50, len(words_list))):
+                    if '.' in words_list[i] or '。' in words_list[i]:
+                        end_pos = i + 1
+                        break
+        else:
+            # Original logic: adjust to sentence terminator
+            for i in range(batch_end, min(batch_end + 50, len(words_list))):
+                if '.' in words_list[i] or '。' in words_list[i]:
+                    end_pos = i + 1
+                    break
 
         batch_words = words_list[batch_idx:end_pos]
         batch_text = ' '.join(batch_words)
         batches.append((batch_count, batch_words, batch_text, max_length, batch_idx))
         batch_idx = end_pos
 
-    console.print(f"[cyan]🚀 Submitting {len(batches)} batches to thread pool[/cyan]")
+    console.print(f"[cyan]🚀 Submitting {len(batches)} batches to thread pool (pause_threshold={pause_threshold})[/cyan]")
 
     all_sentences = [None] * len(batches)
     completed_batches = 0
