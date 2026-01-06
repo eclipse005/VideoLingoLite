@@ -85,8 +85,7 @@ def subtitle_settings_section():
                 update_key("asr.use_hotwords", st.session_state.asr_use_hotwords)
             
             use_hotwords = st.toggle(
-                "启用热词", 
-                value=st.session_state.asr_use_hotwords, 
+                "启用热词",
                 key="asr_use_hotwords",
                 on_change=on_use_hotwords_change,
                 help="提供逗号分隔的单词列表以提高识别准确性。"
