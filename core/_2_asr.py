@@ -37,9 +37,20 @@ def transcribe():
     for result in all_results:
         combined_result['segments'].extend(result['segments'])
 
-    # 7. Process df
+    # 7. Process df (always generate cleaned_chunks.xlsx for word-level data)
     df = process_transcription(combined_result)
     save_results(df)
+
+    # 8. For WhisperX: also generate split_by_meaning.txt directly from segments
+    if asr_runtime == "whisperX":
+        from core.utils.models import _3_2_SPLIT_BY_MEANING
+        rprint(f"[cyan]📝 Writing WhisperX segments to: {_3_2_SPLIT_BY_MEANING}[/cyan]")
+        with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
+            for segment in combined_result['segments']:
+                text = segment.get('text', '').strip()
+                if text:
+                    f.write(text + '\n')
+        rprint(f"[green]✅ Generated split_by_meaning.txt from WhisperX segments (skipping LLM step)[/green]")
         
 if __name__ == "__main__":
     transcribe()
