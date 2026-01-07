@@ -18,8 +18,7 @@ dependencies = [
     "torchaudio",
     "librosa==0.11.0",
     "pydub==0.25.1",
-    "whisperx==3.7.4",
-    # 数据处理 - 必须降级以适配 WhisperX (<2.3.0)
+    # 数据处理 - 依赖版本锁定
     "pandas==2.2.3",
     # AI & API
     "openai==2.9.0",
@@ -32,6 +31,9 @@ dependencies = [
     "json-repair==0.54.2",
     "autocorrect-py==2.14.0",
     "pysrt>=1.1.2",
+    "nemo-toolkit[asr]>=2.2.1",
+    "pyarrow>=22.0.0",
+    "numpy<2.0",
 ]
 
 [project.optional-dependencies]

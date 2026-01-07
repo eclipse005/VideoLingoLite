@@ -209,7 +209,17 @@ def align_timestamp(df_text, df_translate, subtitle_output_configs: list, output
 
     # Output subtitles 📜
     def generate_subtitle_string(df, columns):
-        return ''.join([f"{i+1}\n{row['timestamp']}\n{row[columns[0]].strip()}\n{row[columns[1]].strip() if len(columns) > 1 else ''}\n\n" for i, row in df.iterrows()]).strip()
+        result = []
+        for i, row in df.iterrows():
+            # Safe getter: handle NaN and non-string types
+            def safe_get(col):
+                val = row.get(col, '')
+                return str(val).strip() if pd.notna(val) else ''
+
+            line1 = safe_get(columns[0])
+            line2 = safe_get(columns[1]) if len(columns) > 1 else ''
+            result.append(f"{i+1}\n{row['timestamp']}\n{line1}\n{line2}\n\n")
+        return ''.join(result).strip()
 
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)

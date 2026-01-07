@@ -22,7 +22,7 @@ def process_video(file, dubbing=False, is_retry=False):
 
     text_steps = [
         ("🎥 Processing input file", partial(process_input_file, file)),
-        ("🎙️ Transcribing with Whisper", partial(_2_asr.transcribe)),
+        ("🎙️ Transcribing with ASR", partial(_2_asr.transcribe)),
         ("✂️ Splitting sentences", split_sentences),
         ("📝 Summarizing and translating", summarize_and_translate),
         ("⚡ Processing and aligning subtitles", process_and_align_subtitles),

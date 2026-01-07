@@ -37,7 +37,7 @@ api_reflection:
   model: 'YOUR_DEFAULT_MODEL'
 
 # *Number of LLM multi-threaded accesses, set to 1 if using local LLM
-max_workers: 16
+max_workers: 8
 
 # Language settings, written into the prompt, can be described in natural language
 target_language: '简体中文'
@@ -47,13 +47,11 @@ asr:
   # ASR (Automatic Speech Recognition) specified recognition language ISO 639-1
   language: 'en'
   detected_language: 'en'
-  # ASR running mode ["gemini", "whisperX"]. Specifies where to run
-  runtime: 'whisperX'
-  # use large-v3, large-v2, large-v1, medium, distil-large-v3, distil-large-v2, distil-medium.en or Purfview/faster-distil-whisper-large-v3.5
-  model: 'Purfview/faster-distil-whisper-large-v3.5'
-  batch_size: 8
-  use_hotwords: false
-  hotwords: ''
+  # ASR running mode ["gemini", "parakeet"]. Specifies where to run
+  # - gemini: Cloud API (multilingual including Chinese, requires API key)
+  # - parakeet: Local model (NVIDIA GPU required, 25 European languages only, auto language detection)
+  #   Supported: bg, hr, cs, da, nl, en, et, fi, fr, de, el, hu, it, lv, lt, mt, pl, pt, ro, sk, sl, es, sv, ru, uk
+  runtime: 'parakeet'
 
 
 ## ======================== Advanced Settings ======================== ##
@@ -74,7 +72,7 @@ max_split_length: 25
 reflect_translate: true
 
 # *Pause-based sentence split threshold (seconds). When time gap between consecutive words exceeds this value, a new batch is forced. Set to null or 0 to disable.
-pause_split_threshold: 2.0
+pause_split_threshold: 1
 
 # *Whether to pause after extracting professional terms and before translation, allowing users to manually adjust the terminology table output\log\terminology.json
 pause_before_translate: false
@@ -86,7 +84,7 @@ pause_before_translate: false
 
 ## ======================== Additional settings ======================== ##
 
-# Whisper model directory
+# ASR model directory
 model_dir: './_model_cache'
 
 # Supported upload video formats

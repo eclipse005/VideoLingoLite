@@ -70,39 +70,14 @@ def subtitle_settings_section():
             if langs[lang] != load_key("asr.language"):
                 update_key("asr.language", langs[lang])
 
-        runtime = st.selectbox("语音识别引擎", options=["gemini", "whisperX"], index=["gemini", "whisperX"].index(load_key("asr.runtime")), help="选择ASR服务进行转录")
+        runtime_options = ["gemini", "parakeet"]
+        runtime = st.selectbox("语音识别引擎", options=runtime_options, index=runtime_options.index(load_key("asr.runtime")), help="选择ASR服务进行转录")
+
+        # Parakeet 警告提示
+        if runtime == "parakeet":
+            st.warning("⚠️ Parakeet 仅支持 25 种欧洲语言，不支持中文、日语等。需要 NVIDIA GPU。")
         if runtime != load_key("asr.runtime"):
             update_key("asr.runtime", runtime)
-
-        if runtime == "whisperX":
-            # 初始化session state中的热词开关状态
-            if "asr_use_hotwords" not in st.session_state:
-                st.session_state.asr_use_hotwords = load_key("asr.use_hotwords")
-            
-            # 定义on_change回调函数
-            def on_use_hotwords_change():
-                # 更新session state和配置文件
-                update_key("asr.use_hotwords", st.session_state.asr_use_hotwords)
-            
-            use_hotwords = st.toggle(
-                "启用热词",
-                key="asr_use_hotwords",
-                on_change=on_use_hotwords_change,
-                help="提供逗号分隔的单词列表以提高识别准确性。"
-            )
-
-            if use_hotwords:
-                # 定义on_change回调函数，只在用户确认输入后更新配置
-                def on_hotwords_change():
-                    update_key("asr.hotwords", st.session_state.asr_hotwords_input)
-                
-                st.text_input(
-                    "热词", 
-                    value=load_key("asr.hotwords"),
-                    key="asr_hotwords_input",
-                    on_change=on_hotwords_change,
-                    help="输入需要重点识别的词汇，用逗号分隔"
-                )
 
         with c2:
             target_language = st.text_input("目标语言", value=load_key("target_language"), help="用自然语言输入任何语言,只要LLM能理解即可")

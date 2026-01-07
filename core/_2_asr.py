@@ -17,12 +17,12 @@ def transcribe():
 
     # 4. Select ASR backend based on config
     asr_runtime = load_key("asr.runtime")
-    if asr_runtime == "whisperX":
-        from core.asr_backend.whisperX_local import transcribe_audio as ts
-        rprint("[cyan]🎤 Transcribing audio with WhisperX...[/cyan]")
-    elif asr_runtime == "gemini":
+    if asr_runtime == "gemini":
         from core.asr_backend.gemini import transcribe_audio_gemini as ts
         rprint("[cyan]🎤 Transcribing audio with Gemini API...[/cyan]")
+    elif asr_runtime == "parakeet":
+        from core.asr_backend.parakeet_local import transcribe_audio as ts
+        rprint("[cyan]🎤 Transcribing audio with NVIDIA Parakeet...[/cyan]")
     else:
         raise ValueError(f"Unsupported ASR runtime: {asr_runtime}")
 
@@ -41,16 +41,16 @@ def transcribe():
     df = process_transcription(combined_result)
     save_results(df)
 
-    # 8. For WhisperX: also generate split_by_meaning.txt directly from segments
-    if asr_runtime == "whisperX":
+    # 8. For Parakeet: also generate split_by_meaning.txt directly from segments
+    if asr_runtime == "parakeet":
         from core.utils.models import _3_2_SPLIT_BY_MEANING
-        rprint(f"[cyan]📝 Writing WhisperX segments to: {_3_2_SPLIT_BY_MEANING}[/cyan]")
+        rprint(f"[cyan]📝 Writing Parakeet segments to: {_3_2_SPLIT_BY_MEANING}[/cyan]")
         with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
             for segment in combined_result['segments']:
                 text = segment.get('text', '').strip()
                 if text:
                     f.write(text + '\n')
-        rprint(f"[green]✅ Generated split_by_meaning.txt from WhisperX segments (skipping LLM step)[/green]")
+        rprint(f"[green]✅ Generated split_by_meaning.txt from Parakeet segments (skipping LLM step)[/green]")
         
 if __name__ == "__main__":
     transcribe()

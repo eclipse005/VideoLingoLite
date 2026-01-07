@@ -77,7 +77,7 @@ def process_batch():
                 status_msg = f"Error: Unhandled exception - {str(e)}"
                 console.print(f"[bold red]Error processing {video_file}: {status_msg}")
             finally:
-                update_key('whisper.language', original_source_lang)
+                update_key('asr.language', original_source_lang)
                 update_key('target_language', original_target_lang)
                 
                 df.at[index, 'Status'] = status_msg

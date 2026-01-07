@@ -1,5 +1,11 @@
+# Windows compatibility fix for NeMo toolkit (SIGKILL not available on Windows)
+import sys
+import signal
+if sys.platform == 'win32' and not hasattr(signal, 'SIGKILL'):
+    signal.SIGKILL = signal.SIGTERM
+
 import streamlit as st
-import os, sys
+import os
 from core.st_utils.imports_and_utils import download_subtitle_zip_button, give_star_button, button_style, page_setting
 from core.st_utils.upload_media_section import upload_media_section
 from core import *

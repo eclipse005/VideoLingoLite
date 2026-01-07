@@ -2,13 +2,13 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-**VideoLingoLite** 是“VideoLingo”的轻量化版本，集成了云端与本地（WhisperX）ASR（自动语音识别）和翻译功能，为需要音视频转写、自动翻译的用户提供了灵活高效的解决方案。
+**VideoLingoLite** 是"VideoLingo"的轻量化版本，集成了云端与本地 ASR（Gemini API + Parakeet）和翻译功能，为需要音视频转写、自动翻译的用户提供了灵活高效的解决方案。
 
 ## 项目简介
 
 VideoLingoLite 专注于音视频内容的自动转写与翻译：
 - 支持音频、视频文件的批量自动转写为文本。
-- 支持云端及本地（WhisperX）ASR（自动语音识别）与翻译能力。
+- 支持云端及本地 ASR 与翻译能力。
 - 提供术语自定义表（`custom_terms.xlsx`）以优化行业/领域专用词识别和翻译结果。
 - 精简化设计，部署和使用简单。
 
@@ -16,7 +16,7 @@ VideoLingoLite 专注于音视频内容的自动转写与翻译：
 
 ## 主要功能
 
-- **混合ASR支持**：支持云端及高性能的本地（WhisperX）语音转写。
+- **混合ASR支持**：支持云端及高性能的本地语音转写。
 - **自动翻译**：支持多语言翻译，提升音视频内容可达性。
 - **批量处理**：可通过 `batch` 目录批量处理文件。
 - **可扩展性**：自定义术语、灵活配置。

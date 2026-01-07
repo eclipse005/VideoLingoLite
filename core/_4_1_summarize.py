@@ -8,7 +8,7 @@ from core.utils.models import _3_2_SPLIT_BY_MEANING, _4_1_TERMINOLOGY
 CUSTOM_TERMS_PATH = 'custom_terms.xlsx'
 
 def combine_chunks():
-    """Combine the text chunks identified by whisper into a single long text"""
+    """Combine the text chunks identified by ASR into a single long text"""
     with open(_3_2_SPLIT_BY_MEANING, 'r', encoding='utf-8') as file:
         sentences = file.readlines()
     cleaned_sentences = [line.strip() for line in sentences]
