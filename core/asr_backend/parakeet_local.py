@@ -37,29 +37,29 @@ def _convert_parakeet_to_standard_asr_format(output, start_offset=0):
     """将 Parakeet 输出转换为标准 ASR 格式"""
     if not output or len(output) == 0:
         return {'segments': [], 'language': 'unknown'}
-    
+
     result = output[0]
     segment_timestamps = result.timestamp.get('segment', [])
     word_timestamps = result.timestamp.get('word', [])
-    
+
     segments = []
     word_idx = 0
     for seg_stamp in segment_timestamps:
-        seg_start = seg_stamp['start'] + start_offset
-        seg_end = seg_stamp['end'] + start_offset
+        seg_start = round(seg_stamp['start'] + start_offset, 2)
+        seg_end = round(seg_stamp['end'] + start_offset, 2)
         seg_text = seg_stamp['segment']
-        
+
         words = []
         while word_idx < len(word_timestamps):
             word = word_timestamps[word_idx]
-            word_start = word['start'] + start_offset
-            word_end = word['end'] + start_offset
-            if word_start > seg_end: 
+            word_start = round(word['start'] + start_offset, 2)
+            word_end = round(word['end'] + start_offset, 2)
+            if word_start > seg_end:
                 break
             words.append({'start': word_start, 'end': word_end, 'word': word['word']})
             word_idx += 1
         segments.append({'start': seg_start, 'end': seg_end, 'text': seg_text, 'words': words})
-    
+
     return {'segments': segments, 'language': 'en'}
 
 @except_handler("Parakeet processing error:")
@@ -67,11 +67,11 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
     """主转录函数"""
     if not torch.cuda.is_available():
         raise RuntimeError("Parakeet requires NVIDIA GPU.")
-    
+
     # 1. 加载本地模型
     model = _load_or_download_model()
     audio_length = end - start
-    
+
     # 2. 长音频优化（超过 2 分钟使用局部注意力）
     if audio_length > 120:
         rprint(f"[yellow]⚠️ Long audio (>2min), enabling local attention...[/yellow]")
@@ -93,7 +93,7 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
         output = model.transcribe([tmp_path], timestamps=True)
         return _convert_parakeet_to_standard_asr_format(output, start_offset=start)
     finally:
-        if os.path.exists(tmp_path): 
+        if os.path.exists(tmp_path):
             os.remove(tmp_path)
         del model
         torch.cuda.empty_cache()

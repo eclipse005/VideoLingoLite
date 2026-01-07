@@ -104,8 +104,8 @@ def process_transcription(result: Dict) -> pd.DataFrame:
                     # Assign the end time of the previous word as the start and end time of the current word
                     word_dict = {
                         'text': word["word"],
-                        'start': all_words[-1]['end'],
-                        'end': all_words[-1]['end'],
+                        'start': round(all_words[-1]['end'], 2),
+                        'end': round(all_words[-1]['end'], 2),
                         'speaker_id': speaker_id
                     }
                     all_words.append(word_dict)
@@ -115,8 +115,8 @@ def process_transcription(result: Dict) -> pd.DataFrame:
                     if next_word:
                         word_dict = {
                             'text': word["word"],
-                            'start': next_word["start"],
-                            'end': next_word["end"],
+                            'start': round(next_word["start"], 2),
+                            'end': round(next_word["end"], 2),
                             'speaker_id': speaker_id
                         }
                         all_words.append(word_dict)
@@ -126,8 +126,8 @@ def process_transcription(result: Dict) -> pd.DataFrame:
                 # Normal case, with start and end times
                 word_dict = {
                     'text': f'{word["word"]}',
-                    'start': word.get('start', all_words[-1]['end'] if all_words else 0),
-                    'end': word['end'],
+                    'start': round(word.get('start', all_words[-1]['end'] if all_words else 0), 2),
+                    'end': round(word['end'], 2),
                     'speaker_id': speaker_id
                 }
                 
@@ -144,13 +144,13 @@ def save_results(df: pd.DataFrame):
     removed_rows = initial_rows - len(df)
     if removed_rows > 0:
         rprint(f"[blue]ℹ️ Removed {removed_rows} row(s) with empty text.[/blue]")
-    
+
     # Check for and remove words longer than 20 characters
     long_words = df[df['text'].str.len() > 30]
     if not long_words.empty:
         rprint(f"[yellow]⚠️ Warning: Detected {len(long_words)} word(s) longer than 30 characters. These will be removed.[/yellow]")
         df = df[df['text'].str.len() <= 30]
-    
+
     df['text'] = df['text'].apply(lambda x: f'"{x}"')
     df.to_excel(_2_CLEANED_CHUNKS, index=False)
     rprint(f"[green]📊 Excel file saved to {_2_CLEANED_CHUNKS}[/green]")

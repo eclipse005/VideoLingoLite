@@ -30,9 +30,10 @@ def text_processing_section():
         <p style='font-size: 20px;'>
             1. {"语音识别转录"}<br>
             2. {"使用LLM进行句子分段"}<br>
-            3. {"摘要和多步翻译"}<br>
-            4. {"切割和对齐长字幕"}<br>
-            5. {"生成时间轴和字幕"}<br>
+            3. {"切分长句"}<br>
+            4. {"摘要和多步翻译"}<br>
+            5. {"切割和对齐长字幕"}<br>
+            6. {"生成时间轴和字幕"}<br>
         """, unsafe_allow_html=True)
 
         if not os.path.exists(SUB_VIDEO):
@@ -53,6 +54,8 @@ def process_text():
         _2_asr.transcribe()
     with st.spinner("正在使用LLM进行句子分段..."):
         _3_llm_sentence_split.llm_sentence_split()
+    with st.spinner("正在切分长句..."):
+        _3_2_split_meaning.split_sentences_by_meaning()
     with st.spinner("正在总结和翻译..."):
         _4_1_summarize.get_summary()
         if load_key("pause_before_translate"):

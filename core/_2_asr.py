@@ -2,6 +2,8 @@ from core.utils import *
 from core.asr_backend.audio_preprocess import process_transcription, convert_video_to_audio, split_audio, save_results, normalize_audio_volume
 from core._1_ytdlp import find_video_files
 from core.utils.models import *
+import json
+import os
 
 @check_file_exists(_2_CLEANED_CHUNKS)
 def transcribe():
@@ -37,20 +39,26 @@ def transcribe():
     for result in all_results:
         combined_result['segments'].extend(result['segments'])
 
-    # 7. Process df (always generate cleaned_chunks.xlsx for word-level data)
+    # 7. Save ASR result to JSON
+    asr_json_path = "output/log/asr.json"
+    os.makedirs(os.path.dirname(asr_json_path), exist_ok=True)
+    with open(asr_json_path, 'w', encoding='utf-8') as f:
+        json.dump(combined_result, f, indent=2, ensure_ascii=False)
+    rprint(f"[green]💾 ASR result saved to: {asr_json_path}[/green]")
+
+    # 8. Process df (always generate cleaned_chunks.xlsx for word-level data)
     df = process_transcription(combined_result)
     save_results(df)
 
-    # 8. For Parakeet: also generate split_by_meaning.txt directly from segments
+    # 9. For Parakeet: also generate split_by_meaning_raw.txt directly from segments
     if asr_runtime == "parakeet":
-        from core.utils.models import _3_2_SPLIT_BY_MEANING
-        rprint(f"[cyan]📝 Writing Parakeet segments to: {_3_2_SPLIT_BY_MEANING}[/cyan]")
-        with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
+        from core.utils.models import _3_2_SPLIT_BY_MEANING_RAW
+        rprint(f"[cyan]📝 Writing Parakeet segments to: {_3_2_SPLIT_BY_MEANING_RAW}[/cyan]")
+        with open(_3_2_SPLIT_BY_MEANING_RAW, 'w', encoding='utf-8') as f:
             for segment in combined_result['segments']:
                 text = segment.get('text', '').strip()
                 if text:
                     f.write(text + '\n')
-        rprint(f"[green]✅ Generated split_by_meaning.txt from Parakeet segments (skipping LLM step)[/green]")
-        
+        rprint(f"[green]✅ Generated split_by_meaning_raw.txt from Parakeet segments[/green]")
 if __name__ == "__main__":
     transcribe()
