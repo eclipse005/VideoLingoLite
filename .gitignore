@@ -227,3 +227,4 @@ cookies.txt
 *.srt.bak
 *.wav.bak
 raw_download/
+custom_terms*.xlsx
