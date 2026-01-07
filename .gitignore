@@ -217,6 +217,7 @@ cookies.txt
 
 # ==================== Claude Code ====================
 .claude/
+CLAUDE.md
 
 # ==================== Gemini Code ====================
 .gemini/
