@@ -2,156 +2,182 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-**VideoLingoLite** 是 "VideoLingo" 的轻量化版本，专注于音视频转写与翻译，集成了云端（Gemini API）和本地（NVIDIA Parakeet）ASR 能力。
+> **VideoLingo** 的轻量化版本，专注于音视频转写与翻译
 
-## 项目简介
+**VideoLingoLite** 是 [VideoLingo](https://github.com/Huanshere/VideoLingo) 的精简版本，保留了核心的转写翻译能力，去除冗余功能，让字幕制作更加轻量高效。
 
-VideoLingoLite 是一个高效的音视频自动化处理工具：
-- **双 ASR 后端**：云端 Gemini API（支持多语言）+ 本地 Parakeet（25 种欧洲语言，需 NVIDIA GPU）
-- **LLM 驱动**：使用大语言模型进行语义分句、总结和多步翻译
-- **批量处理**：支持批量任务自动化处理
-- **精简设计**：去除配音、本地 ASR（非 GPU）、视频处理等冗余功能
+---
 
-## 处理流程
+## 核心功能
 
-VideoLingoLite 采用 6 步处理流水线：
+### 语音转文字
+- **双引擎支持**：云端 Gemini API（多语言）+ 本地 Parakeet（25 种欧洲语言）
+- **人声分离**：嘈杂环境下自动分离人声，大幅提升转录准确率
+- **词级时间戳**：精确到每个词的时间定位
 
-```
-1. 语音识别转录 (ASR)
-   ├─ Gemini API (云端，多语言)
-   └─ Parakeet (本地，NVIDIA GPU)
+### 智能翻译
+- **两阶段翻译**：先直译，再意译，确保译文自然流畅
+- **上下文感知**：结合前后文和术语表进行翻译
+- **自定义术语**：支持导入专业术语表，确保术语翻译准确
+- **自动摘要**：提取视频主题和关键术语
 
-2. LLM 语义分句
-   └─ 使用 difflib 对齐保留原始时间戳
+### 多语言支持
+- **CJK 优化**：针对中日韩语言的特殊分词和对齐处理
+- **25+ 欧洲语言**：本地 Parakeet 引擎支持
+- **云端多语言**：Gemini API 支持全球主流语言
 
-3. 长句智能切分
-   └─ CJK 语言支持，避免单词内切分
+### 字幕生成
+- **4 种格式**：源语言字幕、翻译字幕、双语字幕（两种顺序）
+- **智能对齐**：字幕长度自动适配，可读性更强
+- **自动优化**：合并重复字幕、清理冗余内容
 
-4. 内容总结与术语提取
-   └─ 生成摘要和领域术语表
+### 批量处理
+- **Excel 配置**：通过表格配置多个视频任务
+- **自动化队列**：一键处理整个文件夹的视频
+- **错误恢复**：失败任务自动隔离，方便重新处理
 
-5. 多步翻译
-   └─ 直译 → 意译两阶段处理
-
-6. 字幕生成
-   └─ 长度限制对齐，生成 SRT 格式字幕
-```
-
-## 主要功能
-
-- **混合 ASR**：云端 Gemini + 本地 Parakeet 双后端
-- **语义分句**：LLM 驱动的句子边界检测
-- **多步翻译**：直译 + 意译，确保翻译质量
-- **自定义术语**：支持 `custom_terms.xlsx` 优化专业术语
-- **批量处理**：通过 `batch/` 目录进行任务自动化
-- **多语言支持**：CJK 语言（中日韩）特殊处理
-
-## 目录结构
-
-```
-.
-├── .cursorrules            # 编辑器规则
-├── .gitignore              # Git 忽略规则
-├── .streamlit/             # Streamlit 配置
-├── LICENSE                 # Apache 2.0 许可证
-├── OneKeyStart.bat         # 一键启动脚本 (Windows)
-├── README.md               # 项目说明文档
-├── batch/                  # 批量处理目录
-│   ├── input/              # 输入文件放置处
-│   ├── output/             # 处理结果输出处
-│   └── tasks_setting.xlsx  # 批量任务配置
-├── config.yaml             # 主配置文件
-├── core/                   # 核心处理模块
-│   ├── _1_ytdlp.py         # 视频下载
-│   ├── _2_asr.py           # ASR 转录
-│   ├── _3_llm_sentence_split.py  # LLM 语义分句
-│   ├── _3_2_split_meaning.py      # 长句切分
-│   ├── _4_1_summarize.py   # 总结与术语提取
-│   ├── _4_2_translate.py   # 多步翻译
-│   ├── _5_split_sub.py     # 字幕长度对齐
-│   ├── _6_gen_sub.py       # 最终字幕生成
-│   ├── asr_backend/        # ASR 后端实现
-│   │   ├── gemini.py       # Gemini API
-│   │   └── parakeet_local.py  # Parakeet 本地模型
-│   ├── prompts.py          # 多语言提示词模板
-│   └── utils/              # 工具函数
-├── custom_terms.xlsx       # 自定义术语表模板
-├── pyproject.toml          # 项目依赖 (uv)
-├── st.py                   # Streamlit 主入口
-└── ui/                     # UI 组件
-```
+---
 
 ## 快速开始
 
-### 1. 环境准备
+### 安装依赖
 
 ```bash
-# 安装 uv 包管理器
+# 1. 安装 uv 包管理器
 pip install uv
 
-# 克隆项目
+# 2. 克隆项目
 git clone https://github.com/eclipse005/VideoLingoLite.git
 cd VideoLingoLite
 
-# 安装依赖
+# 3. 安装项目依赖
 uv sync
 ```
 
-### 2. 配置设置
+### 启动应用
 
-编辑 `config.yaml`：
-- **ASR 后端**：`asr.runtime: gemini` (云端) 或 `parakeet` (本地 GPU)
-- **API 配置**：设置 Gemini API 密钥
-- **语言设置**：配置源语言和目标语言
-- **并发控制**：`max_workers` 控制 LLM 并发数
+**Windows 用户**：双击 `OneKeyStart.bat`
 
-### 3. 运行项目
-
-**交互式模式**：
+**跨平台方式**：
 ```bash
-# Windows
-OneKeyStart.bat
-
-# 跨平台
 uv run python -m streamlit run st.py
 ```
 
-**批处理模式**：
-1. 将视频文件放入 `batch/input/`
-2. 编辑 `batch/tasks_setting.xlsx` 配置任务
+### 配置 API
+
+首次运行需要在侧边栏配置：
+- **API 地址**：你的 LLM 服务地址
+- **API 密钥**：对应的 API Key
+- **选择模型**：用于翻译的模型
+
+---
+
+## 使用场景
+
+| 场景 | 说明 |
+|------|------|
+| **学习笔记** | 将课程视频转成文字字幕，方便复习 |
+| **内容创作** | 为短视频快速制作双语字幕 |
+| **会议记录** | 自动生成会议纪要和翻译 |
+| **影视翻译** | 批量处理视频素材 |
+| **无障碍服务** | 为听障人士生成字幕 |
+
+---
+
+## 批量处理
+
+需要处理多个视频？使用批处理模式：
+
+1. 将视频文件放入 `batch/input/` 目录
+2. 编辑 `batch/tasks_setting.xlsx` 配置每个任务的语言设置
 3. 运行 `batch/OneKeyBatch.bat`
 
-### 4. 自定义术语
+| 配置项 | 说明 |
+|--------|------|
+| Video File | 视频文件名或 YouTube 链接 |
+| Source Language | 源语言（如 en, zh） |
+| Target Language | 目标语言（如 English, 简体中文） |
+| Dubbing | 是否启用配音 |
 
-编辑 `custom_terms.xlsx` 添加领域术语，优化识别和翻译准确率。
+---
 
-## 配置说明
+## 自定义术语
 
-| 配置项 | 说明 | 默认值 |
-|--------|------|--------|
-| `asr.runtime` | ASR 后端 (gemini/parakeet) | gemini |
-| `asr.language` | 源语言 | zh |
-| `target_language` | 目标语言描述 | English |
-| `max_workers` | LLM 并发数 | 10 |
-| `subtitle.max_length` | 单行字数限制 | 75 |
-| `max_split_length` | 长句切分阈值 | 40 |
+编辑 `custom_terms.xlsx` 添加专业术语，提升翻译准确率：
+
+| 源语言术语 | 目标语言翻译 | 解释说明 |
+|------------|-------------|----------|
+| Machine Learning | 机器学习 | AI 领域术语 |
+| Transformer | Transformer | 深度学习架构 |
+
+---
 
 ## 系统要求
 
-**Gemini 模式**（云端）：
+### 基础模式（云端 Gemini）
 - Python 3.10+
 - 网络连接
 
-**Parakeet 模式**（本地）：
+### 本地模式（Parakeet）
 - Python 3.10+
-- NVIDIA GPU (CUDA 支持)
-- 8GB+ 显存
+- NVIDIA GPU（8GB+ 显存）
+- CUDA 支持
 
-## 贡献与许可证
+---
 
-- 本项目遵循 [Apache 2.0](LICENSE) 协议
-- 欢迎提交 PR、反馈问题
+## 配置选项
 
-## 联系
+在 `config.yaml` 中可调整：
 
-详见[项目主页](https://github.com/eclipse005/VideoLingoLite)获取最新信息。
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `asr.runtime` | `gemini` | ASR 引擎：gemini（云端）/ parakeet（本地） |
+| `target_language` | `English` | 目标语言 |
+| `max_workers` | `8` | 并发处理数（本地 LLM 建议设为 1） |
+| `subtitle.max_length` | `75` | 单行字幕字符限制 |
+| `vocal_separation.enabled` | `false` | 是否启用人声分离 |
+| `max_split_length` | `25` | 长句切分阈值 |
+
+---
+
+## 输出文件
+
+处理完成后，`output/` 目录包含：
+
+- `src.srt` - 源语言字幕
+- `trans.srt` - 翻译字幕
+- `src_trans.srt` - 双语字幕（源+译）
+- `trans_src.srt` - 双语字幕（译+源）
+
+---
+
+## 特色技术
+
+- **difflib 对齐算法**：100% 保留原始时间戳，字幕定位精准
+- **多语言自适应分词**：CJK 语言与空格分隔语言分别优化
+- **字符权重系统**：中日文字符 1.75x 权重，字幕显示更协调
+- **3 轮迭代切分**：确保所有长字幕符合长度限制
+
+---
+
+## 开源协议
+
+本项目采用 [Apache 2.0](LICENSE) 协议开源
+
+基于 [VideoLingo](https://github.com/Huanshere/VideoLingo) 改造
+
+---
+
+## 联系我们
+
+- 项目主页：[https://github.com/eclipse005/VideoLingoLite](https://github.com/eclipse005/VideoLingoLite)
+- 原版项目：[https://github.com/Huanshere/VideoLingo](https://github.com/Huanshere/VideoLingo)
+- 问题反馈：提交 Issue 或 Pull Request
+
+---
+
+<div align="center">
+
+**让字幕制作从此轻松高效**
+
+</div>
