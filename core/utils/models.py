@@ -19,6 +19,7 @@ _5_REMERGED = "output/log/translation_results_remerged.xlsx"
 _OUTPUT_DIR = "output"
 _AUDIO_DIR = "output/audio"
 _RAW_AUDIO_FILE = "output/audio/raw.mp3"
+_VOCAL_AUDIO_FILE = "output/audio/vocals.wav"
 _AUDIO_REFERS_DIR = "output/audio/refers"
 _AUDIO_SEGS_DIR = "output/audio/segs"
 _AUDIO_TMP_DIR = "output/audio/tmp"
@@ -39,6 +40,7 @@ __all__ = [
     "_OUTPUT_DIR",
     "_AUDIO_DIR",
     "_RAW_AUDIO_FILE",
+    "_VOCAL_AUDIO_FILE",
     "_AUDIO_REFERS_DIR",
     "_AUDIO_SEGS_DIR",
     "_AUDIO_TMP_DIR"

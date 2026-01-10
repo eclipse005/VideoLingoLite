@@ -46,12 +46,15 @@ target_language: '简体中文'
 asr:
   # ASR (Automatic Speech Recognition) specified recognition language ISO 639-1
   language: 'en'
-  detected_language: 'en'
   # ASR running mode ["gemini", "parakeet"]. Specifies where to run
   # - gemini: Cloud API (multilingual including Chinese, requires API key)
   # - parakeet: Local model (NVIDIA GPU required, 25 European languages only, auto language detection)
   #   Supported: bg, hr, cs, da, nl, en, et, fi, fr, de, el, hu, it, lv, lt, mt, pl, pt, ro, sk, sl, es, sv, ru, uk
   runtime: 'parakeet'
+
+# Vocal separation for noisy environments
+vocal_separation:
+  enabled: true   # Enable vocal separation to improve ASR accuracy in noisy environments
 
 
 ## ======================== Advanced Settings ======================== ##

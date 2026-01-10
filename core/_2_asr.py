@@ -11,11 +11,21 @@ def transcribe():
     video_file = find_video_files()
     convert_video_to_audio(video_file)
 
-    # 2. Use original audio directly (no vocal separation)
-    vocal_audio = _RAW_AUDIO_FILE
+    # 2. Optional vocal separation for noisy environments
+    if load_key("vocal_separation.enabled"):
+        from core.utils.vocal_separator import separate_vocals
+        rprint("[cyan]🎤 Separating vocals from audio...[/cyan]")
+        if separate_vocals():
+            vocal_audio = _VOCAL_AUDIO_FILE
+            rprint("[green]✅ Vocal separation completed, using vocals for transcription[/green]")
+        else:
+            rprint("[yellow]⚠️ Vocal separation failed, falling back to original audio[/yellow]")
+            vocal_audio = _RAW_AUDIO_FILE
+    else:
+        vocal_audio = _RAW_AUDIO_FILE
 
     # 3. Extract audio
-    segments = split_audio(_RAW_AUDIO_FILE)
+    segments = split_audio(vocal_audio)
 
     # 4. Select ASR backend based on config
     asr_runtime = load_key("asr.runtime")

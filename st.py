@@ -50,8 +50,24 @@ def text_processing_section():
             return True
 
 def process_text():
-    with st.spinner("正在使用语音识别进行转录..."):
-        _2_asr.transcribe()
+    # 语音识别转录（包含可选的人声分离）
+    if load_key("vocal_separation.enabled"):
+        with st.spinner("正在进行人声分离..."):
+            # 先提取音频
+            from core._1_ytdlp import find_video_files
+            from core.asr_backend.audio_preprocess import convert_video_to_audio
+            video_file = find_video_files()
+            convert_video_to_audio(video_file)
+
+            # 再进行人声分离
+            from core.utils.vocal_separator import separate_vocals
+            separate_vocals()
+
+        with st.spinner("正在使用语音识别进行转录..."):
+            _2_asr.transcribe()
+    else:
+        with st.spinner("正在使用语音识别进行转录..."):
+            _2_asr.transcribe()
     with st.spinner("正在使用LLM进行句子分段..."):
         _3_llm_sentence_split.llm_sentence_split()
     with st.spinner("正在切分长句..."):
