@@ -3376,7 +3376,7 @@ wheels = [
 [[package]]
 name = "videolingolite"
 version = "3.0.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "audio-separator", extra = ["gpu"] },
     { name = "autocorrect-py" },

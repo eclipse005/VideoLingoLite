@@ -53,7 +53,8 @@ where = ["."]
 include = ["core*", "batch*", "translations*"]
 
 [tool.uv]
-# ❗ 关键修正：确保 CUDA 和 CPU 平台的标记是互斥的。
+package = false
+
 [tool.uv.sources]
 torch = [
   # 1. CUDA Index: Windows (any arch) OR Linux (x86_64)

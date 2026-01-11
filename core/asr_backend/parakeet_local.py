@@ -3,9 +3,16 @@ import warnings
 import time
 import torch
 import librosa
+import gc  # 引入垃圾回收，防止内存/显存泄露
 from rich import print as rprint
 from core.utils import *
 import nemo.collections.asr as nemo_asr
+
+# 不需要 import logging 了
+from nemo.utils import logging as nemo_logging
+
+# 直接传 40，效果一模一样（40 代表 ERROR）
+nemo_logging.setLevel(40)
 
 warnings.filterwarnings("ignore")
 
@@ -64,24 +71,42 @@ def _convert_parakeet_to_standard_asr_format(output, start_offset=0):
 
 @except_handler("Parakeet processing error:")
 def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
-    """主转录函数"""
-    if not torch.cuda.is_available():
-        raise RuntimeError("Parakeet requires NVIDIA GPU.")
+    """
+    Parakeet 转录主函数 (自动识别 CPU/GPU)
+    """
 
-    # 1. 加载本地模型
-    model = _load_or_download_model()
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    # ------------------------------------
+
+    # 1. 自动判断设备
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        device_name = torch.cuda.get_device_name(0)
+        rprint(f"[bold green]🚀 GPU Detected: {device_name} | Mode: CUDA Acceleration[/bold green]")
+    else:
+        device = torch.device("cpu")
+        rprint(f"[bold yellow]⚠️ GPU Not Found. Switching to CPU Mode.[/bold yellow]")
+        rprint(f"[dim]Running on CPU may take longer. Performance depends on your CPU power.[/dim]")
+
+    # 2. 加载模型
+    model = _load_or_download_model()    
+    model = model.to(device)
+    model.eval() 
+    
     audio_length = end - start
 
-    # 2. 长音频优化（超过 2 分钟使用局部注意力）
+    # 3. 长音频优化
     if audio_length > 120:
         rprint(f"[yellow]⚠️ Long audio (>2min), enabling local attention...[/yellow]")
         model.change_attention_model(self_attention_model="rel_pos_local_attn", att_context_size=[256, 256])
 
-    # 3. 加载音频片段
+    # 4. 加载音频片段
     rprint(f"[cyan]🎵 Loading audio segment...[/cyan]")
     audio, sr = librosa.load(raw_audio_file, sr=16000, offset=start, duration=audio_length, mono=True)
 
-    # 4. 执行转录
+    # 5. 执行转录
     import tempfile
     import soundfile as sf
     with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
@@ -89,11 +114,20 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
         sf.write(tmp_path, audio, sr)
 
     try:
-        rprint("[bold green]Transcribing...[/bold green]")
-        output = model.transcribe([tmp_path], timestamps=True)
+        rprint(f"[bold green]Transcribing on {str(device).upper()}...[/bold green]")
+        with torch.no_grad():
+            output = model.transcribe([tmp_path], timestamps=True)
         return _convert_parakeet_to_standard_asr_format(output, start_offset=start)
+    
     finally:
+        # 清理临时文件
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+        
+        # --- 运行后彻底释放 (关键) ---
         del model
-        torch.cuda.empty_cache()
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        rprint("[dim]♻️ Resources released.[/dim]")
+        # ---------------------------

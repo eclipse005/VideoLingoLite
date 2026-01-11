@@ -57,7 +57,8 @@ def separate_vocals(input_file=None, output_file=None, model_name=None):
             output_dir=output_dir,
             output_format="wav",
             # 只输出人声轨道，减少IO和计算时间
-            output_single_stem="Vocals"
+            output_single_stem="Vocals",
+            log_level=40 
         )
 
         separator.load_model(model_filename=model_name)
