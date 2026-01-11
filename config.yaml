@@ -54,7 +54,7 @@ asr:
 
 # Vocal separation for noisy environments
 vocal_separation:
-  enabled: true   # Enable vocal separation to improve ASR accuracy in noisy environments
+  enabled: false  # Enable vocal separation to improve ASR accuracy in noisy environments
 
 
 ## ======================== Advanced Settings ======================== ##

@@ -371,22 +371,14 @@ def split_sentence(sentence, num_parts=2, word_limit=20, index=-1):
 
     return best_split
 
-@check_file_exists(_3_2_SPLIT_BY_MEANING)
+@check_file_exists(_3_2_SPLIT_BY_MEANING_RAW)
 def llm_sentence_split():
     """
     Main function for LLM-based sentence segmentation.
 
     Output: split_by_meaning_raw.txt (原始LLM组句结果)
-    Skip: If split_by_meaning.txt exists (最终结果已生成) 或 Parakeet 模式
+    Skip: If split_by_meaning_raw.txt exists (Parakeet segments 或 LLM 已生成)
     """
-    # Check if final result already exists
-    import os
-    if os.path.exists(_3_2_SPLIT_BY_MEANING):
-        with open(_3_2_SPLIT_BY_MEANING, 'r', encoding='utf-8') as f:
-            sentences = [line.strip() for line in f if line.strip()]
-        if sentences:
-            console.print(f"[yellow]⏭️ Skipping LLM sentence splitting (final result already exists: {len(sentences)} sentences)[/yellow]")
-            return sentences
 
     console.print("[blue]🔍 Starting LLM sentence segmentation (difflib-aligned)[/blue]")
     console.print(f"[cyan]📖 Reading input from: {_2_CLEANED_CHUNKS}[/cyan]")
