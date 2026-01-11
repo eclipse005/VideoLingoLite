@@ -14,7 +14,7 @@ import re
 import difflib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from core.prompts import get_sentence_segmentation_prompt, get_split_prompt
-from core.utils import check_file_exists
+from core.utils import check_file_exists, get_language_length_limit, get_joiner
 from core.utils.models import _2_CLEANED_CHUNKS, _3_2_SPLIT_BY_MEANING_RAW, _3_2_SPLIT_BY_MEANING
 from core.utils.config_utils import load_key
 from core.utils.ask_gpt import ask_gpt
@@ -29,8 +29,10 @@ console = Console()
 def clean_word(word):
     """Standardized word cleaner (lowercase, no punctuation) for alignment."""
     word = str(word).lower()
-    # Keep letters, numbers, and CJK characters (中文日文韩文)
-    cleaned = re.sub(r'[^a-z0-9\u4e00-\u9fff]', '', word)
+    # Keep letters, numbers, and CJK characters
+    # Includes: Chinese/Japanese Kanji (\u4e00-\u9fff), Hiragana (\u3040-\u309F),
+    # Katakana (\u30A0-\u30FF), Korean Hangul (\uAC00-\uD7AF)
+    cleaned = re.sub(r'[^a-z0-9\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af]', '', word)
     return cleaned
 
 def get_llm_words_and_splits(segmented_sentences):
@@ -127,12 +129,15 @@ def map_llm_splits_to_original(original_clean_words, llm_clean_words, llm_split_
 
 def reconstruct_sentences(original_words, original_split_indices):
     """Rebuilds sentences using the *original* word list and the *mapped* split indices."""
+    asr_language = load_key("asr.language")
+    joiner = get_joiner(asr_language)
+
     final_sentences = []
     last_idx = 0
     for idx in original_split_indices:
         if idx > last_idx:
             sentence_words = original_words[last_idx:idx]
-            sentence_text = ' '.join(sentence_words)
+            sentence_text = joiner.join(sentence_words)
             final_sentences.append(sentence_text)
         last_idx = idx
     return final_sentences
@@ -383,13 +388,6 @@ def llm_sentence_split():
             console.print(f"[yellow]⏭️ Skipping LLM sentence splitting (final result already exists: {len(sentences)} sentences)[/yellow]")
             return sentences
 
-    # Check if Parakeet mode - if so, skip LLM processing
-    asr_runtime = load_key("asr.runtime")
-    if asr_runtime == "parakeet":
-        console.print(f"[yellow]⏭️ Skipping LLM sentence splitting (Parakeet mode, using raw segments from ASR)[/yellow]")
-        # Return empty list to indicate we're using Parakeet's raw output
-        return []
-
     console.print("[blue]🔍 Starting LLM sentence segmentation (difflib-aligned)[/blue]")
     console.print(f"[cyan]📖 Reading input from: {_2_CLEANED_CHUNKS}[/cyan]")
 
@@ -400,7 +398,9 @@ def llm_sentence_split():
 
     console.print(f"[green]✅ Loaded {len(chunks)} chunks, {len(original_total_words_list)} words total[/green]")
 
-    max_length = load_key("max_split_length")
+    # Get max_length from origin_length config
+    asr_language = load_key("asr.language")
+    max_length = get_language_length_limit(asr_language, 'origin')
     max_workers = load_key("max_workers")
     pause_threshold = load_key("pause_split_threshold")
 

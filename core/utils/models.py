@@ -43,5 +43,136 @@ __all__ = [
     "_VOCAL_AUDIO_FILE",
     "_AUDIO_REFERS_DIR",
     "_AUDIO_SEGS_DIR",
-    "_AUDIO_TMP_DIR"
+    "_AUDIO_TMP_DIR",
+    "TARGET_LANG_MAP"
 ]
+
+
+# ------------------------------------------
+# 目标语言映射表（自然语言描述 → ISO 代码）
+# ------------------------------------------
+TARGET_LANG_MAP = {
+    # 中文
+    '简体中文': 'zh', '中文': 'zh', 'Chinese': 'zh', 'zh': 'zh', '汉语': 'zh',
+    '繁体中文': 'zh', '正體中文': 'zh', '國語': 'zh',
+    
+    # 英语
+    'English': 'en', '英语': 'en', '英文': 'en', 'en': 'en',
+    
+    # 日语
+    '日本語': 'ja', '日语': 'ja', 'Japanese': 'ja', 'ja': 'ja',
+    
+    # 西班牙语
+    'Español': 'es', '西班牙语': 'es', 'es': 'es', 'Spanish': 'es',
+    
+    # 法语
+    'Français': 'fr', '法语': 'fr', 'fr': 'fr', 'French': 'fr',
+    
+    # 德语
+    'Deutsch': 'de', '德语': 'de', 'de': 'de', 'German': 'de',
+    
+    # 意大利语
+    'Italiano': 'it', '意大利语': 'it', 'it': 'it', 'Italian': 'it',
+    
+    # 俄语
+    'Русский': 'ru', '俄语': 'ru', 'ru': 'ru', 'Russian': 'ru',
+    
+    # 韩语
+    '한국어': 'ko', '韩语': 'ko', 'ko': 'ko', 'Korean': 'ko',
+    
+    # 葡萄牙语
+    'Português': 'pt', '葡萄牙语': 'pt', 'pt': 'pt', 'Portuguese': 'pt',
+    
+    # 阿拉伯语
+    'العربية': 'ar', '阿拉伯语': 'ar', 'ar': 'ar', 'Arabic': 'ar',
+    
+    # 荷兰语
+    'Nederlands': 'nl', '荷兰语': 'nl', 'nl': 'nl', 'Dutch': 'nl',
+    
+    # 瑞典语
+    'Svenska': 'sv', '瑞典语': 'sv', 'sv': 'sv', 'Swedish': 'sv',
+    
+    # 波兰语
+    'Polski': 'pl', '波兰语': 'pl', 'pl': 'pl', 'Polish': 'pl',
+    
+    # 土耳其语
+    'Türkçe': 'tr', '土耳其语': 'tr', 'tr': 'tr', 'Turkish': 'tr',
+    
+    # 泰语
+    'ภาษาไทย': 'th', '泰语': 'th', 'th': 'th', 'Thai': 'th',
+    
+    # 越南语
+    'Tiếng Việt': 'vi', '越南语': 'vi', 'vi': 'vi', 'Vietnamese': 'vi',
+    
+    # 印地语
+    'हिन्दी': 'hi', '印地语': 'hi', 'hi': 'hi', 'Hindi': 'hi',
+    
+    # 希腊语
+    'Ελληνικά': 'el', '希腊语': 'el', 'el': 'el', 'Greek': 'el',
+    
+    # 捷克语
+    'Čeština': 'cs', '捷克语': 'cs', 'cs': 'cs', 'Czech': 'cs',
+    
+    # 匈牙利语
+    'Magyar': 'hu', '匈牙利语': 'hu', 'hu': 'hu', 'Hungarian': 'hu',
+    
+    # 芬兰语
+    'Suomi': 'fi', '芬兰语': 'fi', 'fi': 'fi', 'Finnish': 'fi',
+    
+    # 丹麦语
+    'Dansk': 'da', '丹麦语': 'da', 'da': 'da', 'Danish': 'da',
+    
+    # 挪威语
+    'Norsk': 'no', '挪威语': 'no', 'no': 'no', 'Norwegian': 'no',
+    
+    # 希伯来语
+    'עברית': 'he', '希伯来语': 'he', 'he': 'he', 'Hebrew': 'he',
+    
+    # 罗马尼亚语
+    'Română': 'ro', '罗马尼亚语': 'ro', 'ro': 'ro', 'Romanian': 'ro',
+    
+    # 保加利亚语
+    'Български': 'bg', '保加利亚语': 'bg', 'bg': 'bg', 'Bulgarian': 'bg',
+    
+    # 乌克兰语
+    'Українська': 'uk', '乌克兰语': 'uk', 'uk': 'uk', 'Ukrainian': 'uk',
+    
+    # 斯洛伐克语
+    'Slovenčina': 'sk', '斯洛伐克语': 'sk', 'sk': 'sk', 'Slovak': 'sk',
+    
+    # 克罗地亚语
+    'Hrvatski': 'hr', '克罗地亚语': 'hr', 'hr': 'hr', 'Croatian': 'hr',
+    
+    # 塞尔维亚语
+    'Српски': 'sr', '塞尔维亚语': 'sr', 'sr': 'sr', 'Serbian': 'sr',
+    
+    # 斯洛文尼亚语
+    'Slovenščina': 'sl', '斯洛文尼亚语': 'sl', 'sl': 'sl', 'Slovenian': 'sl',
+    
+    # 立陶宛语
+    'Lietuvių': 'lt', '立陶宛语': 'lt', 'lt': 'lt', 'Lithuanian': 'lt',
+    
+    # 拉脱维亚语
+    'Latviešu': 'lv', '拉脱维亚语': 'lv', 'lv': 'lv', 'Latvian': 'lv',
+    
+    # 爱沙尼亚语
+    'Eesti': 'et', '爱沙尼亚语': 'et', 'et': 'et', 'Estonian': 'et',
+    
+    # 马来语
+    'Bahasa Melayu': 'ms', '马来语': 'ms', 'ms': 'ms', 'Malay': 'ms',
+    
+    # 印尼语
+    'Bahasa Indonesia': 'id', '印尼语': 'id', 'id': 'id', 'Indonesian': 'id',
+    
+    # 菲律宾语
+    'Tagalog': 'tl', '菲律宾语': 'tl', 'tl': 'tl', 'Filipino': 'tl',
+    
+    # 波斯语
+    'فارسی': 'fa', '波斯语': 'fa', 'fa': 'fa', 'Persian': 'fa',
+    
+    # 乌尔都语
+    'اردو': 'ur', '乌尔都语': 'ur', 'ur': 'ur', 'Urdu': 'ur',
+    
+    # 孟加拉语
+    'বাংলা': 'bn', '孟加拉语': 'bn', 'bn': 'bn', 'Bengali': 'bn',
+}

@@ -61,7 +61,8 @@ def transcribe():
     save_results(df)
 
     # 9. For Parakeet: also generate split_by_meaning_raw.txt directly from segments
-    if asr_runtime == "parakeet":
+    # 只有当 segments 包含 text 字段时才生成（否则让 LLM 断句处理）
+    if asr_runtime == "parakeet" and combined_result['segments'] and 'text' in combined_result['segments'][0]:
         from core.utils.models import _3_2_SPLIT_BY_MEANING_RAW
         rprint(f"[cyan]📝 Writing Parakeet segments to: {_3_2_SPLIT_BY_MEANING_RAW}[/cyan]")
         with open(_3_2_SPLIT_BY_MEANING_RAW, 'w', encoding='utf-8') as f:

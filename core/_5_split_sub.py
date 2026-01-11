@@ -12,25 +12,6 @@ from core.utils import *
 from core.utils.models import *
 console = Console()
 
-# ! You can modify your own weights here
-# Chinese and Japanese 2.5 characters, Korean 2 characters, Thai 1.5 characters, full-width symbols 2 characters, other English-based and half-width symbols 1 character
-def calc_len(text: str) -> float:
-    text = str(text) # force convert
-    def char_weight(char):
-        code = ord(char)
-        if 0x4E00 <= code <= 0x9FFF or 0x3040 <= code <= 0x30FF:  # Chinese and Japanese
-            return 1.75
-        elif 0xAC00 <= code <= 0xD7A3 or 0x1100 <= code <= 0x11FF:  # Korean
-            return 1.5
-        elif 0x0E00 <= code <= 0x0E7F:  # Thai
-            return 1
-        elif 0xFF01 <= code <= 0xFF5E:  # full-width symbols
-            return 1.75
-        else:  # other characters (e.g. English and half-width symbols)
-            return 1
-
-    return sum(char_weight(char) for char in text)
-
 def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], List[str], str]:
     align_prompt = get_align_prompt(src_sub, tr_sub, src_part)
     
@@ -89,15 +70,25 @@ def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], Lis
     return src_parts, tr_parts, tr_remerged
 
 def split_align_subs(src_lines: List[str], tr_lines: List[str]):
-    subtitle_set = load_key("subtitle")
-    MAX_SUB_LENGTH = subtitle_set["max_length"]
-    TARGET_SUB_MULTIPLIER = subtitle_set["target_multiplier"]
+    # Get source and target language ISO codes
+    asr_language = load_key("asr.language")
+    target_lang_desc = load_key("target_language")
+    from core.utils.models import TARGET_LANG_MAP
+    target_language = TARGET_LANG_MAP.get(target_lang_desc, 'en')
+
+    # Get soft limits for source and target languages
+    origin_soft_limit = get_language_length_limit(asr_language, 'origin')
+    translate_soft_limit = get_language_length_limit(target_language, 'translate')
+
     remerged_tr_lines = tr_lines.copy()
-    
+
     to_split = []
     for i, (src, tr) in enumerate(zip(src_lines, tr_lines)):
         src, tr = str(src), str(tr)
-        if len(src) > MAX_SUB_LENGTH or calc_len(tr) * TARGET_SUB_MULTIPLIER > MAX_SUB_LENGTH:
+        # Check if source or translation exceeds hard limit
+        src_exceeds = check_length_exceeds(src, origin_soft_limit, asr_language)
+        tr_exceeds = check_length_exceeds(tr, translate_soft_limit, target_language)
+        if src_exceeds or tr_exceeds:
             to_split.append(i)
             table = Table(title=f"📏 Line {i} needs to be split")
             table.add_column("Type", style="cyan")
@@ -105,23 +96,12 @@ def split_align_subs(src_lines: List[str], tr_lines: List[str]):
             table.add_row("Source Line", src)
             table.add_row("Target Line", tr)
             console.print(table)
-    
+
     @except_handler("Error in split_align_subs")
     def process(i):
         # Calculate the number of parts dynamically based on sentence length
-        # Support both English (word-based) and Chinese (character-based)
-        asr_language = load_key("asr.language")
-        is_cjk = asr_language.lower() in ['zh', 'chinese', 'ja', 'japanese', 'ko', 'korean']
-
-        if is_cjk:
-            # For CJK languages: use character count with weight
-            text_length = calc_len(src_lines[i])
-        else:
-            # For English and other space-delimited languages: use word count
-            text_length = len(src_lines[i].split())
-
-        max_split_length = load_key("max_split_length")
-        num_parts = max(2, math.ceil(text_length / max_split_length))
+        text_length = get_effective_length(src_lines[i], asr_language)
+        num_parts = max(2, math.ceil(text_length / origin_soft_limit))
 
         split_src = split_sentence(src_lines[i], num_parts=num_parts).strip()
 
@@ -148,24 +128,31 @@ def split_align_subs(src_lines: List[str], tr_lines: List[str]):
 
 def split_for_sub_main():
     console.print("[bold green]🚀 Start splitting subtitles...[/bold green]")
-    
+
     df = pd.read_excel(_4_2_TRANSLATION)
     src = df['Source'].tolist()
     trans = df['Translation'].tolist()
-    
-    subtitle_set = load_key("subtitle")
-    MAX_SUB_LENGTH = subtitle_set["max_length"]
-    TARGET_SUB_MULTIPLIER = subtitle_set["target_multiplier"]
-    
+
+    # Get source and target language ISO codes
+    asr_language = load_key("asr.language")
+    target_lang_desc = load_key("target_language")
+    from core.utils.models import TARGET_LANG_MAP
+    target_language = TARGET_LANG_MAP.get(target_lang_desc, 'en')
+
+    # Get soft limits for source and target languages
+    origin_soft_limit = get_language_length_limit(asr_language, 'origin')
+    translate_soft_limit = get_language_length_limit(target_language, 'translate')
+
     for attempt in range(3):  # 多次切割
         console.print(Panel(f"🔄 Split attempt {attempt + 1}", expand=False))
         split_src, split_trans, remerged = split_align_subs(src.copy(), trans)
-        
+
         # 检查是否所有字幕都符合长度要求
-        if all(len(src) <= MAX_SUB_LENGTH for src in split_src) and \
-           all(calc_len(tr) * TARGET_SUB_MULTIPLIER <= MAX_SUB_LENGTH for tr in split_trans):
+        src_all_ok = all(not check_length_exceeds(s, origin_soft_limit, asr_language) for s in split_src)
+        tr_all_ok = all(not check_length_exceeds(t, translate_soft_limit, target_language) for t in split_trans)
+        if src_all_ok and tr_all_ok:
             break
-        
+
         # 更新源数据继续下一轮分割
         src, trans = split_src, split_trans
 

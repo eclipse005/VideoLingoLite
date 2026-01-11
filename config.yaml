@@ -59,17 +59,45 @@ vocal_separation:
 
 ## ======================== Advanced Settings ======================== ##
 
-subtitle:
-  # *Maximum length of each subtitle line in characters
-  max_length: 75
-  # *Translated subtitles are slightly larger than source subtitles, affecting the reference length for subtitle splitting
-  target_multiplier: 1.2
+# Original text length limit (for sentence splitting)
+# For space-separated languages: word count
+# For non-space languages: character count
+origin_length:
+  en: 18    # English: 18 words
+  ja: 18    # Japanese: 18 characters
+  zh: 15    # Chinese: 15 characters
+  es: 18    # Spanish: 18 words
+  fr: 18    # French: 18 words
+  de: 18    # German: 18 words
+  it: 18    # Italian: 18 words
+  ru: 18    # Russian: 18 words
+
+# Translation text length limit (for subtitle generation)
+# For space-separated languages: word count
+# For non-space languages: character count
+translate_length:
+  en: 12    # English: 12 words
+  zh: 22    # Chinese: 22 characters
+  ja: 20    # Japanese: 20 characters
+  es: 12    # Spanish: 12 words
+  fr: 12    # French: 12 words
+  de: 12    # German: 12 words
+  it: 12    # Italian: 12 words
+  ru: 12    # Russian: 12 words
+
+# Split ratio (hard limit = soft limit × ratio, rounded up)
+split_ratio:
+  en: 1.4   # English: 1.4
+  ja: 1.4   # Japanese: 1.4
+  zh: 1.5   # Chinese: 1.5
+  es: 1.4   # Spanish: 1.4
+  fr: 1.4   # French: 1.4
+  de: 1.4   # German: 1.4
+  it: 1.4   # Italian: 1.4
+  ru: 1.4   # Russian: 1.4
 
 # *Summary length, set low to 2k if using local LLM
 summary_length: 8000
-
-# *Maximum number of words for the first rough cut, below 18 will cut too finely affecting translation, above 22 is too long and will make subsequent subtitle splitting difficult to align
-max_split_length: 25
 
 # *Whether to reflect the translation result in the original text
 reflect_translate: true

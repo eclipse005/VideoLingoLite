@@ -242,12 +242,14 @@ def parallel_split_sentences(sentences, max_length, max_workers, retry_attempt=0
     new_sentences = [None] * len(sentences)
     futures = []
 
+    asr_language = load_key("asr.language")
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         for index, sentence in enumerate(sentences):
-            # 使用简单分词
-            tokens = tokenize_sentence(sentence)
-            num_parts = math.ceil(len(tokens) / max_length)
-            if len(tokens) > max_length:
+            # 使用有效长度判断
+            effective_length = get_effective_length(sentence, asr_language)
+            num_parts = math.ceil(effective_length / max_length)
+            if check_length_exceeds(sentence, max_length, asr_language):
                 future = executor.submit(split_sentence, sentence, num_parts, max_length, index=index, retry_attempt=retry_attempt)
                 futures.append((future, index, num_parts, sentence))
             else:
@@ -278,11 +280,13 @@ def split_sentences_by_meaning():
     console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from {_3_2_SPLIT_BY_MEANING_RAW}[/cyan]')
 
     # 统计需要切分的句子
-    max_length = load_key("max_split_length")
-    long_sentences = [s for s in sentences if get_word_count(s) > max_length]
+    asr_language = load_key("asr.language")
+    soft_limit = get_language_length_limit(asr_language, 'origin')
+    hard_limit = get_hard_limit(soft_limit, asr_language)
+    long_sentences = [s for s in sentences if check_length_exceeds(s, soft_limit, asr_language)]
 
     if long_sentences:
-        console.print(f'[yellow]⚠️ Found {len(long_sentences)} long sentences (> {max_length} words)[/yellow]')
+        console.print(f'[yellow]⚠️ Found {len(long_sentences)} long sentences (> {hard_limit})[/yellow]')
     else:
         console.print(f'[green]✅ No long sentences found, all sentences are within limit.[/green]')
         # 直接复制到最终文件
@@ -295,7 +299,7 @@ def split_sentences_by_meaning():
         console.print(f'[cyan]🔄 Round {retry_attempt + 1}/3: Processing sentences...[/cyan]')
         sentences = parallel_split_sentences(
             sentences,
-            max_length=max_length,
+            max_length=soft_limit,
             max_workers=load_key("max_workers"),
             retry_attempt=retry_attempt
         )
