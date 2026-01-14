@@ -95,6 +95,19 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
     model = model.to(device)
     model.eval() 
     
+    try:
+        from omegaconf import open_dict
+        if hasattr(model, 'change_decoding_strategy'):
+            cfg = model.cfg.decoding
+            with open_dict(cfg):
+                cfg.cuda_graphs = False
+                if "strategy" in cfg:
+                    cfg.strategy = "greedy"
+            model.change_decoding_strategy(cfg)
+            rprint("[yellow]🛠️ CUDA Graphs disabled and decoding strategy set to greedy for stability.[/yellow]")
+    except Exception as e:
+        rprint(f"[dim red]⚠️ Failed to modify decoding strategy: {e}[/dim red]")
+        
     audio_length = end - start
 
     # 3. 长音频优化

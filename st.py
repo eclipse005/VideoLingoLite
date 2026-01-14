@@ -56,7 +56,7 @@ def process_text():
     with st.spinner(spinner_text):
         _2_asr.transcribe()
     with st.spinner("正在使用LLM进行句子分段..."):
-        _3_llm_sentence_split.llm_sentence_split()
+        _3_llm_sentence_group.llm_sentence_split()
     with st.spinner("正在切分长句..."):
         _3_2_split_meaning.split_sentences_by_meaning()
     with st.spinner("正在总结和翻译..."):

@@ -3,9 +3,15 @@ try:
     from .ask_gpt import ask_gpt
     from .decorator import except_handler, check_file_exists
     from .config_utils import load_key, update_key, get_joiner, get_effective_length, get_language_length_limit, get_hard_limit, check_length_exceeds
+    from .sentence_tools import (
+        split_sentence, map_br_to_original_sentence, get_word_count, tokenize_sentence,
+        get_llm_words_and_splits, map_llm_splits_to_original, reconstruct_sentences
+    )
     from rich import print as rprint
 except ImportError:
     pass
 
 __all__ = ["ask_gpt", "except_handler", "check_file_exists", "load_key", "update_key", "rprint", "get_joiner",
-           "get_effective_length", "get_language_length_limit", "get_hard_limit", "check_length_exceeds"]
+           "get_effective_length", "get_language_length_limit", "get_hard_limit", "check_length_exceeds",
+           "split_sentence", "map_br_to_original_sentence", "get_word_count", "tokenize_sentence",
+           "get_llm_words_and_splits", "map_llm_splits_to_original", "reconstruct_sentences"]

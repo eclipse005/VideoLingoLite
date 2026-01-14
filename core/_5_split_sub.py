@@ -3,7 +3,6 @@ from typing import List, Tuple
 import concurrent.futures
 import math
 
-from core._3_llm_sentence_split import split_sentence
 from core.prompts import get_align_prompt
 from rich.panel import Panel
 from rich.console import Console

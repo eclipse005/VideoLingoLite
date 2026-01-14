@@ -7,6 +7,7 @@ from rich.console import Console
 import autocorrect_py as autocorrect
 from core.utils import *
 from core.utils.models import *
+from core.utils.sentence_tools import tokenize_sentence
 console = Console()
 
 SUBTITLE_OUTPUT_CONFIGS = [ 
@@ -86,7 +87,7 @@ def get_sentence_timestamps(df_words, df_sentences):
 
     # 遍历每一句字幕
     for idx, sentence in df_sentences['Source'].items():
-        sentence_words = str(sentence).split()
+        sentence_words = tokenize_sentence(str(sentence))  # 使用智能分词处理无空格语言
         sentence_clean_words = [clean_word(w) for w in sentence_words]
         sentence_clean_words = [w for w in sentence_clean_words if w]
 

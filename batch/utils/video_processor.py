@@ -77,7 +77,7 @@ def process_input_file(file):
     return {'video_file': video_file}
 
 def split_sentences():
-    _3_llm_sentence_split.llm_sentence_split()
+    _3_llm_sentence_group.llm_sentence_split()
 
 def summarize_and_translate():
     _4_1_summarize.get_summary()

@@ -31,10 +31,10 @@ dependencies = [
     "json-repair==0.54.2",
     "autocorrect-py==2.14.0",
     "pysrt>=1.1.2",
-    "nemo-toolkit[asr]==2.2.1",
+    "nemo-toolkit[asr]==2.6.1",
     "pyarrow>=22.0.0",
-    "numpy<2.0",
-    "audio-separator[gpu]",
+    "numpy>=2.0",
+    "audio-separator[gpu]==0.40.0",
 ]
 
 [project.optional-dependencies]
