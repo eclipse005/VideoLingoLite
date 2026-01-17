@@ -1,5 +1,10 @@
 import os
+import sys
 import gc
+
+# Add project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from batch.utils.settings_check import check_settings
 from batch.utils.video_processor import process_video
 from core.utils.config_utils import load_key, update_key
