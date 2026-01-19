@@ -132,11 +132,12 @@ uv run python -m streamlit run st.py
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
 | `asr.runtime` | `gemini` | ASR 引擎：gemini（云端）/ parakeet（本地） |
-| `target_language` | `English` | 目标语言 |
+| `asr.language` | `en` | 源语言 ISO 639-1 代码（如 en, zh, ja） |
+| `target_language` | `English` | 目标语言（自然语言描述） |
 | `max_workers` | `8` | 并发处理数（本地 LLM 建议设为 1） |
-| `subtitle.max_length` | `75` | 单行字幕字符限制 |
+| `pause_split_threshold` | `1` | 停顿切分阈值（秒），0 或 null 表示禁用 |
 | `vocal_separation.enabled` | `false` | 是否启用人声分离 |
-| `max_split_length` | `25` | 长句切分阈值 |
+| `spacy_model_map` | - | spaCy 模型映射（多语言支持） |
 
 ---
 
@@ -153,6 +154,9 @@ uv run python -m streamlit run st.py
 
 ## 特色技术
 
+- **两阶段分句架构**：NLP 语言学规则（快速）+ LLM 语义切分（精准），兼顾速度与质量
+  - Stage 1 (spaCy)：标点、逗号、连接词、停顿间隙、根词等多维度规则切分
+  - Stage 2 (LLM)：仅对超长句进行语义分析，大幅降低 API 成本
 - **difflib 对齐算法**：100% 保留原始时间戳，字幕定位精准
 - **多语言自适应分词**：CJK 语言与空格分隔语言分别优化
 - **字符权重系统**：中日文字符 1.75x 权重，字幕显示更协调
