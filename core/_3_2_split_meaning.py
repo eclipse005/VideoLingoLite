@@ -1,12 +1,9 @@
 import concurrent.futures
 import math
-import shutil
-import re
 
 from core.utils import *
 from rich.console import Console
-from rich.table import Table
-from core.utils.models import _3_2_SPLIT_BY_MEANING_RAW, _3_2_SPLIT_BY_MEANING
+from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING
 
 console = Console()
 
@@ -47,31 +44,28 @@ def parallel_split_sentences(sentences, max_length, max_workers, retry_attempt=0
 @check_file_exists(_3_2_SPLIT_BY_MEANING)
 def split_sentences_by_meaning():
     """
-    主函数：切分长句
+    主函数：切分长句 (Stage 2)
 
-    输入: split_by_meaning_raw.txt (由 LLM 组句或 Parakeet segments 生成)
-    输出: split_by_meaning.txt (切分长句后的最终结果)
+    输入: split_by_nlp.txt (Stage 1 NLP 分句结果)
+    输出: split_by_meaning.txt (LLM 切分长句后的最终结果)
     """
-    # 读取输入句子 (raw)
-    with open(_3_2_SPLIT_BY_MEANING_RAW, 'r', encoding='utf-8') as f:
+    console.print("[blue]🔍 Starting LLM sentence segmentation (Stage 2)[/blue]")
+
+    # 读取 Stage 1 的输出
+    with open(_3_1_SPLIT_BY_NLP, 'r', encoding='utf-8') as f:
         sentences = [line.strip() for line in f.readlines() if line.strip()]
 
-    console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from {_3_2_SPLIT_BY_MEANING_RAW}[/cyan]')
+    console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from Stage 1 ({_3_1_SPLIT_BY_NLP})[/cyan]')
 
     # 统计需要切分的句子
     asr_language = load_key("asr.language")
     soft_limit = get_language_length_limit(asr_language, 'origin')
-    hard_limit = get_hard_limit(soft_limit, asr_language)
     long_sentences = [s for s in sentences if check_length_exceeds(s, soft_limit, asr_language)]
 
     if long_sentences:
-        console.print(f'[yellow]⚠️ Found {len(long_sentences)} long sentences (> {hard_limit})[/yellow]')
+        console.print(f'[yellow]⚠️ Found {len(long_sentences)} long sentences that need LLM splitting[/yellow]')
     else:
         console.print(f'[green]✅ No long sentences found, all sentences are within limit.[/green]')
-        # 直接复制到最终文件
-        shutil.copy(_3_2_SPLIT_BY_MEANING_RAW, _3_2_SPLIT_BY_MEANING)
-        console.print(f'[green]💾 Copied to: {_3_2_SPLIT_BY_MEANING}[/green]')
-        return sentences
 
     # 🔄 多轮处理确保所有长句都被切分
     for retry_attempt in range(3):

@@ -55,9 +55,9 @@ def process_text():
     spinner_text = "正在进行人声分离与语音转录..." if load_key("vocal_separation.enabled") else "正在进行语音转录..."
     with st.spinner(spinner_text):
         _2_asr.transcribe()
-    with st.spinner("正在使用LLM进行句子分段..."):
-        _3_llm_sentence_group.llm_sentence_split()
-    with st.spinner("正在切分长句..."):
+    with st.spinner("正在进行NLP分句..."):
+        _3_1_split_nlp.split_by_spacy()
+    with st.spinner("正在使用LLM切分长句..."):
         _3_2_split_meaning.split_sentences_by_meaning()
     with st.spinner("正在总结和翻译..."):
         _4_1_summarize.get_summary()

@@ -34,8 +34,10 @@ dependencies = [
     "nemo-toolkit[asr]==2.6.1",
     "pyarrow>=22.0.0",
     "numpy>=2.0",
-    "audio-separator[gpu]==0.40.0",
+    "audio-separator[gpu]==0.41.0",
     "rich>=14.2.0",
+    "spacy>=3.8.11",
+    "pip>=25.3",
 ]
 
 [project.optional-dependencies]

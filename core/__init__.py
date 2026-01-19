@@ -3,7 +3,7 @@ try:
     from . import (
         _1_ytdlp,
         _2_asr,
-        _3_llm_sentence_group,
+        _3_1_split_nlp,
         _3_2_split_meaning,
         _4_1_summarize,
         _4_2_translate,
@@ -22,7 +22,7 @@ __all__ = [
     'cleanup',
     '_1_ytdlp',
     '_2_asr',
-    '_3_llm_sentence_group',
+    '_3_1_split_nlp',
     '_3_2_split_meaning',
     '_4_1_summarize',
     '_4_2_translate',

@@ -11,9 +11,9 @@ from core.utils import *
 from core.utils.models import *
 console = Console()
 
-def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], List[str], str]:
+def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], List[str], List[str]]:
     align_prompt = get_align_prompt(src_sub, tr_sub, src_part)
-    
+
     def valid_align(response_data):
         # 1. 检查response是字典
         if not isinstance(response_data, dict):
@@ -54,19 +54,15 @@ def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], Lis
     src_parts = src_part.split('[br]')
     tr_parts = [item[f'target_part_{i+1}'].strip() for i, item in enumerate(align_data)]
 
-    
-    asr_language = load_key("asr.language")
-    joiner = get_joiner(asr_language)
-    tr_remerged = joiner.join(tr_parts)
-    
     table = Table(title="🔗 Aligned parts")
     table.add_column("Language", style="cyan")
     table.add_column("Parts", style="magenta")
     table.add_row("SRC_LANG", "\n".join(src_parts))
     table.add_row("TARGET_LANG", "\n".join(tr_parts))
     console.print(table)
-    
-    return src_parts, tr_parts, tr_remerged
+
+    # Return tr_parts directly instead of merging, so remerged can be flattened correctly
+    return src_parts, tr_parts, tr_parts
 
 def split_align_subs(src_lines: List[str], tr_lines: List[str]):
     # Get source and target language ISO codes
@@ -106,29 +102,30 @@ def split_align_subs(src_lines: List[str], tr_lines: List[str]):
 
         # 只有当 LLM 认为需要拆分时才调用 align_subs
         if '[br]' in split_src:
-            src_parts, tr_parts, tr_remerged = align_subs(src_lines[i], tr_lines[i], split_src)
+            src_parts, tr_parts, tr_remerged_parts = align_subs(src_lines[i], tr_lines[i], split_src)
         else:
             # LLM 认为不需要拆分，直接使用原始句子
             src_parts = [src_lines[i]]
             tr_parts = [tr_lines[i]]
-            tr_remerged = tr_lines[i]
+            tr_remerged_parts = [tr_lines[i]]
         src_lines[i] = src_parts
         tr_lines[i] = tr_parts
-        remerged_tr_lines[i] = tr_remerged
-    
+        remerged_tr_lines[i] = tr_remerged_parts
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=load_key("max_workers")) as executor:
         executor.map(process, to_split)
-    
-    # Flatten `src_lines` and `tr_lines`
+
+    # Flatten `src_lines`, `tr_lines`, and `remerged_tr_lines`
     src_lines = [item for sublist in src_lines for item in (sublist if isinstance(sublist, list) else [sublist])]
     tr_lines = [item for sublist in tr_lines for item in (sublist if isinstance(sublist, list) else [sublist])]
-    
+    remerged_tr_lines = [item for sublist in remerged_tr_lines for item in (sublist if isinstance(sublist, list) else [sublist])]
+
     return src_lines, tr_lines, remerged_tr_lines
 
 def split_for_sub_main():
     console.print("[bold green]🚀 Start splitting subtitles...[/bold green]")
 
-    df = pd.read_excel(_4_2_TRANSLATION)
+    df = pd.read_excel(_4_2_TRANSLATION).fillna('')
     src = df['Source'].tolist()
     trans = df['Translation'].tolist()
 
@@ -155,14 +152,10 @@ def split_for_sub_main():
         # 更新源数据继续下一轮分割
         src, trans = split_src, split_trans
 
-    # 确保二者有相同的长度，防止报错
-    if len(src) > len(remerged):
-        remerged += [None] * (len(src) - len(remerged))
-    elif len(remerged) > len(src):
-        src += [None] * (len(remerged) - len(src))
-    
+    # After fixing, remerged has the same length and structure as split_src/split_trans
+    # So both files should have identical content now
     pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_excel(_5_SPLIT_SUB, index=False)
-    pd.DataFrame({'Source': src, 'Translation': remerged}).to_excel(_5_REMERGED, index=False)
+    pd.DataFrame({'Source': split_src, 'Translation': remerged}).to_excel(_5_REMERGED, index=False)
 
 if __name__ == '__main__':
     split_for_sub_main()
