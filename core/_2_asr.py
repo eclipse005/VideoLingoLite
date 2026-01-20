@@ -56,7 +56,7 @@ def transcribe():
         json.dump(combined_result, f, indent=2, ensure_ascii=False)
     rprint(f"[green]💾 ASR result saved to: {asr_json_path}[/green]")
 
-    # 8. Process df (always generate cleaned_chunks.xlsx for word-level data)
+    # 8. Process df (always generate cleaned_chunks.csv for word-level data)
     df = process_transcription(combined_result)
     save_results(df)
 

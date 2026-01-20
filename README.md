@@ -89,7 +89,7 @@ uv run python -m streamlit run st.py
 需要处理多个视频？使用批处理模式：
 
 1. 将视频文件放入 `batch/input/` 目录
-2. 编辑 `batch/tasks_setting.xlsx` 配置每个任务的语言设置
+2. 编辑 `batch/tasks_setting.csv` 配置每个任务的语言设置
 3. 运行 `batch/OneKeyBatch.bat`
 
 | 配置项 | 说明 |
@@ -103,7 +103,7 @@ uv run python -m streamlit run st.py
 
 ## 自定义术语
 
-编辑 `custom_terms.xlsx` 添加专业术语，提升翻译准确率：
+编辑 `custom_terms.csv` 添加专业术语，提升翻译准确率：
 
 | 源语言术语 | 目标语言翻译 | 解释说明 |
 |------------|-------------|----------|

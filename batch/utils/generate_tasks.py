@@ -7,7 +7,7 @@ from rich.table import Table
 console = Console()
 
 INPUT_FOLDER = os.path.join('batch', 'input')
-EXCEL_FILE = 'batch/tasks_setting.xlsx'
+CSV_FILE = 'batch/tasks_setting.csv'
 
 # Video file extensions to scan
 VIDEO_EXTENSIONS = {'.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mp3', '.wav', '.m4a', '.flac', '.aac'}
@@ -56,7 +56,7 @@ def get_user_input(default_source_lang='en', default_target_lang='简体中文',
 
 
 def create_excel(files, source_lang, target_lang, dubbing):
-    """Create tasks_setting.xlsx with scanned files"""
+    """Create tasks_setting.csv with scanned files"""
     data = {
         'Video File': files,
         'Source Language': [source_lang] * len(files),
@@ -66,7 +66,7 @@ def create_excel(files, source_lang, target_lang, dubbing):
     }
 
     df = pd.DataFrame(data)
-    df.to_excel(EXCEL_FILE, index=False)
+    df.to_csv(CSV_FILE, index=False, encoding='utf-8-sig')
     return df
 
 
@@ -113,8 +113,8 @@ def main():
     preview_table(df)
 
     # Save
-    df.to_excel(EXCEL_FILE, index=False)
-    console.print(Panel(f"[bold green]Successfully generated {EXCEL_FILE}[/]\n[bold]{len(files)}[/] task(s) added", title="Done", expand=False))
+    df.to_csv(CSV_FILE, index=False, encoding='utf-8-sig')
+    console.print(Panel(f"[bold green]Successfully generated {CSV_FILE}[/]\n[bold]{len(files)}[/] task(s) added", title="Done", expand=False))
 
 
 if __name__ == "__main__":

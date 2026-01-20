@@ -2,14 +2,14 @@
 # 定义中间产出文件
 # ------------------------------------------
 
-_2_CLEANED_CHUNKS = "output/log/cleaned_chunks.xlsx"
+_2_CLEANED_CHUNKS = "output/log/cleaned_chunks.csv"
 _3_1_SPLIT_BY_NLP = "output/log/split_by_nlp.txt"
 _3_2_SPLIT_BY_MEANING_RAW = "output/log/split_by_meaning_raw.txt"  # LLM组句/Parakeet segments 原始结果
 _3_2_SPLIT_BY_MEANING = "output/log/split_by_meaning.txt"  # 切分长句后的最终结果
 _4_1_TERMINOLOGY = "output/log/terminology.json"
-_4_2_TRANSLATION = "output/log/translation_results.xlsx"
-_5_SPLIT_SUB = "output/log/translation_results_for_subtitles.xlsx"
-_5_REMERGED = "output/log/translation_results_remerged.xlsx"
+_4_2_TRANSLATION = "output/log/translation_results.csv"
+_5_SPLIT_SUB = "output/log/translation_results_for_subtitles.csv"
+_5_REMERGED = "output/log/translation_results_remerged.csv"
 
 
 

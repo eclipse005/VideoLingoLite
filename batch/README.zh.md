@@ -13,7 +13,7 @@
 
 ### 2. 配置任务
 
-编辑 `tasks_setting.xlsx` 文件：
+编辑 `tasks_setting.csv` 文件：
 
 | 字段 | 说明 | 可选值 |
 |------|------|--------|
@@ -33,9 +33,9 @@
 
 1. 双击运行 `OneKeyBatch.bat`
 2. 输出文件将保存在 `output` 文件夹
-3. 任务状态可在 `tasks_setting.xlsx` 的 `Status` 列查看
+3. 任务状态可在 `tasks_setting.csv` 的 `Status` 列查看
 
-> 注意在运行时保持 `tasks_setting.xlsx` 关闭，否则会因占用无法写入而中断。
+> 注意在运行时保持 `tasks_setting.csv` 关闭，否则会因占用无法写入而中断。
 
 ## 注意事项
 
@@ -46,7 +46,7 @@
 ### 错误处理
 
 - 处理失败的文件会被移至 `output/ERROR` 文件夹
-- 错误信息记录在 `tasks_setting.xlsx` 的 `Status` 列
+- 错误信息记录在 `tasks_setting.csv` 的 `Status` 列
 - 如需重试：
   1. 将 `ERROR` 下的单个视频文件夹移至根目录
   2. 重命名为 `output`

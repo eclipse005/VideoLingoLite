@@ -3,11 +3,11 @@ import re
 import unicodedata
 from core.prompts import get_summary_prompt
 import pandas as pd
-from core.utils import *
+from core.utils import load_key, rprint, safe_read_csv, ask_gpt
 from core.utils.models import _3_2_SPLIT_BY_MEANING, _4_1_TERMINOLOGY
 from core.utils.sentence_tools import clean_word
 
-CUSTOM_TERMS_PATH = 'custom_terms.xlsx'
+CUSTOM_TERMS_PATH = 'custom_terms.csv'
 
 def combine_chunks():
     """Combine the text chunks identified by ASR into a single long text"""
@@ -85,7 +85,7 @@ def search_things_to_note_in_prompt(sentence):
 
 def get_summary():
     src_content = combine_chunks()
-    custom_terms = pd.read_excel(CUSTOM_TERMS_PATH)
+    custom_terms = safe_read_csv(CUSTOM_TERMS_PATH)
     custom_terms_json = {
         "terms": 
             [

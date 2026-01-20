@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from batch.utils.settings_check import check_settings
 from batch.utils.video_processor import process_video
 from core.utils.config_utils import load_key, update_key
+from core.utils import safe_read_csv
 import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
@@ -31,7 +32,7 @@ def process_batch():
     if not check_settings():
         raise Exception("Settings check failed")
 
-    df = pd.read_excel('batch/tasks_setting.xlsx')
+    df = safe_read_csv('batch/tasks_setting.csv')
     for index, row in df.iterrows():
         if pd.isna(row['Status']) or 'Error' in str(row['Status']):
             total_tasks = len(df)
@@ -86,7 +87,7 @@ def process_batch():
                 update_key('target_language', original_target_lang)
                 
                 df.at[index, 'Status'] = status_msg
-                df.to_excel('batch/tasks_setting.xlsx', index=False)
+                df.to_csv('batch/tasks_setting.csv', index=False, encoding='utf-8-sig')
                 
                 gc.collect()
                 

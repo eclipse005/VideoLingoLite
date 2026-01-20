@@ -148,7 +148,7 @@ def split_sentences_main(nlp):
         output_file.truncate()
 
     # delete the original file
-    os.remove(SPLIT_BY_COMMA_FILE)
+    # os.remove(SPLIT_BY_COMMA_FILE)  # TEMP: Commented out for debugging
 
     rprint(f"[green]💾 Sentences split by connectors saved to →  `{SPLIT_BY_CONNECTOR_FILE}`[/green]")
 

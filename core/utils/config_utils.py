@@ -2,12 +2,40 @@ from ruamel.yaml import YAML
 import threading
 import re
 import math
+import pandas as pd
 
 CONFIG_PATH = 'config.yaml'
 lock = threading.Lock()
 
 yaml = YAML()
 yaml.preserve_quotes = True
+
+# -----------------------
+# Safe CSV reading with encoding detection
+# -----------------------
+
+def safe_read_csv(filepath, **kwargs):
+    """
+    Read CSV with automatic encoding detection.
+    Tries common encodings in order.
+    """
+    # Remove 'encoding' from kwargs if present
+    kwargs.pop('encoding', None)
+
+    # List of encodings to try, in order of preference
+    encodings = ['utf-8-sig', 'utf-8', 'gbk', 'gb2312', 'gb18030', 'latin-1']
+
+    for encoding in encodings:
+        try:
+            return pd.read_csv(filepath, encoding=encoding, **kwargs)
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+        except Exception:
+            # If it's not a decoding error, something else is wrong - don't suppress
+            raise
+
+    # If all encodings fail, raise the original error
+    raise UnicodeDecodeError(f"Could not read {filepath} with any common encoding")
 
 # -----------------------
 # load & update config

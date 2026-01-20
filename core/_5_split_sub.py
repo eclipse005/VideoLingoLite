@@ -125,7 +125,7 @@ def split_align_subs(src_lines: List[str], tr_lines: List[str]):
 def split_for_sub_main():
     console.print("[bold green]🚀 Start splitting subtitles...[/bold green]")
 
-    df = pd.read_excel(_4_2_TRANSLATION).fillna('')
+    df = safe_read_csv(_4_2_TRANSLATION).fillna('')
     src = df['Source'].tolist()
     trans = df['Translation'].tolist()
 
@@ -154,8 +154,8 @@ def split_for_sub_main():
 
     # After fixing, remerged has the same length and structure as split_src/split_trans
     # So both files should have identical content now
-    pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_excel(_5_SPLIT_SUB, index=False)
-    pd.DataFrame({'Source': split_src, 'Translation': remerged}).to_excel(_5_REMERGED, index=False)
+    pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_csv(_5_SPLIT_SUB, index=False, encoding='utf-8-sig')
+    pd.DataFrame({'Source': split_src, 'Translation': remerged}).to_csv(_5_REMERGED, index=False, encoding='utf-8-sig')
 
 if __name__ == '__main__':
     split_for_sub_main()

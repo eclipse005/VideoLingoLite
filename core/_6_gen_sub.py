@@ -189,9 +189,9 @@ def clean_translation(x):
     return autocorrect.format(cleaned)
 
 def align_timestamp_main():
-    df_text = pd.read_excel(_2_CLEANED_CHUNKS)
+    df_text = safe_read_csv(_2_CLEANED_CHUNKS)
     df_text['text'] = df_text['text'].str.strip('"').str.strip()
-    df_translate = pd.read_excel(_5_SPLIT_SUB)
+    df_translate = safe_read_csv(_5_SPLIT_SUB)
     df_translate['Translation'] = df_translate['Translation'].apply(clean_translation)
     
     align_timestamp(df_text, df_translate, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR)

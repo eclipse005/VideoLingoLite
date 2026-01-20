@@ -98,7 +98,7 @@ def translate_all():
     
     # Save translation results
     df_translate = pd.DataFrame({'Source': src_text, 'Translation': trans_text})
-    df_translate.to_excel(_4_2_TRANSLATION, index=False)
+    df_translate.to_csv(_4_2_TRANSLATION, index=False, encoding='utf-8-sig')
     console.print("[bold green]✅ Translation completed and results saved.[/bold green]")
 
 if __name__ == '__main__':

@@ -13,7 +13,7 @@ Before utilizing the batch mode, ensure you have used the Streamlit mode and pro
 
 ### 2. Task Configuration
 
-Edit the `tasks_setting.xlsx` file:
+Edit the `tasks_setting.csv` file:
 
 | Field | Description | Acceptable Values |
 |-------|-------------|-------------------|
@@ -33,9 +33,9 @@ Example:
 
 1. Double-click to run `OneKeyBatch.bat`
 2. Output files will be saved in the `output` folder
-3. Task status can be monitored in the `Status` column of `tasks_setting.xlsx`
+3. Task status can be monitored in the `Status` column of `tasks_setting.csv`
 
-> Note: Keep `tasks_setting.xlsx` closed during execution to prevent interruptions due to file access conflicts.
+> Note: Keep `tasks_setting.csv` closed during execution to prevent interruptions due to file access conflicts.
 
 ## Important Considerations
 
@@ -46,7 +46,7 @@ If the command line is closed unexpectedly, language settings in `config.yaml` m
 ### Error Management
 
 - Failed files will be moved to the `output/ERROR` folder
-- Error messages are recorded in the `Status` column of `tasks_setting.xlsx`
+- Error messages are recorded in the `Status` column of `tasks_setting.csv`
 - To retry:
   1. Move the single video folder from `ERROR` to the root directory
   2. Rename it to `output`

@@ -2,16 +2,17 @@ import os
 import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
+from core.utils import safe_read_csv
 
 # Constants
-SETTINGS_FILE = 'batch/tasks_setting.xlsx'
+SETTINGS_FILE = 'batch/tasks_setting.csv'
 INPUT_FOLDER = os.path.join('batch', 'input')
 
 console = Console()
 
 def check_settings():
     os.makedirs(INPUT_FOLDER, exist_ok=True)
-    df = pd.read_excel(SETTINGS_FILE)
+    df = safe_read_csv(SETTINGS_FILE)
     input_files = set(os.listdir(INPUT_FOLDER))
     excel_files = set(df['Video File'].tolist())
     files_not_in_excel = input_files - excel_files
@@ -23,7 +24,7 @@ def check_settings():
     if files_not_in_excel:
         console.print(Panel(
             "\n".join([f"- {file}" for file in files_not_in_excel]),
-            title="[bold red]Warning: Files in input folder not mentioned in Excel sheet",
+            title="[bold red]Warning: Files in input folder not mentioned in CSV file",
             expand=False
         ))
         all_passed = False

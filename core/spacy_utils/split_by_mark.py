@@ -3,6 +3,7 @@ import pandas as pd
 import warnings
 from core.spacy_utils.load_nlp_model import init_nlp, SPLIT_BY_MARK_FILE
 from core.utils.config_utils import load_key, get_joiner
+from core.utils import safe_read_csv
 from rich import print as rprint
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -15,7 +16,7 @@ def split_by_mark(nlp):
     language = load_key("asr.language")
     joiner = get_joiner(language)
     rprint(f"[blue]🔍 Using {language} language joiner: '{joiner}'[/blue]")
-    chunks = pd.read_excel("output/log/cleaned_chunks.xlsx")
+    chunks = safe_read_csv("output/log/cleaned_chunks.csv")
     chunks.text = chunks.text.apply(lambda x: x.strip('"').strip(""))
 
     chunks_list = chunks.text.to_list()

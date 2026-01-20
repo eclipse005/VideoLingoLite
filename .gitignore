@@ -157,7 +157,10 @@ _model_cache/
 
 batch/input/
 batch/output/
-batch/tasks_setting.xlsx
+batch/tasks_setting.csv
+
+# config files
+config.yaml
 
 # large files
 /ffmpeg.exe
@@ -228,4 +231,4 @@ CLAUDE.md
 *.srt.bak
 *.wav.bak
 raw_download/
-custom_terms*.xlsx
+custom_terms*.csv
