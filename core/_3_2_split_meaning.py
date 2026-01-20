@@ -84,6 +84,8 @@ def split_sentence_by_br(sentence: Sentence, llm_output: str) -> List[Sentence]:
     Returns:
         拆分后的 Sentence 对象列表
     """
+    from core.utils.sentence_tools import clean_word
+
     # 1. 找到 [br] 在原始句子中的位置
     br_positions = find_br_positions_in_original(llm_output, sentence.text)
 
@@ -91,10 +93,11 @@ def split_sentence_by_br(sentence: Sentence, llm_output: str) -> List[Sentence]:
         # 没有需要拆分的地方
         return [sentence]
 
-    # 2. 构建字符到 Chunk 的映射
+    # 2. 构建清洗后文本到 Chunk 的映射（关键修复：使用清洗后的文本）
     char_to_chunk = []
     for chunk_idx, chunk in enumerate(sentence.chunks):
-        char_to_chunk.extend([chunk_idx] * len(chunk.text))
+        cleaned_chunk_text = clean_word(chunk.text)
+        char_to_chunk.extend([chunk_idx] * len(cleaned_chunk_text))
 
     # 3. 根据 [br] 位置确定 Chunk 拆分点
     split_points = [0]  # 起始点
