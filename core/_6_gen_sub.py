@@ -7,6 +7,7 @@ from rich.console import Console
 import autocorrect_py as autocorrect
 from core.utils import *
 from core.utils.models import *
+
 console = Console()
 
 SUBTITLE_OUTPUT_CONFIGS = [
@@ -17,7 +18,7 @@ SUBTITLE_OUTPUT_CONFIGS = [
 ]
 
 
-def convert_to_srt_format(start_time, end_time):
+def convert_to_srt_format(start_time: float, end_time: float) -> str:
     """Convert time (in seconds) to the format: hours:minutes:seconds,milliseconds"""
     def seconds_to_hmsm(seconds):
         hours = int(seconds // 3600)
@@ -31,16 +32,17 @@ def convert_to_srt_format(start_time, end_time):
     return f"{start_srt} --> {end_srt}"
 
 
-# ✨ Beautify the translation
-def clean_translation(x):
+def clean_translation(x) -> str:
+    """Beautify the translation"""
     if pd.isna(x):
         return ''
     cleaned = str(x).strip('。').strip('，')
     return autocorrect.format(cleaned)
 
+
 def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output_configs: list, output_dir: str, for_display: bool = True):
     """
-    直接从 Sentence 对象列表生成字幕，不需要匹配
+    直接从 Sentence 对象列表生成字幕
 
     Args:
         sentences: Sentence 对象列表
@@ -104,59 +106,18 @@ def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output
     return df_trans_time
 
 
-def align_timestamp_main(sentences=None):
+def align_timestamp_main(sentences: List[Sentence]) -> None:
     """
     字幕生成主函数，直接从 Sentence 对象生成字幕
 
     Args:
-        sentences: Sentence 对象列表（如果为 None，从 CSV 加载）
+        sentences: Sentence 对象列表
     """
     # 📊 显示接收到的 Sentence 对象信息
-    if sentences:
-        console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 4[/cyan]')
-        console.print(f'[dim]Last sentence time: {sentences[-1].start:.2f}s - {sentences[-1].end:.2f}s[/dim]')
-    else:
-        console.print('[yellow]⚠️ No Sentence objects received, loading from CSV...[/yellow]')
+    console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 4[/cyan]')
+    console.print(f'[dim]Last sentence time: {sentences[-1].start:.2f}s - {sentences[-1].end:.2f}s[/dim]')
 
-    # 如果没有传入 Sentence 对象，从 CSV 加载（向后兼容）
-    if sentences is None:
-        from core._2_asr import load_chunks
-
-        df_translate = safe_read_csv(_5_SPLIT_SUB)
-        df_translate['Translation'] = df_translate['Translation'].apply(clean_translation)
-
-        src = df_translate['Source'].tolist()
-        trans = df_translate['Translation'].tolist()
-
-        # 重建 Sentence 对象
-        chunks = load_chunks()
-        sentences = []
-        char_pos = 0
-        chunk_idx = 0
-
-        for src_text, trans_text in zip(src, trans):
-            sentence_chunks = []
-            text_length = len(src_text)
-
-            while chunk_idx < len(chunks) and char_pos < text_length:
-                chunk = chunks[chunk_idx]
-                sentence_chunks.append(chunk)
-                char_pos += len(chunk.text)
-                chunk_idx += 1
-
-            sentence = Sentence(
-                chunks=sentence_chunks,
-                text=src_text,
-                translation=trans_text,
-                start=sentence_chunks[0].start if sentence_chunks else 0.0,
-                end=sentence_chunks[-1].end if sentence_chunks else 0.0,
-                index=len(sentences),
-                is_split=False
-            )
-            sentences.append(sentence)
-            char_pos = 0
-
-    # 使用新的函数直接从 Sentence 对象生成字幕
+    # 直接从 Sentence 对象生成字幕
     generate_subtitles_from_sentences(sentences, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR, for_display=True)
     console.print(Panel("[bold green]🎉📝 Subtitles generation completed! Please check in the `output` folder 👀[/bold green]"))
     console.print(f'[green]✅ Generated subtitles from {len(sentences)} Sentence objects (no difflib matching!)[/green]')
@@ -164,41 +125,41 @@ def align_timestamp_main(sentences=None):
     # 合并空字幕
     merge_empty_subtitle()
 
-def merge_empty_subtitle():
-    """合并空字幕：检查空行的字幕和前一行是否连续，如果间隔小于0.3秒则删除空字幕并更新前字幕的结束时间
-    同时处理对应的中英文字幕文件"""
+
+def merge_empty_subtitle() -> None:
+    """合并空字幕：检查空行的字幕和前一行是否连续，如果间隔小于0.3秒则删除空字幕并更新前字幕的结束时间"""
     import pysrt
-    
-    def process_srt_pair(trans_path, src_path):
+
+    def process_srt_pair(trans_path: str, src_path: str) -> None:
         """处理中文字幕和对应的英文字幕文件对"""
         if not os.path.exists(trans_path):
             console.print(f"[yellow]⚠️ 文件不存在: {trans_path}[/yellow]")
             return
-            
+
         if not os.path.exists(src_path):
             console.print(f"[yellow]⚠️ 文件不存在: {src_path}[/yellow]")
             return
-            
+
         try:
             # 加载中文字幕和英文字幕
             trans_subs = pysrt.open(trans_path, encoding='utf-8')
             src_subs = pysrt.open(src_path, encoding='utf-8')
-            
+
             if len(trans_subs) != len(src_subs):
                 console.print(f"[red]❌ 字幕文件行数不匹配: {trans_path} ({len(trans_subs)}行) vs {src_path} ({len(src_subs)}行)[/red]")
                 return
-            
+
             # 找到需要合并的空字幕或重复字幕索引
             to_remove = []
             for i in range(len(trans_subs)):
                 if i > 0:  # 从第二个字幕开始检查
                     current_trans = trans_subs[i]
                     prev_trans = trans_subs[i-1]
-                    
+
                     # 检查当前中文字幕是否为空（去除空格后为空字符串）
                     current_text = current_trans.text.strip()
                     prev_text = prev_trans.text.strip()
-                    
+
                     # 计算时间间隔（毫秒转秒）
                     time_gap = (current_trans.start.ordinal - prev_trans.end.ordinal) / 1000.0
 
@@ -226,36 +187,37 @@ def merge_empty_subtitle():
                         # 原文不需要动（包括时间戳和内容）
                         to_remove.append(i)
                         console.print(f"[dim]合并重复字幕: 第{i+1}行 -> 第{i}行[/dim]")
-            
+
             # 从后往前删除，避免索引问题
             for idx in reversed(to_remove):
                 del trans_subs[idx]
                 del src_subs[idx]
-            
+
             # 重新编号并保存
             for i, (trans_sub, src_sub) in enumerate(zip(trans_subs, src_subs), 1):
                 trans_sub.index = i
                 src_sub.index = i
-            
+
             trans_subs.save(trans_path, encoding='utf-8')
             src_subs.save(src_path, encoding='utf-8')
             console.print(f"[green]✅ 处理完成: {trans_path} 和 {src_path}[/green]")
-            
+
         except Exception as e:
             console.print(f"[red]❌ 处理失败 {trans_path} 和 {src_path}: {str(e)}[/red]")
-    
+
     # 定义字幕文件对
     subtitle_pairs = [
         (os.path.join(_OUTPUT_DIR, 'trans.srt'), os.path.join(_OUTPUT_DIR, 'src.srt'))
     ]
-    
+
     console.print(Panel("[bold blue]🔍 开始检查并合并空字幕...[/bold blue]"))
-    
+
     # 处理所有字幕对
     for trans_path, src_path in subtitle_pairs:
         process_srt_pair(trans_path, src_path)
-    
-    console.print(Panel("[bold green]🎉 空字幕合并完成！[/bold green]"))    
+
+    console.print(Panel("[bold green]🎉 空字幕合并完成！[/bold green]"))
+
 
 if __name__ == '__main__':
-    align_timestamp_main()
+    print("This module requires Sentence objects as input.")

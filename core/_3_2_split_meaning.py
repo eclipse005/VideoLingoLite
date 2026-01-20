@@ -123,9 +123,14 @@ def split_sentence_by_br(sentence: Sentence, llm_output: str) -> List[Sentence]:
 
         sub_chunks = sentence.chunks[start_idx:end_idx]
 
+        # 使用 joiner 拼接子句文本
+        asr_language = load_key("asr.language")
+        joiner = get_joiner(asr_language)
+        sub_text = joiner.join(c.text for c in sub_chunks)
+
         new_sentence = Sentence(
             chunks=sub_chunks,
-            text="".join(c.text for c in sub_chunks),
+            text=sub_text,
             start=sub_chunks[0].start,
             end=sub_chunks[-1].end,
             index=sentence.index + i,
@@ -185,58 +190,21 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
     # Flatten the list of lists
     return [s for sublist in new_sentences for s in sublist]
 
-def split_sentences_by_meaning(sentences: List[Sentence] = None):
+def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     """
     主函数：切分长句 (Stage 2)
 
     Args:
-        sentences: Sentence 对象列表（如果为 None，则从文本文件加载）
+        sentences: Sentence 对象列表
 
-    输入: split_by_nlp.txt (Stage 1 NLP 分句结果) 或 List[Sentence]
-    输出: split_by_meaning.txt (LLM 切分长句后的最终结果) 和 List[Sentence]
+    Returns:
+        List[Sentence]: 切分后的 Sentence 对象列表
     """
     console.print("[blue]🔍 Starting LLM sentence segmentation (Stage 2)[/blue]")
 
-    # 如果没有传入 Sentence 对象，从文本文件读取（向后兼容）
-    if sentences is None:
-        with open(_3_1_SPLIT_BY_NLP, 'r', encoding='utf-8') as f:
-            text_lines = [line.strip() for line in f.readlines() if line.strip()]
-
-        # 将文本转换为临时 Sentence 对象（没有 Chunk 信息，用于 LLM 处理）
-        sentences = []
-        chunks = load_chunks()  # 加载 chunks 用于获取时间戳
-        char_pos = 0
-        chunk_idx = 0
-
-        for text_line in text_lines:
-            # 找到覆盖这段文本的 chunks
-            sentence_chunks = []
-            text_length = len(text_line)
-
-            while chunk_idx < len(chunks) and char_pos < text_length:
-                chunk = chunks[chunk_idx]
-                sentence_chunks.append(chunk)
-                char_pos += len(chunk.text)
-                chunk_idx += 1
-
-            # 创建临时 Sentence 对象
-            sentence = Sentence(
-                chunks=sentence_chunks,
-                text=text_line,
-                start=sentence_chunks[0].start if sentence_chunks else 0.0,
-                end=sentence_chunks[-1].end if sentence_chunks else 0.0,
-                index=len(sentences),
-                is_split=False
-            )
-            sentences.append(sentence)
-            char_pos = 0  # 重置
-
-    console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from Stage 1 ({_3_1_SPLIT_BY_NLP})[/cyan]')
-
-    # 📊 显示接收到的 Sentence 对象信息
-    if sentences and isinstance(sentences[0], Sentence):
-        console.print(f'[green]✅ Received {len(sentences)} Sentence objects from Stage 1[/green]')
-        console.print(f"[dim]First sentence has {len(sentences[0].chunks)} chunks | Time: {sentences[0].start:.2f}s - {sentences[0].end:.2f}s[/dim]")
+    console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from Stage 1[/cyan]')
+    console.print(f'[green]✅ Received {len(sentences)} Sentence objects from Stage 1[/green]')
+    console.print(f"[dim]First sentence has {len(sentences[0].chunks)} chunks | Time: {sentences[0].start:.2f}s - {sentences[0].end:.2f}s[/dim]")
 
     # 统计需要切分的句子
     asr_language = load_key("asr.language")

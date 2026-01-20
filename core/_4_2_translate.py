@@ -2,38 +2,34 @@ import pandas as pd
 import json
 import concurrent.futures
 import unicodedata
+from typing import List
 from core.translate_lines import translate_lines
 from core._4_1_summarize import search_things_to_note_in_prompt
 from core.utils import *
+from core.utils.models import *
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from difflib import SequenceMatcher
-from core.utils.models import *
+
 console = Console()
 
-# Function to split text into chunks
-def split_chunks_by_chars(chunk_size, max_i, texts=None):
+
+def split_chunks_by_chars(chunk_size: int, max_i: int, texts: List[str]) -> List[str]:
     """
     Split text into chunks based on character count
 
     Args:
         chunk_size: Maximum characters per chunk
         max_i: Maximum sentences per chunk
-        texts: List of texts (if None, load from file)
+        texts: List of texts
 
     Returns:
         List of multi-line text chunks
     """
-    if texts is None:
-        with open(_3_2_SPLIT_BY_MEANING, "r", encoding="utf-8") as file:
-            sentences = file.read().strip().split('\n')
-    else:
-        sentences = texts
-
     chunks = []
     chunk = ''
     sentence_count = 0
-    for sentence in sentences:
+    for sentence in texts:
         if len(chunk) + len(sentence + '\n') > chunk_size or sentence_count == max_i:
             chunks.append(chunk.strip())
             chunk = sentence + '\n'
@@ -44,35 +40,39 @@ def split_chunks_by_chars(chunk_size, max_i, texts=None):
     chunks.append(chunk.strip())
     return chunks
 
-# Get context from surrounding chunks
-def get_previous_content(chunks, chunk_index):
-    return None if chunk_index == 0 else chunks[chunk_index - 1].split('\n')[-3:] # Get last 3 lines
-def get_after_content(chunks, chunk_index):
-    return None if chunk_index == len(chunks) - 1 else chunks[chunk_index + 1].split('\n')[:2] # Get first 2 lines
 
-# 🔍 Translate a single chunk
-def translate_chunk(chunk, chunks, theme_prompt, i):
+def get_previous_content(chunks: List[str], chunk_index: int) -> List[str] | None:
+    """Get previous content for context"""
+    return None if chunk_index == 0 else chunks[chunk_index - 1].split('\n')[-3:]
+
+
+def get_after_content(chunks: List[str], chunk_index: int) -> List[str] | None:
+    """Get after content for context"""
+    return None if chunk_index == len(chunks) - 1 else chunks[chunk_index + 1].split('\n')[:2]
+
+
+def translate_chunk(chunk: str, chunks: List[str], theme_prompt: str, i: int):
+    """Translate a single chunk with context"""
     things_to_note_prompt = search_things_to_note_in_prompt(chunk)
     previous_content_prompt = get_previous_content(chunks, i)
     after_content_prompt = get_after_content(chunks, i)
     translation, english_result = translate_lines(chunk, previous_content_prompt, after_content_prompt, things_to_note_prompt, theme_prompt, i)
     return i, english_result, translation
 
-# Add similarity calculation function
-def similar(a, b):
-    # Use unicodedata normalization to handle composed characters, improving matching accuracy
+
+def similar(a: str, b: str) -> float:
+    """Calculate similarity between two strings using unicodedata normalization"""
     a_norm = unicodedata.normalize('NFC', a.lower())
     b_norm = unicodedata.normalize('NFC', b.lower())
     return SequenceMatcher(None, a_norm, b_norm).ratio()
 
-# 🚀 Main function to translate all chunks
-@check_file_exists(_4_2_TRANSLATION)
-def translate_all(sentences=None):
+
+def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     """
     翻译所有句子并填充 Sentence.translation 字段
 
     Args:
-        sentences: Sentence 对象列表（如果为 None，从文本文件加载）
+        sentences: Sentence 对象列表
 
     Returns:
         List[Sentence]: 带翻译的 Sentence 对象列表
@@ -80,48 +80,8 @@ def translate_all(sentences=None):
     console.print("[bold green]Start Translating All...[/bold green]")
 
     # 📊 显示接收到的 Sentence 对象信息
-    if sentences:
-        console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 2[/cyan]')
-        console.print(f'[dim]First sentence: "{sentences[0].text[:50]}..."[/dim]')
-    else:
-        console.print('[yellow]⚠️ No Sentence objects received, loading from CSV...[/yellow]')
-
-    # 如果没有传入 Sentence 对象，从文本文件加载（向后兼容）
-    if sentences is None:
-        from core._2_asr import load_chunks
-        from core._3_1_split_nlp import build_char_to_chunk_mapping
-        import spacy
-
-        # 从 split_by_meaning.txt 加载文本
-        with open(_3_2_SPLIT_BY_MEANING, "r", encoding="utf-8") as file:
-            text_lines = [line.strip() for line in file.readlines() if line.strip()]
-
-        # 重建 Sentence 对象
-        chunks = load_chunks()
-        sentences = []
-        char_pos = 0
-        chunk_idx = 0
-
-        for text_line in text_lines:
-            sentence_chunks = []
-            text_length = len(text_line)
-
-            while chunk_idx < len(chunks) and char_pos < text_length:
-                chunk = chunks[chunk_idx]
-                sentence_chunks.append(chunk)
-                char_pos += len(chunk.text)
-                chunk_idx += 1
-
-            sentence = Sentence(
-                chunks=sentence_chunks,
-                text=text_line,
-                start=sentence_chunks[0].start if sentence_chunks else 0.0,
-                end=sentence_chunks[-1].end if sentence_chunks else 0.0,
-                index=len(sentences),
-                is_split=False
-            )
-            sentences.append(sentence)
-            char_pos = 0
+    console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 2[/cyan]')
+    console.print(f'[dim]First sentence: "{sentences[0].text[:50]}..."[/dim]')
 
     # 准备翻译块（从 Sentence 对象提取文本）
     sentence_texts = [sent.text for sent in sentences]
@@ -175,7 +135,7 @@ def translate_all(sentences=None):
                 sentences[sent_idx].translation = trans
                 sent_idx += 1
 
-    # Save translation results to CSV (向后兼容)
+    # Save translation results to CSV
     df_translate = pd.DataFrame({'Source': src_text, 'Translation': trans_text})
     df_translate.to_csv(_4_2_TRANSLATION, index=False, encoding='utf-8-sig')
     console.print("[bold green]✅ Translation completed and results saved.[/bold green]")
@@ -187,5 +147,6 @@ def translate_all(sentences=None):
 
     return sentences
 
+
 if __name__ == '__main__':
-    translate_all()
+    print("This module requires Sentence objects as input.")
