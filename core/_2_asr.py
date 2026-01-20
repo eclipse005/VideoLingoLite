@@ -73,17 +73,18 @@ def load_chunks() -> List[Chunk]:
     df = safe_read_csv(_2_CLEANED_CHUNKS)
     chunks = []
 
-    for idx, row in df.iterrows():
+    for row in df.itertuples(index=True):
+        speaker_id = row.speaker_id if pd.notna(row.speaker_id) and row.speaker_id else None
         chunk = Chunk(
-            text=str(row['text']).strip('"'),
-            start=float(row['start']),
-            end=float(row['end']),
-            speaker_id=str(row['speaker_id']) if pd.notna(row['speaker_id']) and row['speaker_id'] else None,
-            index=idx
+            text=row.text.strip('"'),
+            start=float(row.start),
+            end=float(row.end),
+            speaker_id=speaker_id,
+            index=row.Index
         )
         chunks.append(chunk)
 
-    rprint(f"[green]Loaded {len(chunks)} chunks from {_2_CLEANED_CHUNKS}[/green]")
+    rprint(f"[green]✅ Loaded {len(chunks)} chunks from {_2_CLEANED_CHUNKS}[/green]")
     return chunks
 
 if __name__ == "__main__":
