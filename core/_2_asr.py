@@ -4,6 +4,8 @@ from core._1_ytdlp import find_video_files
 from core.utils.models import *
 import json
 import os
+import pandas as pd
+from typing import List
 
 @check_file_exists(_2_CLEANED_CHUNKS)
 def transcribe():
@@ -59,6 +61,30 @@ def transcribe():
     # 8. Process df (always generate cleaned_chunks.csv for word-level data)
     df = process_transcription(combined_result)
     save_results(df)
+
+
+def load_chunks() -> List[Chunk]:
+    """
+    从 cleaned_chunks.csv 加载 Chunk 对象列表
+
+    Returns:
+        List[Chunk]: 词/字级别的 Chunk 对象列表
+    """
+    df = safe_read_csv(_2_CLEANED_CHUNKS)
+    chunks = []
+
+    for idx, row in df.iterrows():
+        chunk = Chunk(
+            text=str(row['text']).strip('"'),
+            start=float(row['start']),
+            end=float(row['end']),
+            speaker_id=str(row['speaker_id']) if pd.notna(row['speaker_id']) and row['speaker_id'] else None,
+            index=idx
+        )
+        chunks.append(chunk)
+
+    rprint(f"[green]Loaded {len(chunks)} chunks from {_2_CLEANED_CHUNKS}[/green]")
+    return chunks
 
 if __name__ == "__main__":
     transcribe()
