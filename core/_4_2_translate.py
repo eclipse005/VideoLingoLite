@@ -81,7 +81,6 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
 
     # 📊 显示接收到的 Sentence 对象信息
     console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 2[/cyan]')
-    console.print(f'[dim]First sentence: "{sentences[0].text[:50]}..."[/dim]')
 
     # 准备翻译块（从 Sentence 对象提取文本）
     sentence_texts = [sent.text for sent in sentences]

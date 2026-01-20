@@ -124,8 +124,6 @@ def split_by_spacy() -> List[Sentence]:
 
     rprint(f"[green]✅ NLP sentence segmentation completed: {_3_1_SPLIT_BY_NLP}[/green]")
     rprint(f"[cyan]📊 Generated {len(sentences)} Sentence objects[/cyan]")
-    if sentences:
-        rprint(f"[dim]First sentence: '{sentences[0].text[:50]}...' | Time: {sentences[0].start:.2f}s - {sentences[0].end:.2f}s[/dim]")
     return sentences
 
 

@@ -115,7 +115,6 @@ def align_timestamp_main(sentences: List[Sentence]) -> None:
     """
     # 📊 显示接收到的 Sentence 对象信息
     console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 4[/cyan]')
-    console.print(f'[dim]Last sentence time: {sentences[-1].start:.2f}s - {sentences[-1].end:.2f}s[/dim]')
 
     # 直接从 Sentence 对象生成字幕
     generate_subtitles_from_sentences(sentences, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR, for_display=True)

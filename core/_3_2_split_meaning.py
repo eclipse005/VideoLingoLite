@@ -204,7 +204,6 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
 
     console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from Stage 1[/cyan]')
     console.print(f'[green]✅ Received {len(sentences)} Sentence objects from Stage 1[/green]')
-    console.print(f"[dim]First sentence has {len(sentences[0].chunks)} chunks | Time: {sentences[0].start:.2f}s - {sentences[0].end:.2f}s[/dim]")
 
     # 统计需要切分的句子
     asr_language = load_key("asr.language")
