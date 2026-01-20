@@ -188,12 +188,79 @@ def clean_translation(x):
     cleaned = str(x).strip('。').strip('，')
     return autocorrect.format(cleaned)
 
+def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output_configs: list, output_dir: str, for_display: bool = True):
+    """
+    直接从 Sentence 对象列表生成字幕，不需要匹配
+
+    Args:
+        sentences: Sentence 对象列表
+        subtitle_output_configs: 字幕输出配置
+        output_dir: 输出目录
+        for_display: 是否用于显示
+    """
+    df_trans_time = []
+
+    for sent in sentences:
+        df_trans_time.append({
+            'Source': sent.text,
+            'Translation': sent.translation,
+            'timestamp': (sent.start, sent.end),
+            'duration': sent.duration
+        })
+
+    # 转换为 DataFrame
+    df_trans_time = pd.DataFrame(df_trans_time)
+
+    # 移除间隙
+    for i in range(len(df_trans_time) - 1):
+        delta_time = df_trans_time.loc[i + 1, 'timestamp'][0] - df_trans_time.loc[i, 'timestamp'][1]
+        if 0 < delta_time < 1:
+            df_trans_time.at[i, 'timestamp'] = (
+                df_trans_time.loc[i, 'timestamp'][0],
+                df_trans_time.loc[i + 1, 'timestamp'][0]
+            )
+
+    # 转换为 SRT 格式
+    df_trans_time['timestamp'] = df_trans_time['timestamp'].apply(
+        lambda x: convert_to_srt_format(x[0], x[1])
+    )
+
+    # 美化字幕
+    if for_display:
+        df_trans_time['Translation'] = df_trans_time['Translation'].apply(
+            lambda x: autocorrect.format(re.sub(r'[，。]', ' ', str(x).strip()).strip())
+        )
+
+    # 输出字幕
+    def generate_subtitle_string(df, columns):
+        result = []
+        for i, row in df.iterrows():
+            def safe_get(col):
+                val = row.get(col, '')
+                return str(val).strip() if pd.notna(val) else ''
+
+            line1 = safe_get(columns[0])
+            line2 = safe_get(columns[1]) if len(columns) > 1 else ''
+            result.append(f"{i+1}\n{row['timestamp']}\n{line1}\n{line2}\n\n")
+        return ''.join(result).strip()
+
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        for filename, columns in subtitle_output_configs:
+            subtitle_str = generate_subtitle_string(df_trans_time, columns)
+            with open(os.path.join(output_dir, filename), 'w', encoding='utf-8') as f:
+                f.write(subtitle_str)
+
+    return df_trans_time
+
+
 def align_timestamp_main():
+    # TODO: Replace with generate_subtitles_from_sentences() once pipeline uses Sentence objects end-to-end
     df_text = safe_read_csv(_2_CLEANED_CHUNKS)
     df_text['text'] = df_text['text'].str.strip('"').str.strip()
     df_translate = safe_read_csv(_5_SPLIT_SUB)
     df_translate['Translation'] = df_translate['Translation'].apply(clean_translation)
-    
+
     align_timestamp(df_text, df_translate, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR)
     console.print(Panel("[bold green]🎉📝 Subtitles generation completed! Please check in the `output` folder 👀[/bold green]"))
 
