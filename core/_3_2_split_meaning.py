@@ -235,7 +235,7 @@ def split_sentences_by_meaning(sentences: List[Sentence] = None):
     # 统计需要切分的句子
     asr_language = load_key("asr.language")
     soft_limit = get_language_length_limit(asr_language, 'origin')
-    long_sentences = [s for s in sentences if check_length_exceeds(s, soft_limit, asr_language)]
+    long_sentences = [s for s in sentences if check_length_exceeds(s.text, soft_limit, asr_language)]
 
     if long_sentences:
         console.print(f'[yellow]⚠️ Found {len(long_sentences)} long sentences that need LLM splitting[/yellow]')
