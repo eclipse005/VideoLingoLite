@@ -134,6 +134,14 @@ def split_for_sub_main(sentences=None):
     """
     console.print("[bold green]🚀 Start splitting subtitles...[/]")
 
+    # 📊 显示接收到的 Sentence 对象信息
+    if sentences:
+        console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 3[/cyan]')
+        has_translation = sum(1 for s in sentences if s.translation)
+        console.print(f'[dim]Sentences with translation: {has_translation}/{len(sentences)}[/dim]')
+    else:
+        console.print('[yellow]⚠️ No Sentence objects received, loading from CSV...[/yellow]')
+
     # 如果没有传入 Sentence 对象，从 CSV 加载（向后兼容）
     if sentences is None:
         from core._2_asr import load_chunks
@@ -274,6 +282,7 @@ def split_for_sub_main(sentences=None):
     pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_csv(_5_REMERGED, index=False, encoding='utf-8-sig')
 
     console.print("[bold green]✅ Subtitle splitting completed![/bold green]")
+    console.print(f'[cyan]📊 Returning {len(sentences)} Sentence objects to Stage 5[/cyan]')
     return sentences
 
 if __name__ == '__main__':

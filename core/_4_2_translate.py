@@ -79,6 +79,13 @@ def translate_all(sentences=None):
     """
     console.print("[bold green]Start Translating All...[/bold green]")
 
+    # 📊 显示接收到的 Sentence 对象信息
+    if sentences:
+        console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 2[/cyan]')
+        console.print(f'[dim]First sentence: "{sentences[0].text[:50]}..."[/dim]')
+    else:
+        console.print('[yellow]⚠️ No Sentence objects received, loading from CSV...[/yellow]')
+
     # 如果没有传入 Sentence 对象，从文本文件加载（向后兼容）
     if sentences is None:
         from core._2_asr import load_chunks
@@ -172,6 +179,11 @@ def translate_all(sentences=None):
     df_translate = pd.DataFrame({'Source': src_text, 'Translation': trans_text})
     df_translate.to_csv(_4_2_TRANSLATION, index=False, encoding='utf-8-sig')
     console.print("[bold green]✅ Translation completed and results saved.[/bold green]")
+
+    # 📊 显示翻译填充情况
+    translated_count = sum(1 for s in sentences if s.translation)
+    console.print(f'[cyan]📊 Filled {translated_count}/{len(sentences)} Sentence.translation fields[/cyan]')
+    console.print(f'[cyan]📊 Returning {len(sentences)} Sentence objects to Stage 4[/cyan]')
 
     return sentences
 

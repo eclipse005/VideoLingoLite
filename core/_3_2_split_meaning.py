@@ -232,6 +232,11 @@ def split_sentences_by_meaning(sentences: List[Sentence] = None):
 
     console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from Stage 1 ({_3_1_SPLIT_BY_NLP})[/cyan]')
 
+    # 📊 显示接收到的 Sentence 对象信息
+    if sentences and isinstance(sentences[0], Sentence):
+        console.print(f'[green]✅ Received {len(sentences)} Sentence objects from Stage 1[/green]')
+        console.print(f"[dim]First sentence has {len(sentences[0].chunks)} chunks | Time: {sentences[0].start:.2f}s - {sentences[0].end:.2f}s[/dim]")
+
     # 统计需要切分的句子
     asr_language = load_key("asr.language")
     soft_limit = get_language_length_limit(asr_language, 'origin')
@@ -257,6 +262,7 @@ def split_sentences_by_meaning(sentences: List[Sentence] = None):
         f.write('\n'.join(sent.text for sent in sentences))
 
     console.print(f'[green]✅ All sentences processed! Final count: {len(sentences)}[/green]')
+    console.print(f'[cyan]📊 Returning {len(sentences)} Sentence objects to Stage 3[/cyan]')
     console.print(f'[green]💾 Saved to: {_3_2_SPLIT_BY_MEANING}[/green]')
 
     return sentences

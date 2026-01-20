@@ -111,6 +111,13 @@ def align_timestamp_main(sentences=None):
     Args:
         sentences: Sentence 对象列表（如果为 None，从 CSV 加载）
     """
+    # 📊 显示接收到的 Sentence 对象信息
+    if sentences:
+        console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 4[/cyan]')
+        console.print(f'[dim]Last sentence time: {sentences[-1].start:.2f}s - {sentences[-1].end:.2f}s[/dim]')
+    else:
+        console.print('[yellow]⚠️ No Sentence objects received, loading from CSV...[/yellow]')
+
     # 如果没有传入 Sentence 对象，从 CSV 加载（向后兼容）
     if sentences is None:
         from core._2_asr import load_chunks
@@ -152,6 +159,7 @@ def align_timestamp_main(sentences=None):
     # 使用新的函数直接从 Sentence 对象生成字幕
     generate_subtitles_from_sentences(sentences, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR, for_display=True)
     console.print(Panel("[bold green]🎉📝 Subtitles generation completed! Please check in the `output` folder 👀[/bold green]"))
+    console.print(f'[green]✅ Generated subtitles from {len(sentences)} Sentence objects (no difflib matching!)[/green]')
 
     # 合并空字幕
     merge_empty_subtitle()
