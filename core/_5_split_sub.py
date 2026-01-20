@@ -122,12 +122,53 @@ def split_align_subs(src_lines: List[str], tr_lines: List[str]):
 
     return src_lines, tr_lines, remerged_tr_lines
 
-def split_for_sub_main():
-    console.print("[bold green]🚀 Start splitting subtitles...[/bold green]")
+def split_for_sub_main(sentences=None):
+    """
+    字幕切分主函数，处理 Sentence 对象
 
-    df = safe_read_csv(_4_2_TRANSLATION).fillna('')
-    src = df['Source'].tolist()
-    trans = df['Translation'].tolist()
+    Args:
+        sentences: Sentence 对象列表（如果为 None，从 CSV 加载）
+
+    Returns:
+        List[Sentence]: 切分后的 Sentence 对象列表
+    """
+    console.print("[bold green]🚀 Start splitting subtitles...[/bold]")
+
+    # 如果没有传入 Sentence 对象，从 CSV 加载（向后兼容）
+    if sentences is None:
+        from core._2_asr import load_chunks
+
+        df = safe_read_csv(_4_2_TRANSLATION).fillna('')
+        src = df['Source'].tolist()
+        trans = df['Translation'].tolist()
+
+        # 重建 Sentence 对象
+        chunks = load_chunks()
+        sentences = []
+        char_pos = 0
+        chunk_idx = 0
+
+        for src_text, trans_text in zip(src, trans):
+            sentence_chunks = []
+            text_length = len(src_text)
+
+            while chunk_idx < len(chunks) and char_pos < text_length:
+                chunk = chunks[chunk_idx]
+                sentence_chunks.append(chunk)
+                char_pos += len(chunk.text)
+                chunk_idx += 1
+
+            sentence = Sentence(
+                chunks=sentence_chunks,
+                text=src_text,
+                translation=trans_text,
+                start=sentence_chunks[0].start if sentence_chunks else 0.0,
+                end=sentence_chunks[-1].end if sentence_chunks else 0.0,
+                index=len(sentences),
+                is_split=False
+            )
+            sentences.append(sentence)
+            char_pos = 0
 
     # Get source and target language ISO codes
     asr_language = load_key("asr.language")
@@ -139,23 +180,101 @@ def split_for_sub_main():
     origin_soft_limit = get_language_length_limit(asr_language, 'origin')
     translate_soft_limit = get_language_length_limit(target_language, 'translate')
 
-    for attempt in range(3):  # 多次切割
+    # 多轮切割
+    for attempt in range(3):
         console.print(Panel(f"🔄 Split attempt {attempt + 1}", expand=False))
-        split_src, split_trans, remerged = split_align_subs(src.copy(), trans)
 
-        # 检查是否所有字幕都符合长度要求
-        src_all_ok = all(not check_length_exceeds(s, origin_soft_limit, asr_language) for s in split_src)
-        tr_all_ok = all(not check_length_exceeds(t, translate_soft_limit, target_language) for t in split_trans)
-        if src_all_ok and tr_all_ok:
+        # 找出需要切分的句子
+        to_split = []
+        for i, sent in enumerate(sentences):
+            src_exceeds = check_length_exceeds(sent.text, origin_soft_limit, asr_language)
+            tr_exceeds = check_length_exceeds(sent.translation, translate_soft_limit, target_language)
+            if src_exceeds or tr_exceeds:
+                to_split.append(i)
+
+        if not to_split:
+            console.print("[green]✅ All subtitles are within length limits![/green]")
             break
 
-        # 更新源数据继续下一轮分割
-        src, trans = split_src, split_trans
+        # 处理需要切分的句子，构建新列表
+        new_sentences = []
+        for i, sent in enumerate(sentences):
+            if i not in to_split:
+                # 不需要拆分，直接添加
+                new_sentences.append(sent)
+                continue
 
-    # After fixing, remerged has the same length and structure as split_src/split_trans
-    # So both files should have identical content now
+            # 需要拆分
+            # 计算需要拆分成几份
+            text_length = get_effective_length(sent.text, asr_language)
+            num_parts = max(2, math.ceil(text_length / origin_soft_limit))
+
+            # 使用 LLM 拆分原文
+            split_src = split_sentence(sent.text, num_parts=num_parts).strip()
+
+            if '[br]' in split_src:
+                # 需要拆分：使用 difflib 匹配找到 [br] 位置，拆分 chunks
+                from core._3_2_split_meaning import find_br_positions_in_original
+                from core.utils.sentence_tools import clean_word
+
+                br_positions = find_br_positions_in_original(split_src, sent.text)
+
+                if br_positions:
+                    # 构建字符到 Chunk 的映射（使用清洗后的文本）
+                    char_to_chunk = []
+                    for chunk_idx, chunk in enumerate(sent.chunks):
+                        cleaned_chunk_text = clean_word(chunk.text)
+                        char_to_chunk.extend([chunk_idx] * len(cleaned_chunk_text))
+
+                    # 确定 Chunk 拆分点
+                    split_points = [0]
+                    for br_pos in br_positions:
+                        if br_pos < len(char_to_chunk):
+                            chunk_idx = char_to_chunk[br_pos]
+                            if chunk_idx not in split_points:
+                                split_points.append(chunk_idx)
+                    split_points.append(len(sent.chunks))
+                    split_points = sorted(set(split_points))
+
+                    # 拆分 Chunks，创建新的 Sentence 对象
+                    for j in range(len(split_points) - 1):
+                        start_idx = split_points[j]
+                        end_idx = split_points[j + 1]
+
+                        if start_idx >= end_idx:
+                            continue
+
+                        sub_chunks = sent.chunks[start_idx:end_idx]
+                        sub_text = "".join(c.text for c in sub_chunks)
+
+                        new_sentence = Sentence(
+                            chunks=sub_chunks,
+                            text=sub_text,
+                            translation="",  # 译文需要后续对齐
+                            start=sub_chunks[0].start,
+                            end=sub_chunks[-1].end,
+                            index=sent.index + j,
+                            is_split=True
+                        )
+                        new_sentences.append(new_sentence)
+                else:
+                    # 没有找到拆分点，保持原样
+                    new_sentences.append(sent)
+            else:
+                # LLM 认为不需要拆分
+                new_sentences.append(sent)
+
+        # 更新句子列表
+        sentences = new_sentences
+
+    # 保存结果到 CSV（向后兼容）
+    split_src = [sent.text for sent in sentences]
+    split_trans = [sent.translation for sent in sentences]
     pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_csv(_5_SPLIT_SUB, index=False, encoding='utf-8-sig')
-    pd.DataFrame({'Source': split_src, 'Translation': remerged}).to_csv(_5_REMERGED, index=False, encoding='utf-8-sig')
+    pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_csv(_5_REMERGED, index=False, encoding='utf-8-sig')
+
+    console.print("[bold green]✅ Subtitle splitting completed![/bold green]")
+    return sentences
 
 if __name__ == '__main__':
     split_for_sub_main()
