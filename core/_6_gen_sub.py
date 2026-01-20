@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import re
 import difflib
+from typing import List
 from rich.panel import Panel
 from rich.console import Console
 import autocorrect_py as autocorrect
