@@ -12,10 +12,23 @@ from core.utils.models import *
 console = Console()
 
 # Function to split text into chunks
-def split_chunks_by_chars(chunk_size, max_i): 
-    """Split text into chunks based on character count, return a list of multi-line text chunks"""
-    with open(_3_2_SPLIT_BY_MEANING, "r", encoding="utf-8") as file:
-        sentences = file.read().strip().split('\n')
+def split_chunks_by_chars(chunk_size, max_i, texts=None):
+    """
+    Split text into chunks based on character count
+
+    Args:
+        chunk_size: Maximum characters per chunk
+        max_i: Maximum sentences per chunk
+        texts: List of texts (if None, load from file)
+
+    Returns:
+        List of multi-line text chunks
+    """
+    if texts is None:
+        with open(_3_2_SPLIT_BY_MEANING, "r", encoding="utf-8") as file:
+            sentences = file.read().strip().split('\n')
+    else:
+        sentences = texts
 
     chunks = []
     chunk = ''
@@ -54,9 +67,59 @@ def similar(a, b):
 
 # 🚀 Main function to translate all chunks
 @check_file_exists(_4_2_TRANSLATION)
-def translate_all():
+def translate_all(sentences=None):
+    """
+    翻译所有句子并填充 Sentence.translation 字段
+
+    Args:
+        sentences: Sentence 对象列表（如果为 None，从文本文件加载）
+
+    Returns:
+        List[Sentence]: 带翻译的 Sentence 对象列表
+    """
     console.print("[bold green]Start Translating All...[/bold green]")
-    chunks = split_chunks_by_chars(chunk_size=1500, max_i=20)
+
+    # 如果没有传入 Sentence 对象，从文本文件加载（向后兼容）
+    if sentences is None:
+        from core._2_asr import load_chunks
+        from core._3_1_split_nlp import build_char_to_chunk_mapping
+        import spacy
+
+        # 从 split_by_meaning.txt 加载文本
+        with open(_3_2_SPLIT_BY_MEANING, "r", encoding="utf-8") as file:
+            text_lines = [line.strip() for line in file.readlines() if line.strip()]
+
+        # 重建 Sentence 对象
+        chunks = load_chunks()
+        sentences = []
+        char_pos = 0
+        chunk_idx = 0
+
+        for text_line in text_lines:
+            sentence_chunks = []
+            text_length = len(text_line)
+
+            while chunk_idx < len(chunks) and char_pos < text_length:
+                chunk = chunks[chunk_idx]
+                sentence_chunks.append(chunk)
+                char_pos += len(chunk.text)
+                chunk_idx += 1
+
+            sentence = Sentence(
+                chunks=sentence_chunks,
+                text=text_line,
+                start=sentence_chunks[0].start if sentence_chunks else 0.0,
+                end=sentence_chunks[-1].end if sentence_chunks else 0.0,
+                index=len(sentences),
+                is_split=False
+            )
+            sentences.append(sentence)
+            char_pos = 0
+
+    # 准备翻译块（从 Sentence 对象提取文本）
+    sentence_texts = [sent.text for sent in sentences]
+    chunks = split_chunks_by_chars(chunk_size=1500, max_i=20, texts=sentence_texts)
+
     with open(_4_1_TERMINOLOGY, 'r', encoding='utf-8') as file:
         theme_prompt = json.load(file).get('theme')
 
@@ -74,32 +137,43 @@ def translate_all():
                 progress.update(task, advance=1)
 
     results.sort(key=lambda x: x[0])  # Sort results based on original order
-    
-    # 💾 Save results to lists and Excel file
+
+    # 💾 将翻译结果填充到 Sentence.translation 字段
+    sent_idx = 0  # 当前处理到的句子索引
     src_text, trans_text = [], []
+
     for i, chunk in enumerate(chunks):
         chunk_lines = chunk.split('\n')
         src_text.extend(chunk_lines)
-        
+
         # Calculate similarity between current chunk and translation results
         chunk_text = ''.join(chunk_lines).lower()
-        matching_results = [(r, similar(''.join(r[1].split('\n')).lower(), chunk_text)) 
+        matching_results = [(r, similar(''.join(r[1].split('\n')).lower(), chunk_text))
                           for r in results]
         best_match = max(matching_results, key=lambda x: x[1])
-        
+
         # Check similarity and handle exceptions
         if best_match[1] < 0.9:
             console.print(f"[yellow]Warning: No matching translation found for chunk {i}[/yellow]")
             raise ValueError(f"Translation matching failed (chunk {i})")
         elif best_match[1] < 1.0:
             console.print(f"[yellow]Warning: Similar match found (chunk {i}, similarity: {best_match[1]:.3f})[/yellow]")
-            
-        trans_text.extend(best_match[0][2].split('\n'))
-    
-    # Save translation results
+
+        chunk_translations = best_match[0][2].split('\n')
+        trans_text.extend(chunk_translations)
+
+        # 将翻译填充到 Sentence 对象
+        for trans in chunk_translations:
+            if sent_idx < len(sentences):
+                sentences[sent_idx].translation = trans
+                sent_idx += 1
+
+    # Save translation results to CSV (向后兼容)
     df_translate = pd.DataFrame({'Source': src_text, 'Translation': trans_text})
     df_translate.to_csv(_4_2_TRANSLATION, index=False, encoding='utf-8-sig')
     console.print("[bold green]✅ Translation completed and results saved.[/bold green]")
+
+    return sentences
 
 if __name__ == '__main__':
     translate_all()
