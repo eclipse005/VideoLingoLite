@@ -1,6 +1,7 @@
 import re
 import difflib
 import math
+import unicodedata
 from typing import List, Tuple
 
 from core.utils import load_key
@@ -29,11 +30,27 @@ def get_clean_chars(text):
     return [c for c in text if re.match(r'\w', c)]
 
 def clean_word(word):
-    """Standardized word cleaner (lowercase, no punctuation) for alignment."""
+    """
+    Standardized word cleaner using unicodedata.
+    Keeps letters and numbers, removes all punctuation and symbols.
+    """
     word = str(word).lower()
-    # Keep letters, numbers, and CJK characters
-    cleaned = re.sub(r'[^a-z0-9\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af]', '', word)
-    return cleaned
+    result = []
+
+    # 日文修饰符：长音符号、半浊点、浊点等
+    JAPANESE_MARKS = '\u30fc\u309a\u309b\u309c\u3099\u309d'
+
+    for char in word:
+        category = unicodedata.category(char)
+
+        # 保留字母(L*)、数字(N*)
+        # 去除标点(P*)、符号(S*)、分隔符(Z*)、控制字符(C*)
+        if category.startswith('L') or category.startswith('N'):
+            # 额外排除日文修饰符
+            if char not in JAPANESE_MARKS:
+                result.append(char)
+
+    return ''.join(result)
 
 def get_word_count(sentence):
     """
@@ -59,8 +76,8 @@ def tokenize_sentence(sentence):
     is_cjk = asr_language.lower() in ['zh', 'chinese', 'ja', 'japanese', 'ko', 'korean']
 
     if is_cjk:
-        # CJK: 英文单词 + 中文字符
-        words = re.findall(r'[a-zA-Z]+(?:[0-9]+\.?[0-9]*|[.-][0-9]+)*|[^\s]',
+        # CJK: 英文单词 + 纯数字 + 中文字符 (修复: 添加纯数字匹配模式)
+        words = re.findall(r'[a-zA-Z]+(?:[0-9]+\.?[0-9]*|[.-][0-9]+)*|[0-9]+(?:\.?[0-9]*)?|[^\s]',
                           sentence.replace(' ', ''))
     else:
         # 空格分隔语言: 按空格分割

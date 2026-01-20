@@ -34,6 +34,8 @@ def init_nlp():
 # --------------------
 # define the intermediate files
 # --------------------
+SPLIT_BY_MARK_FILE = "output/log/split_by_mark.txt"
 SPLIT_BY_COMMA_FILE = "output/log/split_by_comma.txt"
 SPLIT_BY_CONNECTOR_FILE = "output/log/split_by_connector.txt"
-SPLIT_BY_MARK_FILE = "output/log/split_by_mark.txt"
+SPLIT_BY_NLP_FILE = "output/log/split_by_nlp.txt"
+SPLIT_BY_PAUSE_FILE = "output/log/split_by_pause.txt"

@@ -2031,6 +2031,24 @@ wheels = [
 ]
 
 [[package]]
+name = "onnx2torch"
+version = "1.5.15"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "onnx" },
+    { name = "torch", version = "2.8.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine != 's390x' and sys_platform == 'darwin'" },
+    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "torch", version = "2.8.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(platform_machine == 's390x' and sys_platform == 'darwin') or (platform_machine != 'x86_64' and sys_platform != 'darwin' and sys_platform != 'win32')" },
+    { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'win32'" },
+    { name = "torchvision" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/51/bb56a5dfee431aa61f13a297e33f6ae0654e55d3ba93d62b88b673182af3/onnx2torch-1.5.15.tar.gz", hash = "sha256:d2a239cf0871cbbeec13d43e2a72ac2f8b3c8dcf80695e4d1040c3deed2b14a2", size = 49786, upload-time = "2024-08-07T14:04:01.076Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/80/cec13a9bcb7525cbd941958037ccb5cd499e8466915130f3d2ee3772d34f/onnx2torch-1.5.15-py3-none-any.whl", hash = "sha256:123258e0f147e07b259cf845c8113c5634b8260e52c5fb26b7d507226732d9e5", size = 80965, upload-time = "2024-08-07T14:04:09.985Z" },
+]
+
+[[package]]
 name = "onnx2torch-py313"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3662,6 +3680,7 @@ dependencies = [
     { name = "librosa" },
     { name = "nemo-toolkit", extra = ["asr"] },
     { name = "numpy" },
+    { name = "onnx2torch" },
     { name = "openai" },
     { name = "openpyxl" },
     { name = "pandas" },
@@ -3697,19 +3716,20 @@ requires-dist = [
     { name = "json-repair", specifier = "==0.54.2" },
     { name = "librosa", specifier = "==0.11.0" },
     { name = "nemo-toolkit", extras = ["asr"], specifier = "==2.6.1" },
-    { name = "numpy", specifier = ">=2.0" },
+    { name = "numpy", specifier = "==2.2.6" },
+    { name = "onnx2torch", specifier = "==1.5.15" },
     { name = "openai", specifier = "==2.9.0" },
     { name = "openpyxl", specifier = "==3.1.5" },
     { name = "pandas", specifier = "==2.2.3" },
-    { name = "pip", specifier = ">=25.3" },
-    { name = "pyarrow", specifier = ">=22.0.0" },
+    { name = "pip", specifier = "==25.3" },
+    { name = "pyarrow", specifier = "==22.0.0" },
     { name = "pydub", specifier = "==0.25.1" },
-    { name = "pysrt", specifier = ">=1.1.2" },
+    { name = "pysrt", specifier = "==1.1.2" },
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "requests", specifier = "==2.32.5" },
-    { name = "rich", specifier = ">=14.2.0" },
+    { name = "rich", specifier = "==14.2.0" },
     { name = "ruamel-yaml", specifier = "==0.18.16" },
-    { name = "spacy", specifier = ">=3.8.11" },
+    { name = "spacy", specifier = "==3.8.11" },
     { name = "streamlit", specifier = "==1.52.1" },
     { name = "torch", marker = "(platform_machine != 'x86_64' and sys_platform != 'win32') or sys_platform == 'darwin'", specifier = "==2.8.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torch", marker = "platform_machine == 'x86_64' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==2.8.0" },

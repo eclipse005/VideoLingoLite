@@ -57,10 +57,10 @@ def split_by_comma_main(nlp):
     with open(SPLIT_BY_COMMA_FILE, "w", encoding="utf-8") as output_file:
         for sentence in all_split_sentences:
             output_file.write(sentence + "\n")
-    
+
     # delete the original file
     os.remove(SPLIT_BY_MARK_FILE)
-    
+
     rprint(f"[green]💾 Sentences split by commas saved to →  `{SPLIT_BY_COMMA_FILE}`[/green]")
 
 if __name__ == "__main__":

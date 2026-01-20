@@ -84,13 +84,11 @@ def split_long_by_root_main(nlp):
             stripped_sentence = sentence.strip()
             if not stripped_sentence or all(char in punctuation for char in stripped_sentence):
                 rprint(f"[yellow]⚠️  Warning: Empty or punctuation-only line detected at index {i}[/yellow]")
-                if i > 0:
-                    all_split_sentences[i-1] += sentence
-                continue
+                continue  # Skip writing empty/punctuation-only lines
             output_file.write(sentence + "\n")
 
     # delete the original file
-    os.remove(SPLIT_BY_CONNECTOR_FILE)   
+    os.remove(SPLIT_BY_CONNECTOR_FILE)
 
     rprint(f"[green]💾 Long sentences split by root saved to →  {_3_1_SPLIT_BY_NLP}[/green]")
 

@@ -1,14 +1,14 @@
 import os
 import warnings
 from core.spacy_utils.load_nlp_model import init_nlp, SPLIT_BY_COMMA_FILE, SPLIT_BY_CONNECTOR_FILE
-from core.utils import rprint
+from core.utils import rprint, load_key
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 def analyze_connectors(doc, token):
     """
     Analyze whether a token is a connector that should trigger a sentence split.
-    
+
     Processing logic and order:
      1. Check if the token is one of the target connectors based on the language.
      2. For 'that' (English), check if it's part of a contraction (e.g., that's, that'll).
@@ -16,7 +16,8 @@ def analyze_connectors(doc, token):
      4. Default to splitting for certain connectors if no other conditions are met.
      5. For coordinating conjunctions, check if they connect two independent clauses.
     """
-    lang = doc.lang_
+    # Use configured language instead of spaCy's detected language
+    lang = load_key("asr.language")
     if lang == "en":
         connectors = ["that", "which", "where", "when", "because", "but", "and", "or"]
         mark_dep = "mark"
@@ -84,6 +85,9 @@ def analyze_connectors(doc, token):
 def split_by_connectors(text, context_words=5, nlp=None):
     doc = nlp(text)
     sentences = [doc.text]  # init
+
+    # Get language from config for contraction check
+    lang = load_key("asr.language")
     
     while True:
         # Handle each task with a single cut
@@ -97,8 +101,9 @@ def split_by_connectors(text, context_words=5, nlp=None):
             
             for i, token in enumerate(doc):
                 split_before, _ = analyze_connectors(doc, token)
-                
-                if i + 1 < len(doc) and doc[i + 1].text in ["'s", "'re", "'ve", "'ll", "'d"]:
+
+                # English contraction check - only for English
+                if lang == "en" and i + 1 < len(doc) and doc[i + 1].text in ["'s", "'re", "'ve", "'ll", "'d"]:
                     continue
                 
                 left_words = doc[max(0, token.i - context_words):token.i]
@@ -144,7 +149,7 @@ def split_sentences_main(nlp):
 
     # delete the original file
     os.remove(SPLIT_BY_COMMA_FILE)
-    
+
     rprint(f"[green]💾 Sentences split by connectors saved to →  `{SPLIT_BY_CONNECTOR_FILE}`[/green]")
 
 if __name__ == "__main__":

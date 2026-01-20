@@ -16,12 +16,14 @@ Split the given subtitle text into **{num_parts}** parts, each less than **{word
 2. MOST IMPORTANT: Keep parts roughly equal in length (minimum 3 words each)
 3. Split at natural points like punctuation marks or conjunctions
 4. If provided text is repeated words, simply split at the middle of the repeated words.
+5. **CRITICAL: Punctuation marks (。！？,.!?:;) must stay at the END of their sentence, never at the START of a new sentence.**
 
 ## Steps
 1. Analyze the sentence structure, complexity, and key splitting challenges
 2. Generate two alternative splitting approaches with [br] tags at split positions
 3. Compare both approaches highlighting their strengths and weaknesses
 4. Choose the best splitting approach
+5. **Verify: Ensure no part starts with a punctuation mark**
 
 ## Given Text
 <split_this_sentence>
@@ -292,56 +294,3 @@ Pre-processed {src_lang} Subtitles ([br] indicates split points): {src_part}
 Note: Start you answer with ```json and end with ```, do not add any other text.
 '''.strip()
     return align_prompt
-
-## ================================================================
-# @ step3_llm_sentence_split.py
-def get_sentence_segmentation_prompt(words_list, max_length=20):
-    """
-    Generate a prompt for LLM-based sentence segmentation.
-    This replaces the spaCy-based NLP approach with a unified LLM approach.
-    """
-    src_lang = load_key("asr.language")
-    words_text = ' '.join(words_list)
-
-    prompt = f'''
-## Role
-You are a professional subtitle segmentation expert in **{src_lang}** specializing in Netflix-quality subtitle formatting.
-
-## Task
-1. Group the given words into complete sentences based on natural language boundaries
-2. Split any sentence longer than {max_length} words into shorter, more readable segments
-3. Follow Netflix subtitle standards for sentence segmentation
-
-## Segmentation Rules
-1. **Sentence Boundaries**: Use natural pausing points (punctuation marks, conjunctions, etc.)
-2. **Hyphenated/ellipsis continuation**: If a sentence ends with '-' or '...', merge with the next sentence
-3. **Long sentence splitting**: Split sentences >{max_length} words at semantically appropriate points
-4. **Minimum length**: Each sentence should have at least 3 words
-5. **Punctuation handling**: Maintain proper punctuation for readability
-
-## Input Words
-<words_sequence>
-{words_text}
-</words_sequence>
-
-## Output Requirements
-Return a JSON object with:
-- "sentences": Array of segmented sentences
-- "analysis": Brief explanation of segmentation decisions
-
-## Output Format
-```json
-{{
-    "sentences": [
-        "First complete sentence here.",
-        "Second sentence here.",
-        "Third sentence split from long text..."
-    ],
-    "analysis": "Brief description of segmentation strategy and any splitting decisions"
-}}
-```
-
-Note: Start with ```json and end with ```, no other text.
-'''.strip()
-
-    return prompt

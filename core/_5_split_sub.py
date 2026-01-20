@@ -51,7 +51,7 @@ def align_subs(src_sub: str, tr_sub: str, src_part: str) -> Tuple[List[str], Lis
         return {"status": "success", "message": "Align validation completed"}
     parsed = ask_gpt(align_prompt, resp_type='json', valid_def=valid_align, log_title='align_subs')
     align_data = parsed['align']
-    src_parts = src_part.split('[br]')
+    src_parts = [part.strip() for part in src_part.split('[br]')]
     tr_parts = [item[f'target_part_{i+1}'].strip() for i, item in enumerate(align_data)]
 
     table = Table(title="🔗 Aligned parts")
