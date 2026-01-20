@@ -1,9 +1,11 @@
 import json
 import re
+import unicodedata
 from core.prompts import get_summary_prompt
 import pandas as pd
 from core.utils import *
 from core.utils.models import _3_2_SPLIT_BY_MEANING, _4_1_TERMINOLOGY
+from core.utils.sentence_tools import clean_word
 
 CUSTOM_TERMS_PATH = 'custom_terms.xlsx'
 
@@ -16,12 +18,13 @@ def combine_chunks():
     return combined_text[:load_key('summary_length')]  #! Return only the first x characters
 
 def clean_text_for_comparison(text):
-    """Clean text by removing spaces and punctuation for pure text comparison"""
-    # Remove all spaces and convert to lowercase
-    text = re.sub(r'\s+', '', text.lower())
-    # Remove common punctuation
-    text = re.sub(r'[^\w\s]', '', text)
-    return text
+    """Clean text by removing spaces and punctuation for pure text comparison
+
+    Uses unicodedata normalization, consistent with clean_word().
+    """
+    # Use clean_word() for standardization (already uses unicodedata)
+    # clean_word() removes all punctuation and symbols, keeping only letters and numbers
+    return clean_word(text)
 
 def expand_keywords(src):
     """Expand term keywords, supporting both / and () splitting

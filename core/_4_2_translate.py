@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import concurrent.futures
+import unicodedata
 from core.translate_lines import translate_lines
 from core._4_1_summarize import search_things_to_note_in_prompt
 from core.utils import *
@@ -46,7 +47,10 @@ def translate_chunk(chunk, chunks, theme_prompt, i):
 
 # Add similarity calculation function
 def similar(a, b):
-    return SequenceMatcher(None, a, b).ratio()
+    # Use unicodedata normalization to handle composed characters, improving matching accuracy
+    a_norm = unicodedata.normalize('NFC', a.lower())
+    b_norm = unicodedata.normalize('NFC', b.lower())
+    return SequenceMatcher(None, a_norm, b_norm).ratio()
 
 # 🚀 Main function to translate all chunks
 @check_file_exists(_4_2_TRANSLATION)

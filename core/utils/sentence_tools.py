@@ -26,8 +26,18 @@ def is_cjk(char):
     )
 
 def get_clean_chars(text):
-    """只提取字母、数字、汉字等有效字符用于对齐"""
-    return [c for c in text if re.match(r'\w', c)]
+    """Extract only letters, numbers, and valid characters for alignment"""
+    # Use unicodedata instead of regex, consistent with clean_word()
+    result = []
+    JAPANESE_MARKS = '\u30fc\u309a\u309b\u309c\u3099\u309d'
+    for char in text:
+        category = unicodedata.category(char)
+        # Keep letters (L*) and numbers (N*)
+        if category.startswith('L') or category.startswith('N'):
+            # Exclude Japanese modifier marks
+            if char not in JAPANESE_MARKS:
+                result.append(char)
+    return result
 
 def clean_word(word):
     """
@@ -51,39 +61,6 @@ def clean_word(word):
                 result.append(char)
 
     return ''.join(result)
-
-def get_word_count(sentence):
-    """
-    获取句子词数，兼容 CJK 语言
-    - 空格分隔语言 (en, es, fr, etc.): 按空格计数
-    - CJK 语言 (zh, ja, ko): 英文单词按空格，中文字符按字符
-    """
-    asr_language = load_key("asr.language")
-    is_cjk = asr_language.lower() in ['zh', 'chinese', 'ja', 'japanese', 'ko', 'korean']
-
-    if is_cjk:
-        # CJK: 保持英文+数字复合词完整，中文按字符分割
-        words = re.findall(r'[a-zA-Z]+(?:[0-9]+\.?[0-9]*|[.-][0-9]+)*|[^\s]',
-                          sentence.replace(' ', ''))
-        return len(words)
-    else:
-        # 空格分隔语言: 按空格计数
-        return len(sentence.split())
-
-def tokenize_sentence(sentence):
-    """简单分词，替代 spacy"""
-    asr_language = load_key("asr.language")
-    is_cjk = asr_language.lower() in ['zh', 'chinese', 'ja', 'japanese', 'ko', 'korean']
-
-    if is_cjk:
-        # CJK: 英文单词 + 纯数字 + 中文字符 (修复: 添加纯数字匹配模式)
-        words = re.findall(r'[a-zA-Z]+(?:[0-9]+\.?[0-9]*|[.-][0-9]+)*|[0-9]+(?:\.?[0-9]*)?|[^\s]',
-                          sentence.replace(' ', ''))
-    else:
-        # 空格分隔语言: 按空格分割
-        words = sentence.split()
-
-    return words
 
 # ================================================================
 # 核心功能：BR标记映射与句子切分
@@ -241,101 +218,3 @@ def split_sentence(sentence: str, num_parts: int = 2, word_limit: int = 20, inde
 # ================================================================
 # 辅助功能：并行处理和批量操作
 # ================================================================
-
-def get_llm_words_and_splits(segmented_sentences: List[str]) -> Tuple[List[str], List[int]]:
-    """
-    Parses the LLM's sentence list to get its clean words and split indices.
-    Returns: (llm_clean_words, llm_split_indices)
-    """
-    # Get language setting for adaptive tokenization
-    asr_language = load_key("asr.language")
-    is_cjk = asr_language.lower() in ['zh', 'chinese', 'ja', 'japanese', 'ko', 'korean']
-
-    llm_clean_words = []
-    llm_split_indices = []
-    current_word_count = 0
-
-    for sentence in segmented_sentences:
-        if is_cjk:
-            # For CJK languages: smart tokenization
-            pattern = r'[a-zA-Z]+(?:[0-9]+\.?[0-9]*|[.-][0-9]+)*|[0-9]+(?:\.?[0-9]*)?|[^\s]'
-            words = re.findall(pattern, sentence.replace(' ', ''))
-        else:
-            # For space-delimited languages: split by spaces
-            words = str(sentence).split()
-
-        if not words:
-            continue
-
-        clean_words_in_sentence = [clean_word(w) for w in words]
-        clean_words_in_sentence = [w for w in clean_words_in_sentence if w]
-
-        current_word_count += len(clean_words_in_sentence)
-        llm_clean_words.extend(clean_words_in_sentence)
-        llm_split_indices.append(current_word_count)
-
-    return llm_clean_words, llm_split_indices
-
-def map_llm_splits_to_original(original_clean_words: List[str], llm_clean_words: List[str], llm_split_indices: List[int]) -> List[int]:
-    """
-    Maps LLM's split indices back to the original word list indices using difflib.
-    """
-    s = difflib.SequenceMatcher(None, original_clean_words, llm_clean_words, autojunk=False)
-    matching_blocks = s.get_matching_blocks()
-    
-    original_split_indices = []
-    
-    for llm_split_idx in llm_split_indices:
-        mapped_idx = -1
-        
-        # 1. Check if the split is strictly INSIDE a matching block
-        for a_start, b_start, length in matching_blocks:
-            b_end = b_start + length
-            if b_start < llm_split_idx < b_end:
-                b_offset = llm_split_idx - b_start
-                mapped_idx = a_start + b_offset
-                break
-        
-        if mapped_idx != -1:
-            original_split_indices.append(mapped_idx)
-            continue
-
-        # 2. If not inside, find the START of the NEXT matching block
-        next_block_start_idx = None
-        for a_start, b_start, length in matching_blocks:
-            if length == 0: continue
-            if b_start >= llm_split_idx:
-                next_block_start_idx = a_start
-                break
-        
-        if next_block_start_idx is not None:
-            original_split_indices.append(next_block_start_idx)
-        else:
-            # Split is after all matches
-            original_split_indices.append(len(original_clean_words))
-
-    original_split_indices = sorted(list(set(original_split_indices)))
-    
-    # Safety: Ensure we don't miss the final end if LLM implies it
-    if llm_split_indices and llm_split_indices[-1] == len(llm_clean_words):
-        if len(original_clean_words) not in original_split_indices:
-            original_split_indices.append(len(original_clean_words))
-
-    return original_split_indices
-
-def reconstruct_sentences(original_words: List[str], original_split_indices: List[int]) -> List[str]:
-    """Rebuilds sentences using the *original* word list and the *mapped* split indices."""
-    from core.utils import get_joiner
-    
-    asr_language = load_key("asr.language")
-    joiner = get_joiner(asr_language)
-
-    final_sentences = []
-    last_idx = 0
-    for idx in original_split_indices:
-        if idx > last_idx:
-            sentence_words = original_words[last_idx:idx]
-            sentence_text = joiner.join(sentence_words)
-            final_sentences.append(sentence_text)
-        last_idx = idx
-    return final_sentences

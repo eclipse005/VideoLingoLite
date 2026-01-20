@@ -7,7 +7,7 @@ from rich.console import Console
 import autocorrect_py as autocorrect
 from core.utils import *
 from core.utils.models import *
-from core.utils.sentence_tools import tokenize_sentence, clean_word
+from core.utils.sentence_tools import clean_word
 console = Console()
 
 SUBTITLE_OUTPUT_CONFIGS = [ 
@@ -30,29 +30,6 @@ def convert_to_srt_format(start_time, end_time):
     start_srt = seconds_to_hmsm(start_time)
     end_srt = seconds_to_hmsm(end_time)
     return f"{start_srt} --> {end_srt}"
-
-def remove_punctuation(text):
-    text = re.sub(r'\s+', ' ', text)
-    text = re.sub(r'[^\w\s]', '', text)
-    return text.strip()
-
-def show_difference(str1, str2):
-    """Show the difference positions between two strings"""
-    min_len = min(len(str1), len(str2))
-    diff_positions = []
-    
-    for i in range(min_len):
-        if str1[i] != str2[i]:
-            diff_positions.append(i)
-    
-    if len(str1) != len(str2):
-        diff_positions.extend(range(min_len, max(len(str1), len(str2))))
-    
-    print("Difference positions:")
-    print(f"Expected sentence: {str1}")
-    print(f"Actual match: {str2}")
-    print("Position markers: " + "".join("^" if i in diff_positions else " " for i in range(max(len(str1), len(str2)))))
-    print(f"Difference indices: {diff_positions}")
 
 def get_sentence_timestamps(df_words, df_sentences):
     """

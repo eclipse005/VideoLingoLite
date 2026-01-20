@@ -88,9 +88,9 @@ def split_by_pause():
     for idx, row in chunks_df.iterrows():
         chunk_text = str(row['text']).strip('"')
         if joiner == " ":
-            cleaned = "".join(chunk_text.split()).lower()
+            cleaned = unicodedata.normalize('NFC', "".join(chunk_text.split()).lower())
         else:
-            cleaned = chunk_text.lower()
+            cleaned = unicodedata.normalize('NFC', chunk_text.lower())
         for char in cleaned:
             chunk_char_map.append((char, idx))
 
@@ -106,9 +106,9 @@ def split_by_pause():
     while i < len(fixed_lines) and j < len(chunk_chars):
         line = fixed_lines[i]
         if joiner == " ":
-            line_chars = list("".join(line.split()).lower())
+            line_chars = list(unicodedata.normalize('NFC', "".join(line.split()).lower()))
         else:
-            line_chars = list(line.lower())
+            line_chars = list(unicodedata.normalize('NFC', line.lower()))
 
         # 逐字符对比
         k = 0
@@ -145,9 +145,9 @@ def split_by_pause():
                 if i + 1 < len(fixed_lines):
                     next_line = fixed_lines[i + 1]
                     if joiner == " ":
-                        next_line_chars = list("".join(next_line.split()).lower())
+                        next_line_chars = list(unicodedata.normalize('NFC', "".join(next_line.split()).lower()))
                     else:
-                        next_line_chars = list(next_line.lower())
+                        next_line_chars = list(unicodedata.normalize('NFC', next_line.lower()))
 
                     # chunk 中剩余的字符数量
                     chunk_remaining = chunk_end_idx - j
@@ -190,9 +190,9 @@ def split_by_pause():
         chunk_text = str(row['text']).strip('"')
         # 根据 joiner 决定是否保留空格
         if joiner == " ":
-            cleaned = "".join(chunk_text.split()).lower()
+            cleaned = unicodedata.normalize('NFC', "".join(chunk_text.split()).lower())
         else:
-            cleaned = chunk_text.lower()
+            cleaned = unicodedata.normalize('NFC', chunk_text.lower())
         # 为每个字符建立映射
         for char in cleaned:
             chunk_char_map.append({'char': char, 'chunk_idx': idx})
@@ -211,9 +211,9 @@ def split_by_pause():
     for sentence in raw_lines:
         # 根据 joiner 决定是否去掉空格
         if joiner == " ":
-            sentence_chars = list("".join(sentence.split()).lower())
+            sentence_chars = list(unicodedata.normalize('NFC', "".join(sentence.split()).lower()))
         else:
-            sentence_chars = list(sentence.lower())
+            sentence_chars = list(unicodedata.normalize('NFC', sentence.lower()))
 
         # 如果句子为空，跳过
         if not sentence_chars:

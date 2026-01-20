@@ -4,18 +4,9 @@ from typing import Dict, List, Tuple
 from pydub import AudioSegment
 from core.utils import *
 from core.utils.models import *
-from pydub import AudioSegment
 from pydub.silence import detect_silence
 from pydub.utils import mediainfo
 from rich import print as rprint
-
-def normalize_audio_volume(audio_path, output_path, target_db = -20.0, format = "wav"):
-    audio = AudioSegment.from_file(audio_path)
-    change_in_dBFS = target_db - audio.dBFS
-    normalized_audio = audio.apply_gain(change_in_dBFS)
-    normalized_audio.export(output_path, format=format)
-    rprint(f"[green]✅ Audio normalized from {audio.dBFS:.1f}dB to {target_db:.1f}dB[/green]")
-    return output_path
 
 def convert_video_to_audio(video_file: str):
     os.makedirs(_AUDIO_DIR, exist_ok=True)
@@ -29,22 +20,6 @@ def convert_video_to_audio(video_file: str):
             '-metadata', 'encoding=UTF-8', _RAW_AUDIO_FILE
         ], check=True, stderr=subprocess.PIPE)
         rprint(f"[green]🎬➡️🎵 Converted <{video_file}> to <{_RAW_AUDIO_FILE}> with FFmpeg\n[/green]")
-
-def get_audio_duration(audio_file: str) -> float:
-    """Get the duration of an audio file using ffmpeg."""
-    cmd = ['ffmpeg', '-i', audio_file]
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    _, stderr = process.communicate()
-    output = stderr.decode('utf-8', errors='ignore')
-    
-    try:
-        duration_str = [line for line in output.split('\n') if 'Duration' in line][0]
-        duration_parts = duration_str.split('Duration: ')[1].split(',')[0].split(':')
-        duration = float(duration_parts[0])*3600 + float(duration_parts[1])*60 + float(duration_parts[2])
-    except Exception as e:
-        print(f"[red]❌ Error: Failed to get audio duration: {e}[/red]")
-        duration = 0
-    return duration
 
 def split_audio(audio_file: str, target_len: float = 30*60, win: float = 60) -> List[Tuple[float, float]]:
     ## 在 [target_len-win, target_len+win] 区间内用 pydub 检测静默，切分音频

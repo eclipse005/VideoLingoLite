@@ -55,23 +55,3 @@ def upload_media_section():
                 st.rerun()
             else:
                 return False
-
-def convert_audio_to_video(audio_file: str) -> str:
-    """
-    ⚠️ 此函数已不再使用
-    现在音频文件直接处理，无需转换为MP4
-    保留此函数以备将来需要生成带黑屏的视频
-    """
-    output_video = os.path.join(OUTPUT_DIR, 'black_screen.mp4')
-    if not os.path.exists(output_video):
-        print(f"🎵➡️🎬 Converting audio to video with FFmpeg ......")
-        ffmpeg_cmd = ['ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=640x360', '-i', audio_file, '-shortest', '-c:v', 'libx264', '-c:a', 'aac', '-pix_fmt', 'yuv420p', output_video]
-        subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True, encoding='utf-8')
-        print(f"🎵➡️🎬 Converted <{audio_file}> to <{output_video}> with FFmpeg\n")
-        # delete audio file
-        os.remove(audio_file)
-    return output_video
-
-# 保持向后兼容的别名
-def download_video_section():
-    return upload_media_section()
