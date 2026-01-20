@@ -59,16 +59,19 @@ def process_text():
         # Stage 1: NLP 分句，返回 Sentence 对象
         sentences = _3_1_split_nlp.split_by_spacy()
     with st.spinner("正在使用LLM切分长句..."):
-        # Stage 2: LLM 切分长句，传入 Sentence 对象
+        # Stage 2: LLM 切分长句，传入/返回 Sentence 对象
         sentences = _3_2_split_meaning.split_sentences_by_meaning(sentences)
     with st.spinner("正在总结和翻译..."):
         _4_1_summarize.get_summary()
         if load_key("pause_before_translate"):
             input("⚠️ 翻译前暂停。请前往`output/log/terminology.json`编辑术语。然后按回车键继续...")
-        _4_2_translate.translate_all()
+        # Stage 3: 翻译，填充 Sentence.translation，返回 Sentence 对象
+        sentences = _4_2_translate.translate_all(sentences)
     with st.spinner("正在处理和对齐字幕..."):
-        _5_split_sub.split_for_sub_main()
-        _6_gen_sub.align_timestamp_main()
+        # Stage 4: 字幕切分，处理 Sentence 对象
+        sentences = _5_split_sub.split_for_sub_main(sentences)
+        # Stage 5: 字幕生成，直接从 Sentence 对象生成
+        _6_gen_sub.align_timestamp_main(sentences)
 
     st.success("字幕处理完成! 🎉")
     st.balloons()
