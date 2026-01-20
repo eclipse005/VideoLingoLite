@@ -183,7 +183,6 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
     # Flatten the list of lists
     return [s for sublist in new_sentences for s in sublist]
 
-@check_file_exists(_3_2_SPLIT_BY_MEANING)
 def split_sentences_by_meaning(sentences: List[Sentence] = None):
     """
     主函数：切分长句 (Stage 2)

@@ -98,7 +98,6 @@ def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]
     return sentences
 
 
-@check_file_exists(_3_1_SPLIT_BY_NLP)
 def split_by_spacy() -> List[Sentence]:
     """
     NLP 分句主函数（Stage 1）
@@ -133,7 +132,6 @@ def split_by_spacy() -> List[Sentence]:
 # New NLP Split Function with Character Position Tracking
 # ------------
 
-@check_file_exists(_3_1_SPLIT_BY_NLP)
 def split_by_nlp(nlp: Language) -> List[Sentence]:
     """
     NLP 分句主函数
