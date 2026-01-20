@@ -132,7 +132,7 @@ def split_for_sub_main(sentences=None):
     Returns:
         List[Sentence]: 切分后的 Sentence 对象列表
     """
-    console.print("[bold green]🚀 Start splitting subtitles...[/bold]")
+    console.print("[bold green]🚀 Start splitting subtitles...[/]")
 
     # 如果没有传入 Sentence 对象，从 CSV 加载（向后兼容）
     if sentences is None:
