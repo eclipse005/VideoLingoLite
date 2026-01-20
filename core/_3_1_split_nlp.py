@@ -12,6 +12,7 @@ Output: split_by_nlp.txt (Stage 1 result)
 
 from dataclasses import dataclass, field
 from typing import List, Optional
+from spacy.language import Language
 
 from core.spacy_utils import *
 from core.utils.models import _3_1_SPLIT_BY_NLP, Chunk, Sentence
@@ -39,7 +40,7 @@ def build_char_to_chunk_mapping(chunks: List[Chunk]) -> List[int]:
     return char_to_chunk
 
 
-def nlp_split_to_sentences(chunks: List[Chunk], nlp) -> List[Sentence]:
+def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]:
     """
     使用 spaCy 进行 NLP 分句，将 Chunk 对象组合成 Sentence 对象
 
@@ -50,8 +51,14 @@ def nlp_split_to_sentences(chunks: List[Chunk], nlp) -> List[Sentence]:
     Returns:
         Sentence 对象列表
     """
+    # Validate input chunks
+    if not chunks:
+        return []
+
     # 1. 拼接所有 Chunk 的文本
     full_text = "".join(chunk.text for chunk in chunks)
+    if not full_text:
+        return []
 
     # 2. 构建字符到 Chunk 的映射
     char_to_chunk = build_char_to_chunk_mapping(chunks)
@@ -64,8 +71,11 @@ def nlp_split_to_sentences(chunks: List[Chunk], nlp) -> List[Sentence]:
         start_char = sent.start_char
         end_char = sent.end_char
 
-        # 边界检查
-        start_char = max(0, min(start_char, len(full_text) - 1))
+        # 边界检查 - Ensure start_char is within valid range [0, len(full_text)-1]
+        if start_char >= len(full_text):
+            continue  # Skip invalid sentence
+        start_char = max(0, start_char)
+        # Ensure end_char is at least start_char + 1 and at most len(full_text)
         end_char = max(start_char + 1, min(end_char, len(full_text)))
 
         # 找到对应的 Chunk 范围
@@ -108,7 +118,7 @@ def split_by_spacy():
 # ------------
 
 @check_file_exists(_3_1_SPLIT_BY_NLP)
-def split_by_nlp(nlp):
+def split_by_nlp(nlp: Language) -> List[Sentence]:
     """
     NLP 分句主函数
 
