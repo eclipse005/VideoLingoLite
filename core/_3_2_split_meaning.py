@@ -95,6 +95,8 @@ def split_sentence_by_br(sentence: Sentence, llm_output: str) -> List[Sentence]:
         return [sentence]
 
     # 2. 构建清洗后文本到 Chunk 的映射（关键修复：使用清洗后的文本）
+    # 注意：这里不需要添加空格，因为 find_br_positions_in_original 返回的位置
+    # 是基于清洗后的文本（clean_word 去除了空格），所以 char_to_chunk 也应该不包含空格
     char_to_chunk = []
     for chunk_idx, chunk in enumerate(sentence.chunks):
         cleaned_chunk_text = clean_word(chunk.text)

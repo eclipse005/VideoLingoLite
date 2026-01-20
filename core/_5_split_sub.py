@@ -229,6 +229,8 @@ def split_for_sub_main(sentences=None):
 
                 if br_positions:
                     # 构建字符到 Chunk 的映射（使用清洗后的文本）
+                    # 注意：这里不需要添加空格，因为 find_br_positions_in_original 返回的位置
+                    # 是基于清洗后的文本（clean_word 去除了空格），所以 char_to_chunk 也应该不包含空格
                     char_to_chunk = []
                     for chunk_idx, chunk in enumerate(sent.chunks):
                         cleaned_chunk_text = clean_word(chunk.text)
@@ -244,6 +246,11 @@ def split_for_sub_main(sentences=None):
                     split_points.append(len(sent.chunks))
                     split_points = sorted(set(split_points))
 
+                    # 获取语言连接符
+                    from core.utils import load_key, get_joiner
+                    asr_language = load_key("asr.language")
+                    joiner = get_joiner(asr_language)
+
                     # 拆分 Chunks，创建新的 Sentence 对象
                     for j in range(len(split_points) - 1):
                         start_idx = split_points[j]
@@ -253,7 +260,7 @@ def split_for_sub_main(sentences=None):
                             continue
 
                         sub_chunks = sent.chunks[start_idx:end_idx]
-                        sub_text = "".join(c.text for c in sub_chunks)
+                        sub_text = joiner.join(c.text for c in sub_chunks)  # 使用 joiner 分隔
 
                         new_sentence = Sentence(
                             chunks=sub_chunks,

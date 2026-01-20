@@ -16,7 +16,7 @@ from spacy.language import Language
 
 from core.spacy_utils import *
 from core.utils.models import _3_1_SPLIT_BY_NLP, Chunk, Sentence
-from core.utils import check_file_exists, rprint
+from core.utils import check_file_exists, rprint, load_key, get_joiner
 from core._2_asr import load_chunks
 
 
@@ -24,19 +24,24 @@ from core._2_asr import load_chunks
 # Character Position Mapping Functions
 # ------------
 
-def build_char_to_chunk_mapping(chunks: List[Chunk]) -> List[int]:
+def build_char_to_chunk_mapping(chunks: List[Chunk], joiner: str = "") -> List[int]:
     """
     构建字符到 Chunk 索引的映射
 
     Args:
         chunks: Chunk 对象列表
+        joiner: Chunk 之间的连接符（空格分隔语言为 " "，其他为 ""）
 
     Returns:
         每个字符对应的 Chunk 索引列表
     """
     char_to_chunk = []
     for chunk_idx, chunk in enumerate(chunks):
+        # 添加 chunk 的每个字符
         char_to_chunk.extend([chunk_idx] * len(chunk.text))
+        # 如果有空格分隔符且不是最后一个 chunk，添加空格的映射
+        if joiner and chunk_idx < len(chunks) - 1:
+            char_to_chunk.extend([chunk_idx] * len(joiner))
     return char_to_chunk
 
 
@@ -55,13 +60,17 @@ def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]
     if not chunks:
         return []
 
-    # 1. 拼接所有 Chunk 的文本
-    full_text = "".join(chunk.text for chunk in chunks)
+    # 获取 ASR 语言并确定连接符（空格分隔语言使用 " "，其他使用 ""）
+    asr_language = load_key("asr.language")
+    joiner = get_joiner(asr_language)
+
+    # 1. 拼接所有 Chunk 的文本（使用 joiner 分隔）
+    full_text = joiner.join(chunk.text for chunk in chunks)
     if not full_text:
         return []
 
-    # 2. 构建字符到 Chunk 的映射
-    char_to_chunk = build_char_to_chunk_mapping(chunks)
+    # 2. 构建字符到 Chunk 的映射（考虑空格）
+    char_to_chunk = build_char_to_chunk_mapping(chunks, joiner)
 
     # 3. 使用 spaCy 分句
     doc = nlp(full_text)
