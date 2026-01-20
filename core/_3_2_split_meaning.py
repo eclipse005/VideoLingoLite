@@ -133,8 +133,19 @@ def split_sentence_by_br(sentence: Sentence, llm_output: str) -> List[Sentence]:
     return new_sentences
 
 
-def parallel_split_sentences(sentences, max_length, max_workers, retry_attempt=0):
-    """Split sentences in parallel using a thread pool."""
+def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_workers: int, retry_attempt: int = 0) -> List[Sentence]:
+    """
+    Split sentences in parallel using a thread pool.
+
+    Args:
+        sentences: List of Sentence objects to process
+        max_length: Maximum effective length per sentence
+        max_workers: Number of parallel workers
+        retry_attempt: Retry attempt number (for logging)
+
+    Returns:
+        Flattened list of Sentence objects (split as needed)
+    """
     new_sentences = [None] * len(sentences)
     futures = []
 
@@ -142,30 +153,34 @@ def parallel_split_sentences(sentences, max_length, max_workers, retry_attempt=0
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         for index, sentence in enumerate(sentences):
-            # 使用有效长度判断
-            effective_length = get_effective_length(sentence, asr_language)
+            # Skip if already split
+            if sentence.is_split:
+                new_sentences[index] = [sentence]
+                continue
+
+            # Use effective length for Sentence object
+            effective_length = get_effective_length(sentence.text, asr_language)
             num_parts = math.ceil(effective_length / max_length)
-            if check_length_exceeds(sentence, max_length, asr_language):
-                future = executor.submit(split_sentence, sentence, num_parts, max_length, index=index)
-                futures.append((future, index, num_parts, sentence))
+
+            if check_length_exceeds(sentence.text, max_length, asr_language):
+                # Submit LLM task with sentence.text
+                future = executor.submit(split_sentence, sentence.text, num_parts, max_length, index=index)
+                futures.append((future, index, sentence))
             else:
                 new_sentences[index] = [sentence]
 
-        for future, index, num_parts, sentence in futures:
+        for future, index, sentence in futures:
             split_result = future.result()
-            if split_result:
-                # 处理 [br] 标记为换行
-                if '[br]' in split_result:
-                    split_lines = [part.strip() for part in split_result.split('[br]')]
-                    split_lines = [line for line in split_lines if line]
-                else:
-                    # 如果没有切分，保持原样
-                    split_lines = [split_result.strip()]
-                new_sentences[index] = split_lines
+            if split_result and '[br]' in split_result:
+                # Use split_sentence_by_br to split the Sentence object
+                split_sentence_list = split_sentence_by_br(sentence, split_result)
+                new_sentences[index] = split_sentence_list
             else:
+                # No splitting occurred, keep original
                 new_sentences[index] = [sentence]
 
-    return [sentence for sublist in new_sentences for sentence in sublist]
+    # Flatten the list of lists
+    return [s for sublist in new_sentences for s in sublist]
 
 @check_file_exists(_3_2_SPLIT_BY_MEANING)
 def split_sentences_by_meaning():
