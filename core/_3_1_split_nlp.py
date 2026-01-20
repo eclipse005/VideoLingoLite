@@ -10,9 +10,83 @@ This module uses spaCy to perform rule-based sentence splitting:
 Output: split_by_nlp.txt (Stage 1 result)
 """
 
+from dataclasses import dataclass, field
+from typing import List, Optional
+
 from core.spacy_utils import *
-from core.utils.models import _3_1_SPLIT_BY_NLP
+from core.utils.models import _3_1_SPLIT_BY_NLP, Chunk, Sentence
 from core.utils import check_file_exists, rprint
+from core._2_asr import load_chunks
+
+
+# ------------
+# Character Position Mapping Functions
+# ------------
+
+def build_char_to_chunk_mapping(chunks: List[Chunk]) -> List[int]:
+    """
+    构建字符到 Chunk 索引的映射
+
+    Args:
+        chunks: Chunk 对象列表
+
+    Returns:
+        每个字符对应的 Chunk 索引列表
+    """
+    char_to_chunk = []
+    for chunk_idx, chunk in enumerate(chunks):
+        char_to_chunk.extend([chunk_idx] * len(chunk.text))
+    return char_to_chunk
+
+
+def nlp_split_to_sentences(chunks: List[Chunk], nlp) -> List[Sentence]:
+    """
+    使用 spaCy 进行 NLP 分句，将 Chunk 对象组合成 Sentence 对象
+
+    Args:
+        chunks: Chunk 对象列表
+        nlp: spaCy NLP 模型
+
+    Returns:
+        Sentence 对象列表
+    """
+    # 1. 拼接所有 Chunk 的文本
+    full_text = "".join(chunk.text for chunk in chunks)
+
+    # 2. 构建字符到 Chunk 的映射
+    char_to_chunk = build_char_to_chunk_mapping(chunks)
+
+    # 3. 使用 spaCy 分句
+    doc = nlp(full_text)
+    sentences = []
+
+    for sent_idx, sent in enumerate(doc.sents):
+        start_char = sent.start_char
+        end_char = sent.end_char
+
+        # 边界检查
+        start_char = max(0, min(start_char, len(full_text) - 1))
+        end_char = max(start_char + 1, min(end_char, len(full_text)))
+
+        # 找到对应的 Chunk 范围
+        start_chunk_idx = char_to_chunk[start_char]
+        end_chunk_idx = char_to_chunk[end_char - 1]
+
+        # 提取对应的 Chunk 对象
+        sentence_chunks = chunks[start_chunk_idx:end_chunk_idx + 1]
+
+        # 创建 Sentence 对象
+        sentence = Sentence(
+            chunks=sentence_chunks,
+            text=sent.text,
+            start=sentence_chunks[0].start if sentence_chunks else 0.0,
+            end=sentence_chunks[-1].end if sentence_chunks else 0.0,
+            index=sent_idx
+        )
+        sentences.append(sentence)
+
+    return sentences
+
 
 @check_file_exists(_3_1_SPLIT_BY_NLP)
 def split_by_spacy():
@@ -27,6 +101,38 @@ def split_by_spacy():
     split_by_pause()
     rprint(f"[green]✅ NLP sentence segmentation completed: {_3_1_SPLIT_BY_NLP}[/green]")
     return
+
+
+# ------------
+# New NLP Split Function with Character Position Tracking
+# ------------
+
+@check_file_exists(_3_1_SPLIT_BY_NLP)
+def split_by_nlp(nlp):
+    """
+    NLP 分句主函数
+
+    输入: cleaned_chunks.csv → List[Chunk]
+    输出: List[Sentence] → 保存到 split_by_nlp.txt (文本) 和返回对象
+    """
+    rprint("[blue]🔍 Starting NLP sentence splitting...[/blue]")
+
+    # 1. 加载 Chunk 对象
+    chunks = load_chunks()
+
+    # 2. NLP 分句，生成 Sentence 对象
+    sentences = nlp_split_to_sentences(chunks, nlp)
+
+    # 3. 保存文本到文件（向后兼容）
+    with open(_3_1_SPLIT_BY_NLP, 'w', encoding='utf-8') as f:
+        for sent in sentences:
+            f.write(sent.text + '\n')
+
+    rprint(f'[green]✅ NLP splitting complete! {len(sentences)} sentences generated[/green]')
+    rprint(f'[green]💾 Saved to: {_3_1_SPLIT_BY_NLP}[/green]')
+
+    return sentences
+
 
 if __name__ == '__main__':
     split_by_spacy()
