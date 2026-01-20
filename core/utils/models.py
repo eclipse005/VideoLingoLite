@@ -1,3 +1,45 @@
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+
+@dataclass
+class Chunk:
+    """词/字级别的语音识别单元，携带时间戳"""
+    text: str           # 词/字内容（如 "Hello", "world."）
+    start: float        # 开始时间（秒）
+    end: float          # 结束时间（秒）
+    speaker_id: Optional[str] = None  # 说话人ID
+    index: int = 0      # 在 cleaned_chunks.csv 中的行号
+
+    @property
+    def duration(self) -> float:
+        """获取该词的时长"""
+        return self.end - self.start
+
+
+@dataclass
+class Sentence:
+    """句子级别的对象，由多个 Chunk 组成"""
+    chunks: List[Chunk]     # 组成这句话的所有 Chunk
+    text: str               # 从 chunks 拼接的完整文本
+    start: float            # = chunks[0].start
+    end: float              # = chunks[-1].end
+    translation: str = ""   # 翻译文本
+    index: int = 0          # 句子序号
+    is_split: bool = False  # 是否被 LLM 切分过
+
+    @property
+    def duration(self) -> float:
+        """获取这句话的时长"""
+        return self.end - self.start
+
+    def update_timestamps(self):
+        """根据 chunks 更新 start 和 end 时间戳"""
+        if self.chunks:
+            self.start = self.chunks[0].start
+            self.end = self.chunks[-1].end
+
+
 # ------------------------------------------
 # 定义中间产出文件
 # ------------------------------------------
@@ -29,6 +71,8 @@ _AUDIO_TMP_DIR = "output/audio/tmp"
 # ------------------------------------------
 
 __all__ = [
+    "Chunk",
+    "Sentence",
     "_2_CLEANED_CHUNKS",
     "_3_1_SPLIT_BY_NLP",
     "_3_2_SPLIT_BY_MEANING_RAW",
