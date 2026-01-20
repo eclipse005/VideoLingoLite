@@ -56,11 +56,11 @@ def process_text():
     with st.spinner(spinner_text):
         _2_asr.transcribe()
     with st.spinner("正在进行NLP分句..."):
-        _3_1_split_nlp.split_by_spacy()
+        # Stage 1: NLP 分句，返回 Sentence 对象
+        sentences = _3_1_split_nlp.split_by_spacy()
     with st.spinner("正在使用LLM切分长句..."):
-        # Note: split_sentences_by_meaning() now works with Sentence objects internally
-        # but saves/loads from text files for compatibility with existing pipeline
-        _3_2_split_meaning.split_sentences_by_meaning()
+        # Stage 2: LLM 切分长句，传入 Sentence 对象
+        sentences = _3_2_split_meaning.split_sentences_by_meaning(sentences)
     with st.spinner("正在总结和翻译..."):
         _4_1_summarize.get_summary()
         if load_key("pause_before_translate"):

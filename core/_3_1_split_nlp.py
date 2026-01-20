@@ -99,18 +99,31 @@ def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]
 
 
 @check_file_exists(_3_1_SPLIT_BY_NLP)
-def split_by_spacy():
+def split_by_spacy() -> List[Sentence]:
+    """
+    NLP 分句主函数（Stage 1）
+
+    执行多步 NLP 分句处理，并返回 Sentence 对象列表
+
+    Returns:
+        List[Sentence]: 分句后的 Sentence 对象列表
+    """
     rprint("[blue]🔍 Starting NLP-based sentence segmentation (Stage 1)[/blue]")
 
     nlp = init_nlp()
 
+    # 执行原有的分句步骤
     split_by_mark(nlp)
     split_by_comma_main(nlp)
     split_sentences_main(nlp)
     split_long_by_root_main(nlp)
     split_by_pause()
+
+    # 使用新的对象化流程生成 Sentence 对象
+    sentences = split_by_nlp(nlp)
+
     rprint(f"[green]✅ NLP sentence segmentation completed: {_3_1_SPLIT_BY_NLP}[/green]")
-    return
+    return sentences
 
 
 # ------------
