@@ -3,6 +3,7 @@ import math
 from typing import List
 
 from core.utils import *
+from core._2_asr import load_chunks
 from rich.console import Console
 from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, Sentence
 
@@ -183,18 +184,51 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
     return [s for sublist in new_sentences for s in sublist]
 
 @check_file_exists(_3_2_SPLIT_BY_MEANING)
-def split_sentences_by_meaning():
+def split_sentences_by_meaning(sentences: List[Sentence] = None):
     """
     主函数：切分长句 (Stage 2)
 
-    输入: split_by_nlp.txt (Stage 1 NLP 分句结果)
-    输出: split_by_meaning.txt (LLM 切分长句后的最终结果)
+    Args:
+        sentences: Sentence 对象列表（如果为 None，则从文本文件加载）
+
+    输入: split_by_nlp.txt (Stage 1 NLP 分句结果) 或 List[Sentence]
+    输出: split_by_meaning.txt (LLM 切分长句后的最终结果) 和 List[Sentence]
     """
     console.print("[blue]🔍 Starting LLM sentence segmentation (Stage 2)[/blue]")
 
-    # 读取 Stage 1 的输出
-    with open(_3_1_SPLIT_BY_NLP, 'r', encoding='utf-8') as f:
-        sentences = [line.strip() for line in f.readlines() if line.strip()]
+    # 如果没有传入 Sentence 对象，从文本文件读取（向后兼容）
+    if sentences is None:
+        with open(_3_1_SPLIT_BY_NLP, 'r', encoding='utf-8') as f:
+            text_lines = [line.strip() for line in f.readlines() if line.strip()]
+
+        # 将文本转换为临时 Sentence 对象（没有 Chunk 信息，用于 LLM 处理）
+        sentences = []
+        chunks = load_chunks()  # 加载 chunks 用于获取时间戳
+        char_pos = 0
+        chunk_idx = 0
+
+        for text_line in text_lines:
+            # 找到覆盖这段文本的 chunks
+            sentence_chunks = []
+            text_length = len(text_line)
+
+            while chunk_idx < len(chunks) and char_pos < text_length:
+                chunk = chunks[chunk_idx]
+                sentence_chunks.append(chunk)
+                char_pos += len(chunk.text)
+                chunk_idx += 1
+
+            # 创建临时 Sentence 对象
+            sentence = Sentence(
+                chunks=sentence_chunks,
+                text=text_line,
+                start=sentence_chunks[0].start if sentence_chunks else 0.0,
+                end=sentence_chunks[-1].end if sentence_chunks else 0.0,
+                index=len(sentences),
+                is_split=False
+            )
+            sentences.append(sentence)
+            char_pos = 0  # 重置
 
     console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from Stage 1 ({_3_1_SPLIT_BY_NLP})[/cyan]')
 
@@ -220,7 +254,7 @@ def split_sentences_by_meaning():
 
     # 💾 保存结果到最终文件
     with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(sentences))
+        f.write('\n'.join(sent.text for sent in sentences))
 
     console.print(f'[green]✅ All sentences processed! Final count: {len(sentences)}[/green]')
     console.print(f'[green]💾 Saved to: {_3_2_SPLIT_BY_MEANING}[/green]')
