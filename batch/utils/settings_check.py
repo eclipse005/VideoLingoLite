@@ -14,16 +14,16 @@ def check_settings():
     os.makedirs(INPUT_FOLDER, exist_ok=True)
     df = safe_read_csv(SETTINGS_FILE)
     input_files = set(os.listdir(INPUT_FOLDER))
-    excel_files = set(df['Video File'].tolist())
-    files_not_in_excel = input_files - excel_files
+    csv_files = set(df['Video File'].tolist())
+    files_not_in_csv = input_files - csv_files
 
     all_passed = True
     local_video_tasks = 0
     url_tasks = 0
 
-    if files_not_in_excel:
+    if files_not_in_csv:
         console.print(Panel(
-            "\n".join([f"- {file}" for file in files_not_in_excel]),
+            "\n".join([f"- {file}" for file in files_not_in_csv]),
             title="[bold red]Warning: Files in input folder not mentioned in CSV file",
             expand=False
         ))

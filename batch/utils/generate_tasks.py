@@ -55,7 +55,7 @@ def get_user_input(default_source_lang='en', default_target_lang='简体中文',
     return source_lang, target_lang, dubbing
 
 
-def create_excel(files, source_lang, target_lang, dubbing):
+def create_csv(files, source_lang, target_lang, dubbing):
     """Create tasks_setting.csv with scanned files"""
     data = {
         'Video File': files,
@@ -107,7 +107,7 @@ def main():
     source_lang, target_lang, dubbing = get_user_input()
 
     # Create DataFrame
-    df = create_excel(files, source_lang, target_lang, dubbing)
+    df = create_csv(files, source_lang, target_lang, dubbing)
 
     # Preview
     preview_table(df)
