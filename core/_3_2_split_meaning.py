@@ -218,7 +218,7 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
     # Flatten the list of lists
     return [s for sublist in new_sentences for s in sublist]
 
-@cache_objects(_CACHE_SENTENCES_SPLIT)
+@cache_objects(_CACHE_SENTENCES_SPLIT, _3_2_SPLIT_BY_MEANING)
 def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     """
     主函数：切分长句 (Stage 2)
@@ -263,12 +263,7 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     elapsed = time.time() - start_time
     console.print(f"[dim]⏱️ LLM 长句切分耗时: {format_duration(elapsed)}[/dim]")
 
-    # 💾 保存结果到最终文件
-    with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(sent.text for sent in sentences))
-
     console.print(f'[green]✅ 处理完成！最终句子数: {len(sentences)}[/green]')
-    console.print(f'[green]💾 已保存到: {_3_2_SPLIT_BY_MEANING}[/green]')
 
     return sentences
 
