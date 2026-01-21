@@ -81,17 +81,14 @@ def split_sentences():
     sentences = _3_2_split_meaning.split_sentences_by_meaning(sentences)
     return {'sentences': sentences}
 
-def summarize_and_translate(sentences=None):
+def summarize_and_translate():
+    sentences = globals().get('sentences')
     _4_1_summarize.get_summary()
-    if sentences is None:
-        # 从缓存加载 sentences
-        sentences = _3_2_split_meaning.load_sentences()
     sentences = _4_2_translate.translate_all(sentences)
     return {'sentences': sentences}
 
-def process_and_align_subtitles(sentences=None):
-    if sentences is None:
-        sentences = _3_2_split_meaning.load_sentences()
+def process_and_align_subtitles():
+    sentences = globals().get('sentences')
     sentences = _5_split_sub.split_for_sub_main(sentences)
     _6_gen_sub.align_timestamp_main(sentences)
     return {'sentences': sentences}

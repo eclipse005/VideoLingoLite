@@ -74,8 +74,6 @@ def cache_objects(cache_file: str, text_file: str = None, text_attr: str = 'text
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            rprint(f"[dim]🔍 函数 {func.__name__} 开始执行[/dim]")
-
             if os.path.exists(cache_file):
                 rprint(f"[yellow]⏩ 从缓存加载: {cache_file}[/yellow]")
                 try:
@@ -92,7 +90,6 @@ def cache_objects(cache_file: str, text_file: str = None, text_attr: str = 'text
                     raise
 
             # 执行函数
-            rprint(f"[dim]⚡ 执行函数 {func.__name__}...[/dim]")
             result = func(*args, **kwargs)
 
             # 确保输出目录存在
@@ -116,27 +113,21 @@ def cache_objects(cache_file: str, text_file: str = None, text_attr: str = 'text
 
 def _save_text_file(obj, text_file: str, text_attr: str = 'text'):
     """从对象列表中提取文本并保存到文件"""
-    try:
-        # 确保目录存在
-        text_dir = os.path.dirname(text_file)
-        if text_dir:
-            os.makedirs(text_dir, exist_ok=True)
+    # 确保目录存在
+    text_dir = os.path.dirname(text_file)
+    if text_dir:
+        os.makedirs(text_dir, exist_ok=True)
 
-        # 提取文本
-        if isinstance(obj, list) and obj and hasattr(obj[0], text_attr):
-            texts = [getattr(item, text_attr) for item in obj]
-            content = '\n'.join(texts)
-        else:
-            content = str(obj)
+    # 提取文本
+    if isinstance(obj, list) and obj and hasattr(obj[0], text_attr):
+        texts = [getattr(item, text_attr) for item in obj]
+        content = '\n'.join(texts)
+    else:
+        content = str(obj)
 
-        # 保存文件
-        with open(text_file, 'w', encoding='utf-8') as f:
-            f.write(content)
-
-        rprint(f"[green]💾 已保存文本文件: {text_file}[/green]")
-    except Exception as e:
-        rprint(f"[red]❌ 保存文本文件失败 {text_file}: {e}[/red]")
-        raise
+    # 保存文件
+    with open(text_file, 'w', encoding='utf-8') as f:
+        f.write(content)
 
 if __name__ == "__main__":
     @except_handler("function execution failed", retry=3, delay=1)
