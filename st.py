@@ -70,7 +70,7 @@ def process_text():
     else:
         # 完整模式：总结 → 翻译 → 拆分对齐 → 生成字幕
         with st.spinner("正在总结和翻译..."):
-            _4_1_summarize.get_summary()
+            _4_1_summarize.get_summary(sentences)
             if load_key("pause_before_translate"):
                 input("⚠️ 翻译前暂停。请前往`output/log/terminology.json`编辑术语。然后按回车键继续...")
             # Stage 3: 翻译，填充 Sentence.translation，返回 Sentence 对象

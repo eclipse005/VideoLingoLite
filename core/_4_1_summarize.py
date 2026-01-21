@@ -2,21 +2,20 @@ import json
 import re
 import unicodedata
 import time
+from typing import List
 from core.prompts import get_summary_prompt
 import pandas as pd
 from core.utils import load_key, rprint, safe_read_csv, ask_gpt, format_duration
-from core.utils.models import _3_2_SPLIT_BY_MEANING, _4_1_TERMINOLOGY
+from core.utils.models import _4_1_TERMINOLOGY, Sentence
 from core.utils.sentence_tools import clean_word
 
 CUSTOM_TERMS_PATH = 'custom_terms.csv'
 
-def combine_chunks():
-    """Combine the text chunks identified by ASR into a single long text"""
-    with open(_3_2_SPLIT_BY_MEANING, 'r', encoding='utf-8') as file:
-        sentences = file.readlines()
-    cleaned_sentences = [line.strip() for line in sentences]
+def combine_chunks(sentences: List[Sentence]):
+    """从 Sentence 对象列表组合文本"""
+    cleaned_sentences = [s.text.strip() for s in sentences]
     combined_text = ' '.join(cleaned_sentences)
-    return combined_text[:load_key('summary_length')]  #! Return only the first x characters
+    return combined_text[:load_key('summary_length')]
 
 def clean_text_for_comparison(text):
     """Clean text by removing spaces and punctuation for pure text comparison
@@ -84,12 +83,18 @@ def search_things_to_note_in_prompt(sentence):
     else:
         return None
 
-def get_summary():
+def get_summary(sentences: List[Sentence]):
+    """
+    生成内容总结和术语表
+
+    Args:
+        sentences: Sentence 对象列表
+    """
     rprint("📝 正在总结和提取术语...")
 
     start_time = time.time()
 
-    src_content = combine_chunks()
+    src_content = combine_chunks(sentences)
     custom_terms = safe_read_csv(CUSTOM_TERMS_PATH)
     custom_terms_json = {
         "terms":

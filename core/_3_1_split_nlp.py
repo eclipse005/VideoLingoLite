@@ -177,7 +177,7 @@ def split_by_spacy() -> List[Sentence]:
 # New NLP Split Function with Character Position Tracking
 # ------------
 
-@cache_objects(_CACHE_SENTENCES_NLP)
+@cache_objects(_CACHE_SENTENCES_NLP, _3_1_SPLIT_BY_NLP)
 def split_by_nlp(nlp: Language) -> List[Sentence]:
     """
     NLP 分句主函数
@@ -190,11 +190,6 @@ def split_by_nlp(nlp: Language) -> List[Sentence]:
 
     # 2. NLP 分句，生成 Sentence 对象
     sentences = nlp_split_to_sentences(chunks, nlp)
-
-    # 3. 保存文本到文件（向后兼容）
-    with open(_3_1_SPLIT_BY_NLP, 'w', encoding='utf-8') as f:
-        for sent in sentences:
-            f.write(sent.text + '\n')
 
     rprint(f'[green]✅ 处理完成！共 {len(sentences)} 个句子[/green]')
 
