@@ -54,6 +54,16 @@ _5_SPLIT_SUB = "output/log/translation_results_for_subtitles.csv"
 _5_REMERGED = "output/log/translation_results_remerged.csv"
 
 
+# ------------------------------------------
+# 缓存文件路径 (pickle 格式，用于断点续跑)
+# ------------------------------------------
+
+_CACHE_DIR = "output/cache"
+_CACHE_SENTENCES_NLP = "output/cache/sentences_nlp.pkl"
+_CACHE_SENTENCES_SPLIT = "output/cache/sentences_split.pkl"
+_CACHE_SENTENCES_TRANSLATED = "output/cache/sentences_translated.pkl"
+
+
 
 # ------------------------------------------
 # 定义音频文件
@@ -88,7 +98,11 @@ __all__ = [
     "_AUDIO_REFERS_DIR",
     "_AUDIO_SEGS_DIR",
     "_AUDIO_TMP_DIR",
-    "TARGET_LANG_MAP"
+    "TARGET_LANG_MAP",
+    "_CACHE_DIR",
+    "_CACHE_SENTENCES_NLP",
+    "_CACHE_SENTENCES_SPLIT",
+    "_CACHE_SENTENCES_TRANSLATED"
 ]
 
 

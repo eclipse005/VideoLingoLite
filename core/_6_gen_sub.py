@@ -54,6 +54,50 @@ def clean_translation(x) -> str:
     return autocorrect.format(cleaned)
 
 
+def add_space_for_mixed_script(text: str, lang: str) -> str:
+    """
+    为非空格语言添加混排空格（中文/日文等 + 拉丁字母/数字）
+
+    Args:
+        text: 原始文本
+        lang: 语言代码 (zh, ja, en 等)
+
+    Returns:
+        添加空格后的文本
+    """
+    # 空格语言：不需要处理
+    if lang in ['en', 'es', 'fr', 'de', 'it', 'ru']:
+        return text
+
+    # 非空格语言：双向添加空格
+    # 非ASCII -> 拉丁
+    text = re.sub(r'([^\x00-\x7f])([a-zA-Z0-9])', r'\1 \2', text)
+    # 拉丁 -> 非ASCII
+    text = re.sub(r'([a-zA-Z0-9])([^\x00-\x7f])', r'\1 \2', text)
+    # 清理双空格
+    return text.replace('  ', ' ')
+
+
+def beautify_subtitle_line(text: str, lang_type: str) -> str:
+    """
+    根据语言类型美化字幕行
+
+    Args:
+        text: 原始文本
+        lang_type: 'Source' 或 'Translation'
+
+    Returns:
+        美化后的文本
+    """
+    if lang_type == 'Source':
+        lang = load_key("asr.language")
+    else:  # Translation
+        lang_desc = load_key("target_language")
+        lang = TARGET_LANG_MAP.get(lang_desc, 'en')
+
+    return add_space_for_mixed_script(text, lang)
+
+
 def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output_configs: list, output_dir: str, for_display: bool = True):
     """
     直接从 Sentence 对象列表生成字幕
@@ -107,6 +151,13 @@ def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output
 
             line1 = safe_get(columns[0])
             line2 = safe_get(columns[1]) if len(columns) > 1 else ''
+
+            # 应用混排美化
+            if line1:
+                line1 = beautify_subtitle_line(line1, columns[0])
+            if line2:
+                line2 = beautify_subtitle_line(line2, columns[1])
+
             result.append(f"{i+1}\n{row['timestamp']}\n{line1}\n{line2}\n\n")
         return ''.join(result).strip()
 

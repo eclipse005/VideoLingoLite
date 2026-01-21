@@ -68,6 +68,7 @@ def similar(a: str, b: str) -> float:
     return SequenceMatcher(None, a_norm, b_norm).ratio()
 
 
+@cache_objects(_CACHE_SENTENCES_TRANSLATED)
 def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     """
     翻译所有句子并填充 Sentence.translation 字段

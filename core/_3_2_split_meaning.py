@@ -6,7 +6,7 @@ from core.utils import *
 from core._2_asr import load_chunks
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, Sentence
+from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, _CACHE_SENTENCES_SPLIT, Sentence
 import time
 
 console = Console()
@@ -218,6 +218,7 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
     # Flatten the list of lists
     return [s for sublist in new_sentences for s in sublist]
 
+@cache_objects(_CACHE_SENTENCES_SPLIT)
 def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     """
     主函数：切分长句 (Stage 2)

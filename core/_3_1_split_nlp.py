@@ -14,8 +14,8 @@ from typing import List
 from spacy.language import Language
 
 from core.spacy_utils import *
-from core.utils.models import _3_1_SPLIT_BY_NLP, Chunk, Sentence
-from core.utils import rprint, load_key, get_joiner, Timer
+from core.utils.models import _3_1_SPLIT_BY_NLP, _CACHE_SENTENCES_NLP, Chunk, Sentence
+from core.utils import rprint, load_key, get_joiner, Timer, cache_objects
 from core._2_asr import load_chunks
 
 
@@ -177,6 +177,7 @@ def split_by_spacy() -> List[Sentence]:
 # New NLP Split Function with Character Position Tracking
 # ------------
 
+@cache_objects(_CACHE_SENTENCES_NLP)
 def split_by_nlp(nlp: Language) -> List[Sentence]:
     """
     NLP 分句主函数
