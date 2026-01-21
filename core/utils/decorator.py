@@ -109,21 +109,27 @@ def cache_objects(cache_file: str, text_file: str = None, text_attr: str = 'text
 
 def _save_text_file(obj, text_file: str, text_attr: str = 'text'):
     """从对象列表中提取文本并保存到文件"""
-    # 确保目录存在
-    text_dir = os.path.dirname(text_file)
-    if text_dir:
-        os.makedirs(text_dir, exist_ok=True)
+    try:
+        # 确保目录存在
+        text_dir = os.path.dirname(text_file)
+        if text_dir:
+            os.makedirs(text_dir, exist_ok=True)
 
-    # 提取文本
-    if isinstance(obj, list) and obj and hasattr(obj[0], text_attr):
-        texts = [getattr(item, text_attr) for item in obj]
-        content = '\n'.join(texts)
-    else:
-        content = str(obj)
+        # 提取文本
+        if isinstance(obj, list) and obj and hasattr(obj[0], text_attr):
+            texts = [getattr(item, text_attr) for item in obj]
+            content = '\n'.join(texts)
+        else:
+            content = str(obj)
 
-    # 保存文件
-    with open(text_file, 'w', encoding='utf-8') as f:
-        f.write(content)
+        # 保存文件
+        with open(text_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        rprint(f"[green]💾 已保存文本文件: {text_file}[/green]")
+    except Exception as e:
+        rprint(f"[red]❌ 保存文本文件失败 {text_file}: {e}[/red]")
+        raise
 
 if __name__ == "__main__":
     @except_handler("function execution failed", retry=3, delay=1)
