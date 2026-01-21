@@ -267,5 +267,21 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
 
     return sentences
 
+def load_sentences() -> List[Sentence]:
+    """
+    从缓存加载 Sentence 对象
+
+    Returns:
+        List[Sentence]: Sentence 对象列表
+    """
+    import pickle
+    import os
+    if os.path.exists(_CACHE_SENTENCES_SPLIT):
+        with open(_CACHE_SENTENCES_SPLIT, 'rb') as f:
+            return pickle.load(f)
+    else:
+        raise FileNotFoundError(f"缓存文件不存在: {_CACHE_SENTENCES_SPLIT}")
+
+
 if __name__ == '__main__':
     split_sentences_by_meaning()

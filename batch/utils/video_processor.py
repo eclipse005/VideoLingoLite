@@ -81,13 +81,20 @@ def split_sentences():
     sentences = _3_2_split_meaning.split_sentences_by_meaning(sentences)
     return {'sentences': sentences}
 
-def summarize_and_translate():
+def summarize_and_translate(sentences=None):
     _4_1_summarize.get_summary()
-    _4_2_translate.translate_all()
+    if sentences is None:
+        # 从缓存加载 sentences
+        sentences = _3_2_split_meaning.load_sentences()
+    sentences = _4_2_translate.translate_all(sentences)
+    return {'sentences': sentences}
 
-def process_and_align_subtitles():
-    _5_split_sub.split_for_sub_main()
-    _6_gen_sub.align_timestamp_main()
+def process_and_align_subtitles(sentences=None):
+    if sentences is None:
+        sentences = _3_2_split_meaning.load_sentences()
+    sentences = _5_split_sub.split_for_sub_main(sentences)
+    _6_gen_sub.align_timestamp_main(sentences)
+    return {'sentences': sentences}
 
 def gen_audio_tasks():
     _8_1_audio_task.gen_audio_task_main()
