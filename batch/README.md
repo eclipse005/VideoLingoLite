@@ -8,12 +8,21 @@
 
 ### 1. 准备视频文件
 
-- 将要处理的视频文件放入 `input` 文件夹
-- YouTube 链接可在下一步填写
+将要处理的视频文件放入 `input` 文件夹。
 
-### 2. 配置任务
+### 2. 生成任务配置（可选）
 
-编辑 `tasks_setting.csv` 文件：
+如果 `input` 文件夹中有多个视频文件，可以使用 `OneKeyGenerateTasks.bat` 自动生成 `tasks_setting.csv` 配置文件：
+
+1. 双击运行 `OneKeyGenerateTasks.bat`
+2. 程序会自动扫描 `input` 文件夹中的视频文件
+3. 按提示配置：
+   - **Source Language**：源语言（如 `en`, `zh`）
+   - **Target Language**：翻译语言（如 `简体中文`, `English`）
+   - **Dubbing**：是否配音（`0` 或 `1`）
+4. 预览生成的配置，确认后保存
+
+或者手动编辑 `tasks_setting.csv` 文件：
 
 | 字段 | 说明 | 可选值 |
 |------|------|--------|
