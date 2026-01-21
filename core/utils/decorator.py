@@ -74,18 +74,25 @@ def cache_objects(cache_file: str, text_file: str = None, text_attr: str = 'text
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            rprint(f"[dim]🔍 函数 {func.__name__} 开始执行[/dim]")
+
             if os.path.exists(cache_file):
                 rprint(f"[yellow]⏩ 从缓存加载: {cache_file}[/yellow]")
-                with open(cache_file, 'rb') as f:
-                    result = pickle.load(f)
+                try:
+                    with open(cache_file, 'rb') as f:
+                        result = pickle.load(f)
 
-                # 从缓存加载后，也要保存文本文件（如果指定且不存在）
-                if text_file and not os.path.exists(text_file):
-                    _save_text_file(result, text_file, text_attr)
+                    # 从缓存加载后，也要保存文本文件（如果指定且不存在）
+                    if text_file and not os.path.exists(text_file):
+                        _save_text_file(result, text_file, text_attr)
 
-                return result
+                    return result
+                except Exception as e:
+                    rprint(f"[red]❌ 加载缓存失败: {e}[/red]")
+                    raise
 
             # 执行函数
+            rprint(f"[dim]⚡ 执行函数 {func.__name__}...[/dim]")
             result = func(*args, **kwargs)
 
             # 确保输出目录存在
