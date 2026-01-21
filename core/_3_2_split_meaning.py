@@ -5,7 +5,9 @@ from typing import List
 from core.utils import *
 from core._2_asr import load_chunks
 from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, Sentence
+import time
 
 console = Console()
 
@@ -67,8 +69,10 @@ def find_br_positions_in_original(llm_output: str, original_text: str) -> List[i
         llm_before_br = llm_output[:br_pos]
         llm_clean_before_br = clean_word(llm_before_br.replace('[br]', ''))
 
-        if llm_clean_before_br in llm_to_original:
-            original_pos = llm_to_original[llm_clean_before_br]
+        # 使用清洗后文本的长度（字符位置）来查找映射
+        clean_pos = len(llm_clean_before_br)
+        if clean_pos in llm_to_original:
+            original_pos = llm_to_original[clean_pos]
             original_br_positions.append(original_pos)
 
     return original_br_positions
@@ -177,15 +181,39 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
             else:
                 new_sentences[index] = [sentence]
 
-        for future, index, sentence in futures:
-            split_result = future.result()
-            if split_result and '[br]' in split_result:
-                # Use split_sentence_by_br to split the Sentence object
-                split_sentence_list = split_sentence_by_br(sentence, split_result)
-                new_sentences[index] = split_sentence_list
-            else:
-                # No splitting occurred, keep original
-                new_sentences[index] = [sentence]
+        total = len(futures)
+        # 创建 future 到 (index, sentence) 的映射
+        future_to_data = {future: (index, sentence) for future, index, sentence in futures}
+
+        # 只有在有任务时才显示进度条
+        if total > 0:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TextColumn("({task.completed}/{task.total})"),
+                transient=False,
+                console=console
+            ) as progress:
+                task = progress.add_task(f"[cyan]第 {retry_attempt + 1} 轮: 切分句子...", total=total)
+
+                for future in concurrent.futures.as_completed(future_to_data.keys()):
+                    index, sentence = future_to_data[future]
+                    split_result = future.result()
+
+                    if split_result and '[br]' in split_result:
+                        # Use split_sentence_by_br to split the Sentence object
+                        split_sentence_list = split_sentence_by_br(sentence, split_result)
+                        new_sentences[index] = split_sentence_list
+                    else:
+                        # No splitting occurred, keep original
+                        new_sentences[index] = [sentence]
+
+                    progress.update(task, advance=1)
+        else:
+            # 没有需要切分的句子，直接跳过
+            pass
 
     # Flatten the list of lists
     return [s for sublist in new_sentences for s in sublist]
@@ -200,10 +228,9 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     Returns:
         List[Sentence]: 切分后的 Sentence 对象列表
     """
-    console.print("[blue]🔍 Starting LLM sentence segmentation (Stage 2)[/blue]")
+    console.print("[blue]🔍 开始 LLM 长句切分 (Stage 2)[/blue]")
 
-    console.print(f'[cyan]📖 Loaded {len(sentences)} sentences from Stage 1[/cyan]')
-    console.print(f'[green]✅ Received {len(sentences)} Sentence objects from Stage 1[/green]')
+    start_time = time.time()
 
     # 统计需要切分的句子
     asr_language = load_key("asr.language")
@@ -211,13 +238,20 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     long_sentences = [s for s in sentences if check_length_exceeds(s.text, soft_limit, asr_language)]
 
     if long_sentences:
-        console.print(f'[yellow]⚠️ Found {len(long_sentences)} long sentences that need LLM splitting[/yellow]')
+        console.print(f'[yellow]⚠️ 发现 {len(long_sentences)} 个需要拆分的长句[/yellow]')
     else:
-        console.print(f'[green]✅ No long sentences found, all sentences are within limit.[/green]')
+        console.print(f'[green]✅ 所有句子长度符合要求，无需拆分[/green]')
 
     # 🔄 多轮处理确保所有长句都被切分
     for retry_attempt in range(3):
-        console.print(f'[cyan]🔄 Round {retry_attempt + 1}/3: Processing sentences...[/cyan]')
+        # 检查是否还有需要切分的句子
+        remaining_long = [s for s in sentences if check_length_exceeds(s.text, soft_limit, asr_language)]
+        if not remaining_long:
+            if retry_attempt > 0:
+                console.print(f'[green]✅ 所有句子已符合长度限制[/green]')
+            break
+
+        # 只有在有需要切分的句子时才调用处理函数
         sentences = parallel_split_sentences(
             sentences,
             max_length=soft_limit,
@@ -225,16 +259,17 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
             retry_attempt=retry_attempt
         )
 
+    elapsed = time.time() - start_time
+    console.print(f"[dim]⏱️ LLM 长句切分耗时: {format_duration(elapsed)}[/dim]")
+
     # 💾 保存结果到最终文件
     with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
         f.write('\n'.join(sent.text for sent in sentences))
 
-    console.print(f'[green]✅ All sentences processed! Final count: {len(sentences)}[/green]')
-    console.print(f'[cyan]📊 Returning {len(sentences)} Sentence objects to Stage 3[/cyan]')
-    console.print(f'[green]💾 Saved to: {_3_2_SPLIT_BY_MEANING}[/green]')
+    console.print(f'[green]✅ 处理完成！最终句子数: {len(sentences)}[/green]')
+    console.print(f'[green]💾 已保存到: {_3_2_SPLIT_BY_MEANING}[/green]')
 
     return sentences
 
 if __name__ == '__main__':
-    # print(split_sentence('Which makes no sense to the... average guy who always pushes the character creation slider all the way to the right.', 2, 22))
     split_sentences_by_meaning()

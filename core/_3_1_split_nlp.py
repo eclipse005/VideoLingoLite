@@ -15,7 +15,7 @@ from spacy.language import Language
 
 from core.spacy_utils import *
 from core.utils.models import _3_1_SPLIT_BY_NLP, Chunk, Sentence
-from core.utils import rprint, load_key, get_joiner
+from core.utils import rprint, load_key, get_joiner, Timer
 from core._2_asr import load_chunks
 
 
@@ -115,15 +115,15 @@ def split_by_spacy() -> List[Sentence]:
     Returns:
         List[Sentence]: 分句后的 Sentence 对象列表
     """
-    rprint("[blue]🔍 Starting NLP-based sentence segmentation (Stage 1)[/blue]")
+    rprint("[blue]🔍 开始 NLP 分句 (Stage 1)[/blue]")
 
-    nlp = init_nlp()
+    with Timer("NLP 分句"):
+        nlp = init_nlp()
 
-    # 使用对象化流程生成 Sentence 对象
-    sentences = split_by_nlp(nlp)
+        # 使用对象化流程生成 Sentence 对象
+        sentences = split_by_nlp(nlp)
 
-    rprint(f"[green]✅ NLP sentence segmentation completed: {_3_1_SPLIT_BY_NLP}[/green]")
-    rprint(f"[cyan]📊 Generated {len(sentences)} Sentence objects[/cyan]")
+    rprint(f"[green]✅ NLP 分句完成: {_3_1_SPLIT_BY_NLP}[/green]")
     return sentences
 
 
@@ -138,8 +138,6 @@ def split_by_nlp(nlp: Language) -> List[Sentence]:
     输入: cleaned_chunks.csv → List[Chunk]
     输出: List[Sentence] → 保存到 split_by_nlp.txt (文本) 和返回对象
     """
-    rprint("[blue]🔍 Starting NLP sentence splitting...[/blue]")
-
     # 1. 加载 Chunk 对象
     chunks = load_chunks()
 
@@ -151,8 +149,7 @@ def split_by_nlp(nlp: Language) -> List[Sentence]:
         for sent in sentences:
             f.write(sent.text + '\n')
 
-    rprint(f'[green]✅ NLP splitting complete! {len(sentences)} sentences generated[/green]')
-    rprint(f'[green]💾 Saved to: {_3_1_SPLIT_BY_NLP}[/green]')
+    rprint(f'[green]✅ 处理完成！共 {len(sentences)} 个句子[/green]')
 
     return sentences
 

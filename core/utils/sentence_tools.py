@@ -2,6 +2,7 @@ import re
 import difflib
 import math
 import unicodedata
+import time
 from typing import List, Tuple
 
 from core.utils import load_key
@@ -10,6 +11,50 @@ from core.prompts import get_split_prompt
 from rich.console import Console
 
 console = Console()
+
+
+# ================================================================
+# 时间格式化工具
+# ================================================================
+
+def format_duration(seconds: float) -> str:
+    """
+    将秒数格式化为 时:分:秒 格式
+
+    Args:
+        seconds: 秒数
+
+    Returns:
+        格式化后的时间字符串，如 "1:23:45" 或 "23:45" 或 "45s"
+    """
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    elif minutes > 0:
+        return f"{minutes}:{secs:02d}"
+    else:
+        return f"{secs}s"
+
+
+class Timer:
+    """简单的计时器上下文管理器"""
+
+    def __init__(self, name: str = "操作"):
+        self.name = name
+        self.start_time = None
+
+    def __enter__(self):
+        self.start_time = time.time()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = time.time() - self.start_time
+        duration_str = format_duration(elapsed)
+        console.print(f"[dim]⏱️ {self.name}耗时: {duration_str}[/dim]")
+
 
 # ================================================================
 # 基础功能：分词和长度计算
@@ -210,9 +255,7 @@ def split_sentence(sentence: str, num_parts: int = 2, word_limit: int = 20, inde
         if best_split.count('[br]') == mapped_split.count('[br]'):
             best_split = mapped_split
 
-    if index != -1 and '[br]' in best_split:
-        console.print(f'[green]✅ Sentence {index} has been successfully split[/green]')
-
+    # 返回结果（不在子线程打印日志，由主线程打印）
     return best_split
 
 # ================================================================

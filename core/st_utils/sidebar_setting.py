@@ -76,11 +76,19 @@ def subtitle_settings_section():
         if runtime != load_key("asr.runtime"):
             update_key("asr.runtime", runtime)
 
-        # 人声分离开关
-        vocal_sep_enabled = st.toggle("人声分离", value=load_key("vocal_separation.enabled"),
-                                     help="嘈杂环境下启用，有助于提升转录准确率")
-        if vocal_sep_enabled != load_key("vocal_separation.enabled"):
-            update_key("vocal_separation.enabled", vocal_sep_enabled)
+        # 人声分离和只转录开关（同一排）
+        col1, col2 = st.columns(2)
+        with col1:
+            vocal_sep_enabled = st.toggle("人声分离", value=load_key("vocal_separation.enabled"),
+                                         help="嘈杂环境下启用，有助于提升转录准确率")
+            if vocal_sep_enabled != load_key("vocal_separation.enabled"):
+                update_key("vocal_separation.enabled", vocal_sep_enabled)
+
+        with col2:
+            transcript_only_enabled = st.toggle("只转录", value=load_key("transcript_only"),
+                                                help="跳过翻译流程，仅生成原文字幕")
+            if transcript_only_enabled != load_key("transcript_only"):
+                update_key("transcript_only", transcript_only_enabled)
 
         with c2:
             target_language = st.text_input("目标语言", value=load_key("target_language"), help="用自然语言输入任何语言,只要LLM能理解即可")

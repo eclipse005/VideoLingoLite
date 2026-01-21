@@ -1,9 +1,10 @@
 import json
 import re
 import unicodedata
+import time
 from core.prompts import get_summary_prompt
 import pandas as pd
-from core.utils import load_key, rprint, safe_read_csv, ask_gpt
+from core.utils import load_key, rprint, safe_read_csv, ask_gpt, format_duration
 from core.utils.models import _3_2_SPLIT_BY_MEANING, _4_1_TERMINOLOGY
 from core.utils.sentence_tools import clean_word
 
@@ -84,41 +85,46 @@ def search_things_to_note_in_prompt(sentence):
         return None
 
 def get_summary():
+    rprint("📝 正在总结和提取术语...")
+
+    start_time = time.time()
+
     src_content = combine_chunks()
     custom_terms = safe_read_csv(CUSTOM_TERMS_PATH)
     custom_terms_json = {
-        "terms": 
+        "terms":
             [
                 {
                     "src": str(row.iloc[0]),
-                    "tgt": str(row.iloc[1]), 
+                    "tgt": str(row.iloc[1]),
                     "note": str(row.iloc[2])
                 }
                 for _, row in custom_terms.iterrows()
             ]
     }
     if len(custom_terms) > 0:
-        rprint(f"📖 Custom Terms Loaded: {len(custom_terms)} terms")
-        rprint("📝 Terms Content:", json.dumps(custom_terms_json, indent=2, ensure_ascii=False))
+        rprint(f"📖 已加载自定义术语：{len(custom_terms)} 条")
+        rprint("📝 术语内容：", json.dumps(custom_terms_json, indent=2, ensure_ascii=False))
     summary_prompt = get_summary_prompt(src_content, custom_terms_json)
-    rprint("📝 Summarizing and extracting terminology ...")
-    
+
     def valid_summary(response_data):
         required_keys = {'src', 'tgt', 'note'}
         if 'terms' not in response_data:
             return {"status": "error", "message": "Invalid response format"}
         for term in response_data['terms']:
             if not all(key in term for key in required_keys):
-                return {"status": "error", "message": "Invalid response format"}   
+                return {"status": "error", "message": "Invalid response format"}
         return {"status": "success", "message": "Summary completed"}
 
     summary = ask_gpt(summary_prompt, resp_type='json', valid_def=valid_summary, log_title='summary')
     summary['terms'].extend(custom_terms_json['terms'])
-    
+
     with open(_4_1_TERMINOLOGY, 'w', encoding='utf-8') as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
-    rprint(f'💾 Summary log saved to → `{_4_1_TERMINOLOGY}`')
+    elapsed = time.time() - start_time
+    rprint(f'💾 总结已保存到 → `{_4_1_TERMINOLOGY}`')
+    rprint(f'[dim]⏱️ 总结和术语提取耗时: {format_duration(elapsed)}[/dim]')
 
 if __name__ == '__main__':
     get_summary()

@@ -95,7 +95,7 @@ def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
     # check cache
     cached = _load_cache(prompt, resp_type, log_title)
     if cached:
-        rprint("use cache response")
+        # rprint("use cache response")  # 缓存日志会干扰进度条显示
         # Return cached result without incrementing token usage
         return cached
 

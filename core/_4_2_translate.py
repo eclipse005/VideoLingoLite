@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import concurrent.futures
 import unicodedata
+import time
 from typing import List
 from core.translate_lines import translate_lines
 from core._4_1_summarize import search_things_to_note_in_prompt
@@ -77,10 +78,7 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     Returns:
         List[Sentence]: 带翻译的 Sentence 对象列表
     """
-    console.print("[bold green]Start Translating All...[/bold green]")
-
-    # 📊 显示接收到的 Sentence 对象信息
-    console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 2[/cyan]')
+    start_time = time.time()
 
     # 准备翻译块（从 Sentence 对象提取文本）
     sentence_texts = [sent.text for sent in sentences]
@@ -89,18 +87,21 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     with open(_4_1_TERMINOLOGY, 'r', encoding='utf-8') as file:
         theme_prompt = json.load(file).get('theme')
 
+    console.print(f'[cyan]📊 开始翻译 {len(chunks)} 个批次[/cyan]')
+
     # 🔄 Use concurrent execution for translation
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
-        task = progress.add_task("[cyan]Translating chunks...", total=len(chunks))
-        with concurrent.futures.ThreadPoolExecutor(max_workers=load_key("max_workers")) as executor:
-            futures = []
-            for i, chunk in enumerate(chunks):
-                future = executor.submit(translate_chunk, chunk, chunks, theme_prompt, i)
-                futures.append(future)
-            results = []
-            for future in concurrent.futures.as_completed(futures):
-                results.append(future.result())
-                progress.update(task, advance=1)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=load_key("max_workers")) as executor:
+        futures = []
+        for i, chunk in enumerate(chunks):
+            future = executor.submit(translate_chunk, chunk, chunks, theme_prompt, i)
+            futures.append(future)
+        results = []
+        total = len(futures)
+        for i, future in enumerate(concurrent.futures.as_completed(futures)):
+            results.append(future.result())
+            # 每 20% 显示一次进度
+            if total > 0 and (i + 1) % max(1, total // 5) == 0:
+                console.print(f'[dim]📊 已翻译 {i + 1}/{total} 个批次 ({(i + 1) * 100 // total}%)[/dim]')
 
     results.sort(key=lambda x: x[0])  # Sort results based on original order
 
@@ -137,12 +138,10 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     # Save translation results to CSV
     df_translate = pd.DataFrame({'Source': src_text, 'Translation': trans_text})
     df_translate.to_csv(_4_2_TRANSLATION, index=False, encoding='utf-8-sig')
-    console.print("[bold green]✅ Translation completed and results saved.[/bold green]")
 
-    # 📊 显示翻译填充情况
-    translated_count = sum(1 for s in sentences if s.translation)
-    console.print(f'[cyan]📊 Filled {translated_count}/{len(sentences)} Sentence.translation fields[/cyan]')
-    console.print(f'[cyan]📊 Returning {len(sentences)} Sentence objects to Stage 4[/cyan]')
+    elapsed = time.time() - start_time
+    console.print("[bold green]✅ 翻译完成并已保存[/bold green]")
+    console.print(f"[dim]⏱️ 翻译耗时: {format_duration(elapsed)}[/dim]")
 
     return sentences
 

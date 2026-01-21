@@ -8,10 +8,10 @@ SPACY_MODEL_MAP = load_key("spacy_model_map")
 def get_spacy_model(language: str):
     model = SPACY_MODEL_MAP.get(language.lower(), "en_core_web_md")
     if language not in SPACY_MODEL_MAP:
-        rprint(f"[yellow]Spacy model does not support '{language}', using en_core_web_md model as fallback...[/yellow]")
+        rprint(f"[yellow]Spacy 模型不支持 '{language}'，使用 en_core_web_md 作为备用模型...[/yellow]")
     return model
 
-@except_handler("Failed to load NLP Spacy model")
+@except_handler("NLP Spacy 模型加载失败")
 def init_nlp():
     # Use asr.language from VideoLingoLite
     language = load_key("asr.language")
@@ -21,14 +21,14 @@ def init_nlp():
     model_dir = load_key("model_dir")
     os.environ["NLTK_DATA"] = model_dir
 
-    rprint(f"[blue]⏳ Loading NLP Spacy model: <{model}> ...[/blue]")
+    rprint(f"[blue]⏳ 正在加载 NLP Spacy 模型: <{model}> ...[/blue]")
     try:
         nlp = spacy.load(model)
     except:
-        rprint(f"[yellow]Downloading {model} model...[/yellow]")
+        rprint(f"[yellow]正在下载 {model} 模型...[/yellow]")
         download(model)
         nlp = spacy.load(model)
-    rprint("[green]✅ NLP Spacy model loaded successfully![/green]")
+    rprint("[green]✅ NLP Spacy 模型加载成功！[/green]")
     return nlp
 
 # --------------------

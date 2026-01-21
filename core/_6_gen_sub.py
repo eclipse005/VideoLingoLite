@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import re
+import time
 from typing import List
 from rich.panel import Panel
 from rich.console import Console
@@ -9,6 +10,19 @@ from core.utils import *
 from core.utils.models import *
 
 console = Console()
+
+# 字幕输出配置（完整模式：包含所有格式）
+SUBTITLE_OUTPUT_CONFIGS_FULL = [
+    ('src.srt', ['Source']),
+    ('trans.srt', ['Translation']),
+    ('src_trans.srt', ['Source', 'Translation']),
+    ('trans_src.srt', ['Translation', 'Source'])
+]
+
+# 字幕输出配置（只转录模式：仅原文）
+SUBTITLE_OUTPUT_CONFIGS_TRANSCRIPT_ONLY = [
+    ('src.srt', ['Source'])
+]
 
 SUBTITLE_OUTPUT_CONFIGS = [
     ('src.srt', ['Source']),
@@ -106,23 +120,32 @@ def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output
     return df_trans_time
 
 
-def align_timestamp_main(sentences: List[Sentence]) -> None:
+def align_timestamp_main(sentences: List[Sentence], transcript_only: bool = False) -> None:
     """
     字幕生成主函数，直接从 Sentence 对象生成字幕
 
     Args:
         sentences: Sentence 对象列表
+        transcript_only: 是否只转录模式（仅生成原文字幕）
     """
-    # 📊 显示接收到的 Sentence 对象信息
-    console.print(f'[cyan]📊 Received {len(sentences)} Sentence objects from Stage 4[/cyan]')
+    start_time = time.time()
+
+    # 根据模式选择字幕输出配置
+    if transcript_only:
+        subtitle_output_configs = SUBTITLE_OUTPUT_CONFIGS_TRANSCRIPT_ONLY
+    else:
+        subtitle_output_configs = SUBTITLE_OUTPUT_CONFIGS_FULL
 
     # 直接从 Sentence 对象生成字幕
-    generate_subtitles_from_sentences(sentences, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR, for_display=True)
-    console.print(Panel("[bold green]🎉📝 Subtitles generation completed! Please check in the `output` folder 👀[/bold green]"))
-    console.print(f'[green]✅ Generated subtitles from {len(sentences)} Sentence objects (no difflib matching!)[/green]')
+    generate_subtitles_from_sentences(sentences, subtitle_output_configs, _OUTPUT_DIR, for_display=True)
 
-    # 合并空字幕
-    merge_empty_subtitle()
+    elapsed = time.time() - start_time
+    console.print(Panel("[bold green]🎉📝 字幕生成完成！请查看 `output` 文件夹 👀[/bold green]"))
+    console.print(f"[dim]⏱️ 字幕生成耗时: {format_duration(elapsed)}[/dim]")
+
+    # 只在完整模式下合并空字幕
+    if not transcript_only:
+        merge_empty_subtitle()
 
 
 def merge_empty_subtitle() -> None:

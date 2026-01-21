@@ -61,28 +61,36 @@ def process_text():
     with st.spinner("正在使用LLM切分长句..."):
         # Stage 2: LLM 切分长句，传入/返回 Sentence 对象
         sentences = _3_2_split_meaning.split_sentences_by_meaning(sentences)
-    with st.spinner("正在总结和翻译..."):
-        _4_1_summarize.get_summary()
-        if load_key("pause_before_translate"):
-            input("⚠️ 翻译前暂停。请前往`output/log/terminology.json`编辑术语。然后按回车键继续...")
-        # Stage 3: 翻译，填充 Sentence.translation，返回 Sentence 对象
-        sentences = _4_2_translate.translate_all(sentences)
-    with st.spinner("正在处理和对齐字幕..."):
-        # Stage 4: 字幕切分，处理 Sentence 对象
-        sentences = _5_split_sub.split_for_sub_main(sentences)
-        # Stage 5: 字幕生成，直接从 Sentence 对象生成
-        _6_gen_sub.align_timestamp_main(sentences)
+
+    # 根据模式选择后续流程
+    if load_key("transcript_only"):
+        # 只转录模式：直接生成原文字幕
+        with st.spinner("正在生成字幕..."):
+            _6_gen_sub.align_timestamp_main(sentences, transcript_only=True)
+    else:
+        # 完整模式：总结 → 翻译 → 拆分对齐 → 生成字幕
+        with st.spinner("正在总结和翻译..."):
+            _4_1_summarize.get_summary()
+            if load_key("pause_before_translate"):
+                input("⚠️ 翻译前暂停。请前往`output/log/terminology.json`编辑术语。然后按回车键继续...")
+            # Stage 3: 翻译，填充 Sentence.translation，返回 Sentence 对象
+            sentences = _4_2_translate.translate_all(sentences)
+        with st.spinner("正在处理和对齐字幕..."):
+            # Stage 4: 字幕切分，处理 Sentence 对象
+            sentences = _5_split_sub.split_for_sub_main(sentences)
+            # Stage 5: 字幕生成，直接从 Sentence 对象生成
+            _6_gen_sub.align_timestamp_main(sentences, transcript_only=False)
 
     st.success("字幕处理完成! 🎉")
     st.balloons()
 
     # Print token usage statistics to console
     token_usage = get_token_usage()
-    print(f"\n--- GPT Token Usage Statistics ---")
-    print(f"Total Prompt Tokens: {token_usage['prompt_tokens']}")
-    print(f"Total Completion Tokens: {token_usage['completion_tokens']}")
-    print(f"Total Tokens: {token_usage['total_tokens']}")
-    print(f"--- End of Token Usage ---\n")
+    print(f"\n--- GPT Token 使用统计 ---")
+    print(f"提示词 Tokens: {token_usage['prompt_tokens']}")
+    print(f"完成 Tokens: {token_usage['completion_tokens']}")
+    print(f"总计 Tokens: {token_usage['total_tokens']}")
+    print(f"--- 统计结束 ---\n")
 
 def main():
     # logo_col, _ = st.columns([1,1])

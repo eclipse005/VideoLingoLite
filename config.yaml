@@ -56,6 +56,9 @@ asr:
 vocal_separation:
   enabled: false  # Enable vocal separation to improve ASR accuracy in noisy environments
 
+# Transcript only mode (skip translation)
+transcript_only: false  # Skip translation process, only generate source subtitles
+
 
 ## ======================== Advanced Settings ======================== ##
 
