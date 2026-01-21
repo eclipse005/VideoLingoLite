@@ -11,7 +11,7 @@
 ## 核心功能
 
 ### 语音转文字
-- **双引擎支持**：云端 Gemini API（多语言）+ 本地 Parakeet（25 种欧洲语言）
+- **双引擎支持**：本地 ASR 服务器 + 本地 Parakeet（25 种欧洲语言）
 - **人声分离**：嘈杂环境下自动分离人声，大幅提升转录准确率
 - **词级时间戳**：精确到每个词的时间定位
 - **只转录模式**：跳过翻译，仅生成原文字幕
@@ -30,7 +30,7 @@
 ### 多语言支持
 - **CJK 优化**：针对中日韩语言的特殊分词和对齐处理
 - **25+ 欧洲语言**：本地 Parakeet 引擎支持
-- **云端多语言**：Gemini API 支持全球主流语言
+- **ASR 服务器**：支持通过本地服务器扩展更多语言
 
 ### 字幕生成
 - **4 种格式**：源语言字幕、翻译字幕、双语字幕（两种顺序）
@@ -121,9 +121,9 @@ uv run python -m streamlit run st.py
 
 ## 系统要求
 
-### 基础模式（云端 Gemini）
+### ASR 服务器模式
 - Python 3.10+
-- 网络连接
+- 本地 ASR 服务（如 Whisper、Gemini 等）
 
 ### 本地模式（Parakeet）
 - Python 3.10+
@@ -138,7 +138,7 @@ uv run python -m streamlit run st.py
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `asr.runtime` | `gemini` | ASR 引擎：gemini（云端）/ parakeet（本地） |
+| `asr.runtime` | `gemini` | ASR 引擎：gemini（本地服务器）/ parakeet（本地 GPU） |
 | `asr.language` | `en` | 源语言 ISO 639-1 代码（如 en, zh, ja） |
 | `target_language` | `English` | 目标语言（自然语言描述） |
 | `max_workers` | `8` | 并发处理数（本地 LLM 建议设为 1） |
