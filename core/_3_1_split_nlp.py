@@ -47,59 +47,105 @@ def build_char_to_chunk_mapping(chunks: List[Chunk], joiner: str = "") -> List[i
 def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]:
     """
     使用 spaCy 进行 NLP 分句，将 Chunk 对象组合成 Sentence 对象
-
-    Args:
-        chunks: Chunk 对象列表
-        nlp: spaCy NLP 模型
-
-    Returns:
-        Sentence 对象列表
+    修复：保证 Chunk 原子性，避免由标点符号导致的 Chunk 错误分割
     """
     # Validate input chunks
     if not chunks:
         return []
 
-    # 获取 ASR 语言并确定连接符（空格分隔语言使用 " "，其他使用 ""）
+    # 获取 ASR 语言并确定连接符
     asr_language = load_key("asr.language")
     joiner = get_joiner(asr_language)
 
-    # 1. 拼接所有 Chunk 的文本（使用 joiner 分隔）
+    # 1. 拼接所有 Chunk 的文本
     full_text = joiner.join(chunk.text for chunk in chunks)
     if not full_text:
         return []
 
-    # 2. 构建字符到 Chunk 的映射（考虑空格）
+    # 2. 构建字符到 Chunk 的映射
     char_to_chunk = build_char_to_chunk_mapping(chunks, joiner)
 
     # 3. 使用 spaCy 分句
     doc = nlp(full_text)
     sentences = []
 
+    # 预先计算每个 Chunk 在 full_text 中的字符边界
+    chunk_boundaries = []
+    current_pos = 0
+    for i, chunk in enumerate(chunks):
+        chunk_start = current_pos
+        chunk_end = current_pos + len(chunk.text)
+        chunk_boundaries.append((chunk_start, chunk_end, i))
+        current_pos = chunk_end + len(joiner)
+
+    # 跟踪下一个可用的 Chunk 索引 (Slice 的下界)
+    next_available_chunk_idx = 0
+
     for sent_idx, sent in enumerate(doc.sents):
         start_char = sent.start_char
         end_char = sent.end_char
 
-        # 边界检查 - Ensure start_char is within valid range [0, len(full_text)-1]
+        # 边界检查
         if start_char >= len(full_text):
-            continue  # Skip invalid sentence
+            continue
         start_char = max(0, start_char)
-        # Ensure end_char is at least start_char + 1 and at most len(full_text)
         end_char = max(start_char + 1, min(end_char, len(full_text)))
 
         # 找到对应的 Chunk 范围
         start_chunk_idx = char_to_chunk[start_char]
         end_chunk_idx = char_to_chunk[end_char - 1]
 
-        # 提取对应的 Chunk 对象
-        sentence_chunks = chunks[start_chunk_idx:end_chunk_idx + 1]
+        # 关键修正 1：确保起始 Chunk 不会回退到已使用的 Chunk 之前
+        # 如果 spaCy 识别的这个句子的开头还在上一个句子包含的 Chunk 里（例如 "，"），
+        # 我们就从下一个可用 Chunk 开始算，这通常会导致 start > end，从而触发下面的跳过逻辑
+        start_chunk_idx = max(start_chunk_idx, next_available_chunk_idx)
 
-        # 创建 Sentence 对象
+        # 关键修正 2：如果当前句子映射到的 Chunk 已经被上一个句子用光了，跳过此“残余”句子
+        # 例如："终。，" 整个 Chunk 已被归入上一句，spaCy 再把 "，" 识别为新句时，这里会拦截
+        if start_chunk_idx >= len(chunks):
+            continue
+
+        # 确保 end_chunk_idx 是 Slice 的上界（即包含该 Chunk，所以要 +1 对应 Python 切片语法）
+        # 初始时 end_chunk_idx 指向包含 end_char 的那个 chunk 的索引
+        
+        # 检查分句点是否在 Chunk 内部
+        if end_chunk_idx < len(chunk_boundaries):
+            end_chunk_start, end_chunk_end, _ = chunk_boundaries[end_chunk_idx]
+            
+            # 如果 spaCy 的 end_char 在 Chunk 内部（不在边界），强制包含整个 Chunk
+            # 这保证了 "终。，" 作为一个整体被归入当前句子
+            if end_char > end_chunk_start and end_char < end_chunk_end:
+                 # 当前 chunk 必须完整包含，所以切片上界是 index + 1
+                 slice_end = end_chunk_idx + 1
+            else:
+                 # 正好在边界，或者跨越了，也至少要包含到当前这个 chunk
+                 slice_end = end_chunk_idx + 1
+        else:
+            slice_end = end_chunk_idx + 1
+
+        # 修正切片上界：必须至少等于 start
+        slice_end = max(slice_end, start_chunk_idx)
+
+        # 提取 Chunk 对象
+        sentence_chunks = chunks[start_chunk_idx:slice_end]
+
+        # 关键修正 3：忽略空的句子（当 spaCy 的句子完全落在一个已经被上一句吞并的 Chunk 里时）
+        if not sentence_chunks:
+            continue
+
+        # 更新指针：下一次从当前切片的末尾开始
+        next_available_chunk_idx = slice_end
+
+        # 关键修正 4：根据 Chunk 重建文本，而不是使用 spaCy 的 sent.text
+        # 这确保了 Chunk 内的文本（如 "终。，"）是完整的，不会被切断
+        reconstructed_text = joiner.join(c.text for c in sentence_chunks)
+
         sentence = Sentence(
             chunks=sentence_chunks,
-            text=sent.text,
+            text=reconstructed_text, # 使用重建的完整文本
             start=sentence_chunks[0].start if sentence_chunks else 0.0,
             end=sentence_chunks[-1].end if sentence_chunks else 0.0,
-            index=sent_idx
+            index=len(sentences) # 使用列表长度作为索引，保证连续
         )
         sentences.append(sentence)
 
