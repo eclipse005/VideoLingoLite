@@ -83,7 +83,7 @@ def split_sentences():
 
 def summarize_and_translate():
     sentences = globals().get('sentences')
-    _4_1_summarize.get_summary()
+    _4_1_summarize.get_summary(sentences)
     sentences = _4_2_translate.translate_all(sentences)
     return {'sentences': sentences}
 

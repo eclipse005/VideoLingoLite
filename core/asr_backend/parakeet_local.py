@@ -1,19 +1,68 @@
 import os
+import sys
+import logging
 import warnings
+import io
+
+# ------------
+# Suppress all warnings (MUST be before any library imports)
+# ------------
+
+# 1. Suppress Python warnings
+warnings.filterwarnings("ignore")
+
+# 2. Set root logging level to ERROR before any imports
+logging.basicConfig(level=logging.ERROR)
+
+# 3. Suppress specific NeMo/PyTorch loggers
+for logger_name in [
+    'nemo',
+    'nemo.utils',
+    'nemo.collections.asr',
+    'megatron',
+    'torch.distributed.elastic',
+    'lhotse',
+    'one_logger',
+]:
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.ERROR)
+    logger.propagate = False
+
+# 4. Disable NeMo telemetry and other features via environment variables
+os.environ.setdefault('NEMO_LOGGING_LEVEL', 'ERROR')
+os.environ.setdefault('NEMO_DISABLE_TENSORBOARD', '1')
+
+# 5. Redirect stderr during imports to suppress NeMo warnings
+_original_stderr = sys.stderr
+
+class _SuppressStdErr:
+    """Redirect stderr to suppress NeMo warnings during import"""
+    def write(self, text):
+        # Suppress NeMo warnings, PyTorch distributed warnings, OneLogger messages
+        if any(x in text for x in ['[NeMo W', 'W0121', 'OneLogger', 'redirects.py']):
+            return
+        # Write to original stderr if not suppressed
+        _original_stderr.write(text)
+
+    def flush(self):
+        _original_stderr.flush()
+
+sys.stderr = _SuppressStdErr()
+
+# Now safe to import other libraries (warnings will be suppressed)
 import torch
 import librosa
-import gc  # 引入垃圾回收，防止内存/显存泄露
+import gc
 from rich import print as rprint
 from core.utils import *
 import nemo.collections.asr as nemo_asr
 
-# 不需要 import logging 了
+# Restore stderr after imports
+sys.stderr = _original_stderr
+
+# Ensure NeMo logging is silenced
 from nemo.utils import logging as nemo_logging
-
-# 直接传 40，效果一模一样（40 代表 ERROR）
-nemo_logging.setLevel(40)
-
-warnings.filterwarnings("ignore")
+nemo_logging.setLevel(logging.ERROR)
 
 # 1. 路径配置
 MODEL_DIR = load_key("model_dir") 
@@ -90,28 +139,23 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
         rprint(f"[dim]Running on CPU may take longer. Performance depends on your CPU power.[/dim]")
 
     # 2. 加载模型
-    model = _load_or_download_model()    
+    model = _load_or_download_model()
     model = model.to(device)
-    model.eval() 
-    
-    try:
-        from omegaconf import open_dict
-        if hasattr(model, 'change_decoding_strategy'):
-            cfg = model.cfg.decoding
-            with open_dict(cfg):
-                cfg.cuda_graphs = False
-                if "strategy" in cfg:
-                    cfg.strategy = "greedy"
-            model.change_decoding_strategy(cfg)
-            rprint("[yellow]🛠️ CUDA Graphs disabled and decoding strategy set to greedy for stability.[/yellow]")
-    except Exception as e:
-        rprint(f"[dim red]⚠️ Failed to modify decoding strategy: {e}[/dim red]")
-        
+    model.eval()
+
+    from omegaconf import open_dict
+    if hasattr(model, 'change_decoding_strategy'):
+        cfg = model.cfg.decoding
+        with open_dict(cfg):
+            cfg.cuda_graphs = False
+            if "strategy" in cfg:
+                cfg.strategy = "greedy"
+        model.change_decoding_strategy(cfg)
+
     audio_length = end - start
 
     # 3. 长音频优化
     if audio_length > 120:
-        rprint(f"[yellow]⚠️ Long audio (>2min), enabling local attention...[/yellow]")
         model.change_attention_model(self_attention_model="rel_pos_local_attn", att_context_size=[256, 256])
 
     # 4. 加载音频片段
