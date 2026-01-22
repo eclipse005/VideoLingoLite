@@ -1,18 +1,25 @@
 import os
 import pandas as pd
 import warnings
-from core.spacy_utils.load_nlp_model import init_nlp, SPLIT_BY_MARK_FILE
+from typing import List
+from spacy.language import Language
+from core.spacy_utils.load_nlp_model import init_nlp
 from core.utils.config_utils import load_key, get_joiner
-from core.utils import safe_read_csv
-from rich import print as rprint
+from core.utils import safe_read_csv, rprint
+from core.utils.models import Chunk, Sentence
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # SudachiPy token length limit (bytes)
 SUDACHI_MAX_LENGTH = 40000
 
-def split_by_mark(nlp):
-    # Use asr.language from VideoLingoLite
+
+# ------------
+# Original file-based function (deprecated)
+# ------------
+
+def split_by_mark_main(nlp):
+    """旧的文件流版本（已弃用）"""
     language = load_key("asr.language")
     joiner = get_joiner(language)
     rprint(f"[blue]🔍 Using {language} language joiner: '{joiner}'[/blue]")
@@ -21,16 +28,15 @@ def split_by_mark(nlp):
 
     chunks_list = chunks.text.to_list()
 
-    # For Japanese: process in batches to avoid SudachiPy length limit
     if language == 'ja':
         rprint("[yellow]⚠️  Japanese detected, processing in chunks to avoid SudachiPy limit...[/yellow]")
         sentences_by_mark = _process_japanese_in_chunks(nlp, chunks_list)
     else:
-        # For other languages: use _process_batch_text for consistent punctuation handling
         input_text = joiner.join(chunks_list)
         sentences_by_mark = _process_batch_text(nlp, input_text)
 
-    # Write to file (punctuation merging already handled in _process_batch_text)
+    # Write to file
+    from core.spacy_utils.load_nlp_model import SPLIT_BY_MARK_FILE
     with open(SPLIT_BY_MARK_FILE, "w", encoding="utf-8") as output_file:
         for sentence in sentences_by_mark:
             output_file.write(sentence + "\n")
@@ -149,6 +155,26 @@ def _process_batch_text(nlp, text):
             i += 1
 
     return sentences_by_mark
+
+
+# ------------
+# New Object-based Function
+# ------------
+
+def split_by_mark(chunks: List[Chunk], nlp: Language) -> List[Sentence]:
+    """
+    按标点分句（对象化版本）
+
+    Args:
+        chunks: Chunk 对象列表
+        nlp: spaCy NLP 模型
+
+    Returns:
+        List[Sentence]: 分句后的 Sentence 对象列表
+    """
+    from core._3_1_split_nlp import nlp_split_to_sentences
+    return nlp_split_to_sentences(chunks, nlp)
+
 
 if __name__ == "__main__":
     nlp = init_nlp()

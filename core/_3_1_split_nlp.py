@@ -26,13 +26,14 @@ from core._2_asr import load_chunks
 # Character Position Mapping Functions
 # ------------
 
-def build_char_to_chunk_mapping(chunks: List[Chunk], joiner: str = "") -> List[int]:
+def build_char_to_chunk_mapping(chunks: List[Chunk], joiner: str = "", add_space_after_punct: bool = False) -> List[int]:
     """
     构建字符到 Chunk 索引的映射
 
     Args:
         chunks: Chunk 对象列表
         joiner: Chunk 之间的连接符（空格分隔语言为 " "，其他为 ""）
+        add_space_after_punct: 是否在标点后添加空格（用于 zh, ja, ko）
 
     Returns:
         每个字符对应的 Chunk 索引列表
@@ -41,6 +42,9 @@ def build_char_to_chunk_mapping(chunks: List[Chunk], joiner: str = "") -> List[i
     for chunk_idx, chunk in enumerate(chunks):
         # 添加 chunk 的每个字符
         char_to_chunk.extend([chunk_idx] * len(chunk.text))
+        # 如果在标点后添加空格
+        if add_space_after_punct and chunk.text and chunk.text[-1] in '.。!！?？、,，;；':
+            char_to_chunk.extend([chunk_idx] * 1)  # 空格归属当前 chunk
         # 如果有空格分隔符且不是最后一个 chunk，添加空格的映射
         if joiner and chunk_idx < len(chunks) - 1:
             char_to_chunk.extend([chunk_idx] * len(joiner))
@@ -54,12 +58,30 @@ def _process_batch(chunks: List[Chunk], nlp: Language, joiner: str) -> List[Sent
     这是 nlp_split_to_sentences 的核心逻辑，提取为独立函数以支持分批处理
     """
     # 1. 拼接当前批次的 Chunk 文本
-    full_text = joiner.join(chunk.text for chunk in chunks)
+    # 对于不使用空格的语言（zh, ja, ko），在标点后添加空格以便 spaCy 分句
+    asr_language = load_key("asr.language")
+    add_space_after_punct = asr_language in ['zh', 'ja', 'ko']
+
+    if add_space_after_punct:
+        # 构建带空格的文本用于 spaCy 分句
+        full_text_parts = []
+        for i, chunk in enumerate(chunks):
+            full_text_parts.append(chunk.text)
+            # 如果最后一个字符是标点，添加空格
+            if chunk.text and chunk.text[-1] in '.。!！?？、,，;；':
+                full_text_parts.append(' ')
+            # 如果不是最后一个 chunk，添加 joiner（虽然这些语言 joiner 为空）
+            if i < len(chunks) - 1:
+                full_text_parts.append(joiner)
+        full_text = ''.join(full_text_parts)
+    else:
+        full_text = joiner.join(chunk.text for chunk in chunks)
+
     if not full_text:
         return []
 
     # 2. 构建字符到 Chunk 的映射（仅针对当前批次）
-    char_to_chunk = build_char_to_chunk_mapping(chunks, joiner)
+    char_to_chunk = build_char_to_chunk_mapping(chunks, joiner, add_space_after_punct)
 
     # 3. 使用 spaCy 分句
     doc = nlp(full_text)
@@ -73,6 +95,8 @@ def _process_batch(chunks: List[Chunk], nlp: Language, joiner: str) -> List[Sent
         chunk_end = current_pos + len(chunk.text)
         chunk_boundaries.append((chunk_start, chunk_end, i))
         current_pos = chunk_end + len(joiner)
+        if add_space_after_punct and chunk.text and chunk.text[-1] in '.。!！?？、,，;；':
+            current_pos += 1  # 跳过标点后的空格
 
     # 跟踪下一个可用的 Chunk 索引 (Slice 的下界)
     next_available_chunk_idx = 0
@@ -257,7 +281,14 @@ def split_by_spacy() -> List[Sentence]:
 @cache_objects(_CACHE_SENTENCES_NLP, _3_1_SPLIT_BY_NLP)
 def split_by_nlp(nlp: Language) -> List[Sentence]:
     """
-    NLP 分句主函数
+    NLP 多步骤分句主函数
+
+    处理流程：
+    1. split_by_mark: 按标点分句 (spaCy)
+    2. split_by_comma: 按逗号分句
+    3. split_by_connector: 按连接词分句
+    4. split_by_root: 按词根切分长句
+    5. split_by_pause: 按停顿分句 (可选)
 
     输入: cleaned_chunks.csv → List[Chunk]
     输出: List[Sentence] → 保存到 split_by_nlp.txt (文本) 和返回对象
@@ -265,8 +296,32 @@ def split_by_nlp(nlp: Language) -> List[Sentence]:
     # 1. 加载 Chunk 对象
     chunks = load_chunks()
 
-    # 2. NLP 分句，生成 Sentence 对象
-    sentences = nlp_split_to_sentences(chunks, nlp)
+    # Step 1: 按标点分句 (spaCy)
+    rprint("[cyan]  Step 1: 按标点分句 (spaCy)...[/cyan]")
+    sentences = split_by_mark(chunks, nlp)
+    rprint(f"[green]  ✓ 标点分句完成: {len(sentences)} 个句子[/green]")
+
+    # Step 2: 按逗号分句
+    rprint("[cyan]  Step 2: 按逗号分句...[/cyan]")
+    sentences = split_by_comma(sentences, nlp)
+    rprint(f"[green]  ✓ 逗号分句完成: {len(sentences)} 个句子[/green]")
+
+    # Step 3: 按连接词分句
+    rprint("[cyan]  Step 3: 按连接词分句...[/cyan]")
+    sentences = split_by_connector(sentences, nlp)
+    rprint(f"[green]  ✓ 连接词分句完成: {len(sentences)} 个句子[/green]")
+
+    # Step 4: 按词根切分长句
+    rprint("[cyan]  Step 4: 按词根切分长句...[/cyan]")
+    sentences = split_by_root(sentences, nlp)
+    rprint(f"[green]  ✓ 词根切分完成: {len(sentences)} 个句子[/green]")
+
+    # Step 5: 按停顿分句 (可选)
+    pause_threshold = load_key("pause_split_threshold")
+    if pause_threshold and pause_threshold > 0:
+        rprint(f"[cyan]  Step 5: 按停顿分句 (>{pause_threshold}s)...[/cyan]")
+        sentences = split_by_pause(sentences, pause_threshold)
+        rprint(f"[green]  ✓ 停顿分句完成: {len(sentences)} 个句子[/green]")
 
     rprint(f'[green]✅ 处理完成！共 {len(sentences)} 个句子[/green]')
 

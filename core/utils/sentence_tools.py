@@ -5,7 +5,7 @@ import unicodedata
 import time
 from typing import List, Tuple
 
-from core.utils import load_key
+from core.utils import load_key, get_joiner
 from core.utils.ask_gpt import ask_gpt
 from core.prompts import get_split_prompt
 from rich.console import Console
@@ -257,6 +257,79 @@ def split_sentence(sentence: str, num_parts: int = 2, word_limit: int = 20, inde
 
     # 返回结果（不在子线程打印日志，由主线程打印）
     return best_split
+
+# ================================================================
+# 字符位置到 Chunk 索引的映射（公共函数）
+# ================================================================
+
+def build_char_to_chunk_mapping(chunks, joiner: str = "") -> List[int]:
+    """
+    构建字符到 Chunk 索引的映射
+
+    与 _3_1_split_nlp.py 使用相同的映射逻辑，
+    适用于所有基于 spaCy 的 NLP 分句操作。
+
+    Args:
+        chunks: Chunk 对象列表
+        joiner: Chunk 之间的连接符（空格分隔语言为 " "，其他为 ""）
+
+    Returns:
+        List[int]: 每个字符对应的 Chunk 索引列表
+
+    Example:
+        >>> chunks = [Chunk(text="Hello"), Chunk(text="world")]
+        >>> mapping = build_char_to_chunk_mapping(chunks, joiner=" ")
+        >>> # mapping = [0,0,0,0,0, 0,1,1,1,1]  # "Hello world"
+        >>> # "H"->0, "e"->0, ... " "->0, "w"->1, ...
+    """
+    char_to_chunk = []
+    for chunk_idx, chunk in enumerate(chunks):
+        # 添加 chunk 的每个字符
+        char_to_chunk.extend([chunk_idx] * len(chunk.text))
+        # 如果有空格分隔符且不是最后一个 chunk，添加空格的映射
+        if joiner and chunk_idx < len(chunks) - 1:
+            char_to_chunk.extend([chunk_idx] * len(joiner))
+    return char_to_chunk
+
+
+def map_char_positions_to_chunks(sentence, char_positions: List[int]) -> List[int]:
+    """
+    将原始文本中的字符位置映射到 Chunk 索引
+
+    使用与 _3_1_split_nlp.py 相同的映射逻辑。
+
+    Args:
+        sentence: Sentence 对象
+        char_positions: 原始文本中的字符位置列表（升序）
+
+    Returns:
+        List[int]: 对应的 Chunk 索引列表（去重、排序）
+
+    Example:
+        >>> sentence = Sentence(chunks=[...])
+        >>> char_positions = [10, 25, 40]  # spaCy token.idx 值
+        >>> chunk_indices = map_char_positions_to_chunks(sentence, char_positions)
+        >>> # 返回: [2, 5, 8]
+    """
+    if not char_positions:
+        return []
+
+    asr_language = load_key("asr.language")
+    joiner = get_joiner(asr_language)
+
+    # 构建字符到 Chunk 的映射
+    char_to_chunk = build_char_to_chunk_mapping(sentence.chunks, joiner)
+
+    # 将字符位置映射到 Chunk 索引
+    chunk_indices = []
+    for pos in char_positions:
+        if 0 <= pos < len(char_to_chunk):
+            chunk_idx = char_to_chunk[pos]
+            chunk_indices.append(chunk_idx)
+
+    # 去重并排序
+    return sorted(set(chunk_indices))
+
 
 # ================================================================
 # 辅助功能：并行处理和批量操作

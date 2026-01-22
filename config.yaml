@@ -54,7 +54,7 @@ asr:
 
 # Vocal separation for noisy environments
 vocal_separation:
-  enabled: false  # Enable vocal separation to improve ASR accuracy in noisy environments
+  enabled: true   # Enable vocal separation to improve ASR accuracy in noisy environments
 
 # Transcript only mode (skip translation)
 transcript_only: false  # Skip translation process, only generate source subtitles
@@ -67,8 +67,9 @@ transcript_only: false  # Skip translation process, only generate source subtitl
 # For non-space languages: character count
 origin_length:
   en: 25
-  ja: 40
-  zh: 30
+  ja: 28
+  zh: 25
+  ko: 22
   es: 25
   fr: 25
   de: 22
@@ -82,6 +83,7 @@ translate_length:
   en: 12
   zh: 16
   ja: 18
+  ko: 18
   es: 12
   fr: 12
   de: 10
@@ -93,6 +95,7 @@ split_ratio:
   en: 1.3
   ja: 1.3
   zh: 1.3
+  ko: 1.3
   es: 1.3
   fr: 1.3
   de: 1.2
@@ -106,7 +109,7 @@ summary_length: 8000
 reflect_translate: true
 
 # *Pause-based sentence split threshold (seconds). When time gap between consecutive words exceeds this value, a new batch is forced. Set to null or 0 to disable.
-pause_split_threshold: 1
+pause_split_threshold: 2.5
 
 # *Whether to pause after extracting professional terms and before translation, allowing users to manually adjust the terminology table output\log\terminology.json
 pause_before_translate: false
@@ -116,6 +119,7 @@ spacy_model_map:
   en: 'en_core_web_lg'
   zh: 'zh_core_web_lg'
   ja: 'ja_core_news_lg'
+  ko: 'ko_core_news_lg'
   es: 'es_core_news_lg'
   fr: 'fr_core_news_lg'
   de: 'de_core_news_lg'
@@ -161,3 +165,4 @@ language_split_with_space:
 language_split_without_space:
 - 'zh'
 - 'ja'
+- 'ko'

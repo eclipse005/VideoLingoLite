@@ -55,12 +55,13 @@ def subtitle_settings_section():
             langs = {
                 "🇺🇸 English": "en",
                 "🇨🇳 简体中文": "zh",
+                "🇯🇵 日本語": "ja",
+                "🇰🇷 한국어": "ko",
                 "🇪🇸 Español": "es",
                 "🇷🇺 Русский": "ru",
                 "🇫🇷 Français": "fr",
                 "🇩🇪 Deutsch": "de",
-                "🇮🇹 Italiano": "it",
-                "🇯🇵 日本語": "ja"
+                "🇮🇹 Italiano": "it"
             }
             lang = st.selectbox(
                 "识别语言",
