@@ -7,7 +7,6 @@ from core._2_asr import load_chunks
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, _CACHE_SENTENCES_SPLIT, Sentence
-import time
 
 console = Console()
 
@@ -218,6 +217,7 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
     # Flatten the list of lists
     return [s for sublist in new_sentences for s in sublist]
 
+@timer("LLM 长句切分")
 @cache_objects(_CACHE_SENTENCES_SPLIT, _3_2_SPLIT_BY_MEANING)
 def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     """
@@ -230,8 +230,6 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
         List[Sentence]: 切分后的 Sentence 对象列表
     """
     console.print("[blue]🔍 开始 LLM 长句切分 (Stage 2)[/blue]")
-
-    start_time = time.time()
 
     # 统计需要切分的句子
     asr_language = load_key("asr.language")
@@ -259,9 +257,6 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
             max_workers=load_key("max_workers"),
             retry_attempt=retry_attempt
         )
-
-    elapsed = time.time() - start_time
-    console.print(f"[dim]⏱️ LLM 长句切分耗时: {format_duration(elapsed)}[/dim]")
 
     console.print(f'[green]✅ 处理完成！最终句子数: {len(sentences)}[/green]')
 

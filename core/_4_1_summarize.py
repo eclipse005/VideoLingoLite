@@ -1,11 +1,10 @@
 import json
 import re
 import unicodedata
-import time
 from typing import List
 from core.prompts import get_summary_prompt
 import pandas as pd
-from core.utils import load_key, rprint, safe_read_csv, ask_gpt, format_duration
+from core.utils import load_key, rprint, safe_read_csv, ask_gpt, timer
 from core.utils.models import _4_1_TERMINOLOGY, Sentence
 from core.utils.sentence_tools import clean_word
 
@@ -83,6 +82,7 @@ def search_things_to_note_in_prompt(sentence):
     else:
         return None
 
+@timer("总结和术语提取")
 def get_summary(sentences: List[Sentence]):
     """
     生成内容总结和术语表
@@ -91,8 +91,6 @@ def get_summary(sentences: List[Sentence]):
         sentences: Sentence 对象列表
     """
     rprint("📝 正在总结和提取术语...")
-
-    start_time = time.time()
 
     src_content = combine_chunks(sentences)
     custom_terms = safe_read_csv(CUSTOM_TERMS_PATH)
@@ -127,9 +125,7 @@ def get_summary(sentences: List[Sentence]):
     with open(_4_1_TERMINOLOGY, 'w', encoding='utf-8') as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
-    elapsed = time.time() - start_time
     rprint(f'💾 总结已保存到 → `{_4_1_TERMINOLOGY}`')
-    rprint(f'[dim]⏱️ 总结和术语提取耗时: {format_duration(elapsed)}[/dim]')
 
 if __name__ == '__main__':
     get_summary()

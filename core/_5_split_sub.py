@@ -2,7 +2,6 @@ import pandas as pd
 from typing import List
 import math
 import concurrent.futures
-import time
 
 from core.utils import *
 from core.utils.models import *
@@ -133,6 +132,7 @@ def process_single_sentence_split(sent: Sentence, num_parts: int, index: int, as
     return new_sentences
 
 
+@timer("拆分对齐")
 def split_for_sub_main(sentences: List[Sentence]) -> List[Sentence]:
     """
     字幕拆分对齐主函数，处理 Sentence 对象
@@ -144,8 +144,6 @@ def split_for_sub_main(sentences: List[Sentence]) -> List[Sentence]:
         List[Sentence]: 切分对齐后的 Sentence 对象列表
     """
     console.print(f"[cyan]🔍 开始拆分对齐，共 {len(sentences)} 个句子[/cyan]")
-
-    start_time = time.time()
 
     # Get source and target language ISO codes
     asr_language = load_key("asr.language")
@@ -237,9 +235,7 @@ def split_for_sub_main(sentences: List[Sentence]) -> List[Sentence]:
     pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_csv(_5_SPLIT_SUB, index=False, encoding='utf-8-sig')
     pd.DataFrame({'Source': split_src, 'Translation': split_trans}).to_csv(_5_REMERGED, index=False, encoding='utf-8-sig')
 
-    elapsed = time.time() - start_time
     console.print("[bold green]✅ 字幕拆分对齐完成！[/bold green]")
-    console.print(f"[dim]⏱️ 拆分对齐耗时: {format_duration(elapsed)}[/dim]")
     return sentences
 
 

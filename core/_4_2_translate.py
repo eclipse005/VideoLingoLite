@@ -2,7 +2,6 @@ import pandas as pd
 import json
 import concurrent.futures
 import unicodedata
-import time
 from typing import List
 from core.translate_lines import translate_lines
 from core._4_1_summarize import search_things_to_note_in_prompt
@@ -68,6 +67,7 @@ def similar(a: str, b: str) -> float:
     return SequenceMatcher(None, a_norm, b_norm).ratio()
 
 
+@timer("翻译")
 @cache_objects(_CACHE_SENTENCES_TRANSLATED)
 def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     """
@@ -79,8 +79,6 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     Returns:
         List[Sentence]: 带翻译的 Sentence 对象列表
     """
-    start_time = time.time()
-
     # 准备翻译块（从 Sentence 对象提取文本）
     sentence_texts = [sent.text for sent in sentences]
     chunks = split_chunks_by_chars(chunk_size=1500, max_i=20, texts=sentence_texts)
@@ -140,9 +138,7 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
     df_translate = pd.DataFrame({'Source': src_text, 'Translation': trans_text})
     df_translate.to_csv(_4_2_TRANSLATION, index=False, encoding='utf-8-sig')
 
-    elapsed = time.time() - start_time
     console.print("[bold green]✅ 翻译完成并已保存[/bold green]")
-    console.print(f"[dim]⏱️ 翻译耗时: {format_duration(elapsed)}[/dim]")
 
     return sentences
 

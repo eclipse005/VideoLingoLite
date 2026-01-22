@@ -55,7 +55,7 @@ def split_by_pause():
     # Input/output paths
     input_nlp_path = SPLIT_BY_NLP_FILE
     chunks_path = _2_CLEANED_CHUNKS
-    output_pause_path = SPLIT_BY_NLP_FILE
+    output_pause_path = SPLIT_BY_PAUSE_FILE
 
     # Get pause threshold from config (0 or null means disabled)
     pause_threshold = load_key("pause_split_threshold")

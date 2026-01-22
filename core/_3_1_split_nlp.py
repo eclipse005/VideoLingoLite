@@ -14,8 +14,11 @@ from typing import List
 from spacy.language import Language
 
 from core.spacy_utils import *
+# SudachiPy token length limit (bytes) - must match split_by_mark.py
+SUDACHI_MAX_LENGTH = 40000
+
 from core.utils.models import _3_1_SPLIT_BY_NLP, _CACHE_SENTENCES_NLP, Chunk, Sentence
-from core.utils import rprint, load_key, get_joiner, Timer, cache_objects
+from core.utils import rprint, load_key, get_joiner, timer, cache_objects
 from core._2_asr import load_chunks
 
 
@@ -44,25 +47,18 @@ def build_char_to_chunk_mapping(chunks: List[Chunk], joiner: str = "") -> List[i
     return char_to_chunk
 
 
-def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]:
+def _process_batch(chunks: List[Chunk], nlp: Language, joiner: str) -> List[Sentence]:
     """
-    使用 spaCy 进行 NLP 分句，将 Chunk 对象组合成 Sentence 对象
-    修复：保证 Chunk 原子性，避免由标点符号导致的 Chunk 错误分割
+    处理单个批次的 Chunk，返回 Sentence 对象列表
+
+    这是 nlp_split_to_sentences 的核心逻辑，提取为独立函数以支持分批处理
     """
-    # Validate input chunks
-    if not chunks:
-        return []
-
-    # 获取 ASR 语言并确定连接符
-    asr_language = load_key("asr.language")
-    joiner = get_joiner(asr_language)
-
-    # 1. 拼接所有 Chunk 的文本
+    # 1. 拼接当前批次的 Chunk 文本
     full_text = joiner.join(chunk.text for chunk in chunks)
     if not full_text:
         return []
 
-    # 2. 构建字符到 Chunk 的映射
+    # 2. 构建字符到 Chunk 的映射（仅针对当前批次）
     char_to_chunk = build_char_to_chunk_mapping(chunks, joiner)
 
     # 3. 使用 spaCy 分句
@@ -96,29 +92,19 @@ def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]
         end_chunk_idx = char_to_chunk[end_char - 1]
 
         # 关键修正 1：确保起始 Chunk 不会回退到已使用的 Chunk 之前
-        # 如果 spaCy 识别的这个句子的开头还在上一个句子包含的 Chunk 里（例如 "，"），
-        # 我们就从下一个可用 Chunk 开始算，这通常会导致 start > end，从而触发下面的跳过逻辑
         start_chunk_idx = max(start_chunk_idx, next_available_chunk_idx)
 
-        # 关键修正 2：如果当前句子映射到的 Chunk 已经被上一个句子用光了，跳过此“残余”句子
-        # 例如："终。，" 整个 Chunk 已被归入上一句，spaCy 再把 "，" 识别为新句时，这里会拦截
+        # 关键修正 2：如果当前句子映射到的 Chunk 已经被上一个句子用光了，跳过
         if start_chunk_idx >= len(chunks):
             continue
 
-        # 确保 end_chunk_idx 是 Slice 的上界（即包含该 Chunk，所以要 +1 对应 Python 切片语法）
-        # 初始时 end_chunk_idx 指向包含 end_char 的那个 chunk 的索引
-        
-        # 检查分句点是否在 Chunk 内部
+        # 确保 end_chunk_idx 是 Slice 的上界
         if end_chunk_idx < len(chunk_boundaries):
             end_chunk_start, end_chunk_end, _ = chunk_boundaries[end_chunk_idx]
-            
-            # 如果 spaCy 的 end_char 在 Chunk 内部（不在边界），强制包含整个 Chunk
-            # 这保证了 "终。，" 作为一个整体被归入当前句子
+
             if end_char > end_chunk_start and end_char < end_chunk_end:
-                 # 当前 chunk 必须完整包含，所以切片上界是 index + 1
                  slice_end = end_chunk_idx + 1
             else:
-                 # 正好在边界，或者跨越了，也至少要包含到当前这个 chunk
                  slice_end = end_chunk_idx + 1
         else:
             slice_end = end_chunk_idx + 1
@@ -129,29 +115,121 @@ def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]
         # 提取 Chunk 对象
         sentence_chunks = chunks[start_chunk_idx:slice_end]
 
-        # 关键修正 3：忽略空的句子（当 spaCy 的句子完全落在一个已经被上一句吞并的 Chunk 里时）
+        # 关键修正 3：忽略空的句子
         if not sentence_chunks:
             continue
 
         # 更新指针：下一次从当前切片的末尾开始
         next_available_chunk_idx = slice_end
 
-        # 关键修正 4：根据 Chunk 重建文本，而不是使用 spaCy 的 sent.text
-        # 这确保了 Chunk 内的文本（如 "终。，"）是完整的，不会被切断
+        # 关键修正 4：根据 Chunk 重建文本
         reconstructed_text = joiner.join(c.text for c in sentence_chunks)
 
         sentence = Sentence(
             chunks=sentence_chunks,
-            text=reconstructed_text, # 使用重建的完整文本
+            text=reconstructed_text,
             start=sentence_chunks[0].start if sentence_chunks else 0.0,
             end=sentence_chunks[-1].end if sentence_chunks else 0.0,
-            index=len(sentences) # 使用列表长度作为索引，保证连续
+            index=len(sentences)
         )
         sentences.append(sentence)
 
     return sentences
 
 
+def _process_japanese_in_batches(chunks: List[Chunk], nlp: Language, joiner: str) -> List[Sentence]:
+    """
+    对日语进行分批处理，避免 SudachiPy 字节限制
+
+    策略：
+    1. 按 Chunk 边界累积字节大小
+    2. 接近 SUDACHI_MAX_LENGTH 时，向前查找结束符号（。！？）切分
+    3. 找不到结束符号则按字节强制切分
+    4. 每批独立处理，最后合并结果
+
+    注意：静默处理，不打印详细日志
+    """
+    all_sentences = []
+
+    # 计算每个 Chunk 的字节大小和累积字节
+    chunk_bytes = [len(chunk.text.encode('utf-8')) for chunk in chunks]
+    cumulative_bytes = []
+    total = 0
+    for b in chunk_bytes:
+        total += b
+        cumulative_bytes.append(total)
+
+    # 分批处理
+    batch_start = 0
+    batch_count = 0
+
+    while batch_start < len(chunks):
+        # 找到当前批次的结束位置
+        batch_end = batch_start
+        batch_bytes = 0
+
+        while batch_end < len(chunks):
+            next_chunk_bytes = chunk_bytes[batch_end]
+
+            # 如果添加此 Chunk 会超过限制
+            if batch_bytes + next_chunk_bytes > SUDACHI_MAX_LENGTH and batch_end > batch_start:
+                # 向前查找最近的结束符号（。！？）
+                sentence_end_found = False
+                for look_back in range(min(50, batch_end - batch_start)):  # 最多回溯50个chunk
+                    check_idx = batch_end - 1 - look_back
+                    if check_idx < batch_start:
+                        break
+                    chunk_text = chunks[check_idx].text
+                    # 检查是否包含日语结束符号
+                    if any(punct in chunk_text for punct in ['。', '！', '？', '．', '!', '?']):
+                        batch_end = check_idx + 1  # 在包含结束符号的chunk之后切分
+                        sentence_end_found = True
+                        break
+
+                if sentence_end_found:
+                    break  # 找到结束符号，在此切分
+                # 否则继续尝试添加下一个chunk（向下面的逻辑继续）
+
+            batch_bytes += next_chunk_bytes
+            batch_end += 1
+
+        batch_chunks = chunks[batch_start:batch_end]
+        batch_count += 1
+
+        # 处理当前批次
+        batch_sentences = _process_batch(batch_chunks, nlp, joiner)
+        all_sentences.extend(batch_sentences)
+
+        # 移动到下一批次
+        batch_start = batch_end
+
+    return all_sentences
+
+
+def nlp_split_to_sentences(chunks: List[Chunk], nlp: Language) -> List[Sentence]:
+    """
+    使用 spaCy 进行 NLP 分句，将 Chunk 对象组合成 Sentence 对象
+    修复：保证 Chunk 原子性，避免由标点符号导致的 Chunk 错误分割
+
+    对于日语：分批处理以避免 SudachiPy 字节限制
+    """
+    # Validate input chunks
+    if not chunks:
+        return []
+
+    # 获取 ASR 语言并确定连接符
+    asr_language = load_key("asr.language")
+    joiner = get_joiner(asr_language)
+
+    # 日语需要分批处理
+    if asr_language == 'ja':
+        return _process_japanese_in_batches(chunks, nlp, joiner)
+
+    # 其他语言使用原有逻辑
+    return _process_batch(chunks, nlp, joiner)
+
+
+@timer("NLP 分句")
 def split_by_spacy() -> List[Sentence]:
     """
     NLP 分句主函数（Stage 1）
@@ -163,11 +241,10 @@ def split_by_spacy() -> List[Sentence]:
     """
     rprint("[blue]🔍 开始 NLP 分句 (Stage 1)[/blue]")
 
-    with Timer("NLP 分句"):
-        nlp = init_nlp()
+    nlp = init_nlp()
 
-        # 使用对象化流程生成 Sentence 对象
-        sentences = split_by_nlp(nlp)
+    # 使用对象化流程生成 Sentence 对象
+    sentences = split_by_nlp(nlp)
 
     rprint(f"[green]✅ NLP 分句完成: {_3_1_SPLIT_BY_NLP}[/green]")
     return sentences

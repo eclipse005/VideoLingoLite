@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 import re
-import time
 from typing import List
 from rich.panel import Panel
 from rich.console import Console
@@ -124,10 +123,19 @@ def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output
     # 移除间隙
     for i in range(len(df_trans_time) - 1):
         delta_time = df_trans_time.loc[i + 1, 'timestamp'][0] - df_trans_time.loc[i, 'timestamp'][1]
+
+        # 小间隙：延长当前字幕到下一个字幕开始
         if 0 < delta_time < 1:
             df_trans_time.at[i, 'timestamp'] = (
                 df_trans_time.loc[i, 'timestamp'][0],
                 df_trans_time.loc[i + 1, 'timestamp'][0]
+            )
+
+        # 重叠：将下一个字幕开始时间调整为当前字幕结束时间
+        if delta_time < 0:
+            df_trans_time.at[i + 1, 'timestamp'] = (
+                df_trans_time.loc[i, 'timestamp'][1],
+                df_trans_time.loc[i + 1, 'timestamp'][1]
             )
 
     # 转换为 SRT 格式
@@ -171,6 +179,7 @@ def generate_subtitles_from_sentences(sentences: List[Sentence], subtitle_output
     return df_trans_time
 
 
+@timer("字幕生成")
 def align_timestamp_main(sentences: List[Sentence], transcript_only: bool = False) -> None:
     """
     字幕生成主函数，直接从 Sentence 对象生成字幕
@@ -179,8 +188,6 @@ def align_timestamp_main(sentences: List[Sentence], transcript_only: bool = Fals
         sentences: Sentence 对象列表
         transcript_only: 是否只转录模式（仅生成原文字幕）
     """
-    start_time = time.time()
-
     # 根据模式选择字幕输出配置
     if transcript_only:
         subtitle_output_configs = SUBTITLE_OUTPUT_CONFIGS_TRANSCRIPT_ONLY
@@ -190,9 +197,7 @@ def align_timestamp_main(sentences: List[Sentence], transcript_only: bool = Fals
     # 直接从 Sentence 对象生成字幕
     generate_subtitles_from_sentences(sentences, subtitle_output_configs, _OUTPUT_DIR, for_display=True)
 
-    elapsed = time.time() - start_time
     console.print(Panel("[bold green]🎉📝 字幕生成完成！请查看 `output` 文件夹 👀[/bold green]"))
-    console.print(f"[dim]⏱️ 字幕生成耗时: {format_duration(elapsed)}[/dim]")
 
     # 只在完整模式下合并空字幕
     if not transcript_only:
