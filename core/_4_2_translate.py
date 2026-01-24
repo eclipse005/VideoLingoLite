@@ -8,7 +8,7 @@ from core._4_1_summarize import search_things_to_note_in_prompt
 from core.utils import *
 from core.utils.models import *
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
 from difflib import SequenceMatcher
 
 console = Console()
@@ -96,11 +96,22 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
             futures.append(future)
         results = []
         total = len(futures)
-        for i, future in enumerate(concurrent.futures.as_completed(futures)):
-            results.append(future.result())
-            # 每 20% 显示一次进度
-            if total > 0 and (i + 1) % max(1, total // 5) == 0:
-                console.print(f'[dim]📊 已翻译 {i + 1}/{total} 个批次 ({(i + 1) * 100 // total}%)[/dim]')
+
+        # 使用 Rich Progress 显示翻译进度
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            transient=False,
+            console=console
+        ) as progress:
+            task = progress.add_task("[cyan]正在翻译...", total=total)
+
+            for future in concurrent.futures.as_completed(futures):
+                results.append(future.result())
+                progress.update(task, advance=1)
 
     results.sort(key=lambda x: x[0])  # Sort results based on original order
 
