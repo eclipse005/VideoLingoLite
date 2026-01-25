@@ -28,13 +28,12 @@ def scan_input_folder():
     return sorted(files, key=str.lower)
 
 
-def get_user_input(default_source_lang='en', default_target_lang='简体中文', default_dubbing='0'):
+def get_user_input(default_source_lang='en', default_target_lang='简体中文'):
     """Get user input with default values"""
     console.print(Panel(
         f"[bold cyan]Default values:[/]\n"
         f"Source Language: [yellow]{default_source_lang}[/]\n"
-        f"Target Language: [yellow]{default_target_lang}[/]\n"
-        f"Dubbing: [yellow]{default_dubbing}[/]\n\n"
+        f"Target Language: [yellow]{default_target_lang}[/]\n\n"
         f"[dim]Press Enter to use default value[/]",
         title="Configuration",
         expand=False
@@ -48,20 +47,15 @@ def get_user_input(default_source_lang='en', default_target_lang='简体中文',
     if not target_lang:
         target_lang = default_target_lang
 
-    dubbing = console.input(f"[bold cyan]Dubbing[/] [dim][default: {default_dubbing}][/]: ").strip()
-    if not dubbing:
-        dubbing = default_dubbing
-
-    return source_lang, target_lang, dubbing
+    return source_lang, target_lang
 
 
-def create_csv(files, source_lang, target_lang, dubbing):
+def create_csv(files, source_lang, target_lang):
     """Create tasks_setting.csv with scanned files"""
     data = {
         'Video File': files,
         'Source Language': [source_lang] * len(files),
         'Target Language': [target_lang] * len(files),
-        'Dubbing': [dubbing] * len(files),
         'Status': [''] * len(files)
     }
 
@@ -77,15 +71,13 @@ def preview_table(df):
     table.add_column("Video File", style="yellow")
     table.add_column("Source Language", style="green")
     table.add_column("Target Language", style="green")
-    table.add_column("Dubbing", style="green")
 
     for idx, row in df.iterrows():
         table.add_row(
             str(idx + 1),
             str(row['Video File']),
             str(row['Source Language']),
-            str(row['Target Language']),
-            str(row['Dubbing'])
+            str(row['Target Language'])
         )
 
     console.print(table)
@@ -104,10 +96,10 @@ def main():
     console.print(Panel(f"[bold green]Found {len(files)} file(s)[/]", title="Scan Result", expand=False))
 
     # Get user input
-    source_lang, target_lang, dubbing = get_user_input()
+    source_lang, target_lang = get_user_input()
 
     # Create DataFrame
-    df = create_csv(files, source_lang, target_lang, dubbing)
+    df = create_csv(files, source_lang, target_lang)
 
     # Preview
     preview_table(df)

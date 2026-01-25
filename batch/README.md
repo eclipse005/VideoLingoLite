@@ -19,24 +19,22 @@
 3. 按提示配置：
    - **Source Language**：源语言（如 `en`, `zh`）
    - **Target Language**：翻译语言（如 `简体中文`, `English`）
-   - **Dubbing**：是否配音（`0` 或 `1`）
 4. 预览生成的配置，确认后保存
 
 或者手动编辑 `tasks_setting.csv` 文件：
 
 | 字段 | 说明 | 可选值 |
 |------|------|--------|
-| Video File | 视频文件名（无需 `input/` 前缀）或 YouTube 链接 | - |
+| Video File | 视频文件名（无需 `input/` 前缀） | - |
 | Source Language | 源语言 | 'en', 'zh', ... 或留空使用默认设置 |
 | Target Language | 翻译语言 | 使用自然语言描述，或留空使用默认设置 |
-| Dubbing | 是否配音 | 0 或留空：不配音；1：配音 |
 
 示例：
 
-| Video File | Source Language | Target Language | Dubbing |
-|------------|-----------------|-----------------|---------|
-| https://www.youtube.com/xxx | | German | |
-| Kungfu Panda.mp4 | |  | 1 |
+| Video File | Source Language | Target Language |
+|------------|-----------------|-----------------|
+| Kungfu Panda.mp4 | | German |
+| Tutorial.mp4 | |  |
 
 ### 3. 运行批处理
 
