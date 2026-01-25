@@ -70,7 +70,7 @@ _CACHE_SENTENCES_TRANSLATED = "output/cache/sentences_translated.pkl"
 # ------------------------------------------
 _OUTPUT_DIR = "output"
 _AUDIO_DIR = "output/audio"
-_RAW_AUDIO_FILE = "output/audio/raw.mp3"
+_RAW_AUDIO_FILE = "output/audio/raw.wav"
 _VOCAL_AUDIO_FILE = "output/audio/vocals.wav"
 _AUDIO_REFERS_DIR = "output/audio/refers"
 _AUDIO_SEGS_DIR = "output/audio/segs"

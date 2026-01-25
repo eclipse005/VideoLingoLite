@@ -74,4 +74,4 @@ def transcribe_audio_gemini(raw_audio_path: str, audio_path: str, start: float =
     return result
 
 if __name__ == "__main__":
-    print(transcribe_audio_302("output/audio/raw.mp3"))
+    print(transcribe_audio_302("output/audio/raw.wav"))
