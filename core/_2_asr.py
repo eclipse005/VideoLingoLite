@@ -34,6 +34,10 @@ def transcribe():
     if asr_runtime == "gemini":
         from core.asr_backend.gemini import transcribe_audio_gemini as ts
         rprint("[cyan]🎤 Transcribing audio with Gemini API...[/cyan]")
+    elif asr_runtime == "qwen":
+        from core.asr_backend.qwen3_asr import transcribe_audio as ts
+        model = load_key("asr.model", default="Qwen3-ASR-1.7B")
+        rprint(f"[cyan]🎤 Transcribing audio with {model}...[/cyan]")
     elif asr_runtime == "parakeet":
         from core.asr_backend.parakeet_local import transcribe_audio as ts
         rprint("[cyan]🎤 Transcribing audio with NVIDIA Parakeet...[/cyan]")

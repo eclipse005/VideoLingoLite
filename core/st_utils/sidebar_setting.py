@@ -71,11 +71,24 @@ def subtitle_settings_section():
             if langs[lang] != load_key("asr.language"):
                 update_key("asr.language", langs[lang])
 
-        runtime_options = ["gemini", "parakeet"]
+        runtime_options = ["gemini", "qwen", "parakeet"]
         runtime = st.selectbox("语音识别引擎", options=runtime_options, index=runtime_options.index(load_key("asr.runtime")), help="选择ASR服务进行转录")
 
         if runtime != load_key("asr.runtime"):
             update_key("asr.runtime", runtime)
+
+        # Qwen3-ASR model selection
+        if runtime == "qwen":
+            model_options = ["Qwen3-ASR-1.7B", "Qwen3-ASR-0.6B"]
+            current_model = load_key("asr.model", default="Qwen3-ASR-1.7B")
+            model = st.selectbox(
+                "Qwen3-ASR 模型",
+                options=model_options,
+                index=model_options.index(current_model) if current_model in model_options else 0,
+                help="1.7B: 更高准确率 | 0.6B: 更快速度"
+            )
+            if model != current_model:
+                update_key("asr.model", model)
 
         # 人声分离和只转录开关（同一排）
         col1, col2 = st.columns(2)
