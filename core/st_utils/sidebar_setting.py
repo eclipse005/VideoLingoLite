@@ -71,8 +71,8 @@ def subtitle_settings_section():
             if langs[lang] != load_key("asr.language"):
                 update_key("asr.language", langs[lang])
 
-        runtime_options = ["gemini", "qwen"]
-        runtime = st.selectbox("语音识别引擎", options=runtime_options, index=runtime_options.index(load_key("asr.runtime")), help="选择ASR服务进行转录")
+        runtime_options = ["qwen"]
+        runtime = st.selectbox("语音识别引擎", options=runtime_options, index=0, help="Qwen3-ASR 本地语音识别（52种语言+22中文方言）")
 
         if runtime != load_key("asr.runtime"):
             update_key("asr.runtime", runtime)

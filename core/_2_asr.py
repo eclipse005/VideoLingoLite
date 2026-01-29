@@ -29,17 +29,10 @@ def transcribe():
     # 3. Extract audio
     segments = split_audio(vocal_audio)
 
-    # 4. Select ASR backend based on config
-    asr_runtime = load_key("asr.runtime")
-    if asr_runtime == "gemini":
-        from core.asr_backend.gemini import transcribe_audio_gemini as ts
-        rprint("[cyan]🎤 Transcribing audio with Gemini API...[/cyan]")
-    elif asr_runtime == "qwen":
-        from core.asr_backend.qwen3_asr import transcribe_audio as ts
-        model = load_key("asr.model", default="Qwen3-ASR-1.7B")
-        rprint(f"[cyan]🎤 Transcribing audio with {model}...[/cyan]")
-    else:
-        raise ValueError(f"Unsupported ASR runtime: {asr_runtime}")
+    # 4. Select ASR backend (only qwen in this branch)
+    from core.asr_backend.qwen3_asr import transcribe_audio as ts
+    model = load_key("asr.model", default="Qwen3-ASR-0.6B")
+    rprint(f"[cyan]🎤 Transcribing audio with {model}...[/cyan]")
 
     # 5. Transcribe audio by clips
     all_results = []
