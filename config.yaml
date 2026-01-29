@@ -45,7 +45,7 @@ target_language: '简体中文'
 
 asr:
   # ASR (Automatic Speech Recognition) specified recognition language ISO 639-1
-  language: 'en'
+  language: 'ja'
   # ASR running mode: qwen (local model)
   # - qwen: Local model (52 languages + 22 Chinese dialects, requires GPU)
   #   Supported: zh, en, yue, ar, de, fr, es, pt, id, it, ko, ru, th, vi, ja, tr, hi, ms, nl, sv, da, fi, pl, cs, fil, fa, el, hu, mk, ro

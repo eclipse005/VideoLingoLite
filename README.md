@@ -1,19 +1,28 @@
-# VideoLingoLite
+# VideoLingoLite - Qwen3-ASR 版
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-> **VideoLingo** 的轻量化版本，专注于音视频转写与翻译
+> **VideoLingoLite** 的 Qwen3-ASR 版本 - 支持 52 种语言 + 22 种中文方言的本地语音识别
 
-**VideoLingoLite** 是 [VideoLingo](https://github.com/Huanshere/VideoLingo) 的精简版本，保留了核心的转写翻译能力，去除冗余功能，让字幕制作更加轻量高效。
+**这是 VideoLingoLite 的 Qwen3-ASR 专用分支**，使用阿里通义千问 Qwen3-ASR 模型实现本地语音识别，支持中日韩等 52 种语言和 22 种中文方言。
+
+---
+
+## 分支说明
+
+| 分支 | ASR 引擎 | 语言支持 | 适用场景 |
+|------|----------|----------|----------|
+| [**main**](https://github.com/eclipse005/VideoLingoLite) | Parakeet + Gemini | 25 种欧洲语言 | 欧洲语言转录 |
+| **feature/qwen3-asr** (当前) | **Qwen3-ASR** | **52 种语言 + 22 中文方言** | **中日韩等多语言支持** |
 
 ---
 
 ## 核心功能
 
 ### 语音转文字
-- **双引擎支持**：本地 ASR 服务器 + 本地 Parakeet（25 种欧洲语言）
-- **人声分离**：嘈杂环境下自动分离人声，大幅提升转录准确率
+- **Qwen3-ASR 引擎**：支持 52 种语言 + 22 种中文方言
 - **词级时间戳**：精确到每个词的时间定位
+- **人声分离**：嘈杂环境下自动分离人声，大幅提升转录准确率
 - **只转录模式**：跳过翻译，仅生成原文字幕
 
 ### 智能翻译
@@ -28,9 +37,9 @@
 - **灵活重跑**：清除缓存即可重新执行特定阶段
 
 ### 多语言支持
+- **52 种语言**：zh, en, yue, ar, de, fr, es, pt, id, it, ko, ru, th, vi, ja, tr, hi, ms, nl, sv, da, fi, pl, cs, fil, fa, el, hu, mk, ro
+- **22 种中文方言**：安徽、东北、福建、甘肃、贵州、河北、河南、湖北、湖南、江西、宁夏、山东、陕西、山西、四川、天津、云南、浙江、粤语（香港/广东）、吴语、闽南语
 - **CJK 优化**：针对中日韩语言的特殊分词和对齐处理
-- **25+ 欧洲语言**：本地 Parakeet 引擎支持
-- **ASR 服务器**：支持通过本地服务器扩展更多语言
 
 ### 字幕生成
 - **4 种格式**：源语言字幕、翻译字幕、双语字幕（两种顺序）
@@ -121,14 +130,21 @@ uv run python -m streamlit run st.py
 
 ## 系统要求
 
-### ASR 服务器模式
+### 硬件要求
 - Python 3.10+
-- 本地 ASR 服务（如 Whisper、Gemini 等）
-
-### 本地模式（Parakeet）
-- Python 3.10+
-- NVIDIA GPU（8GB+ 显存）
+- NVIDIA GPU（8GB+ 显存推荐）
 - CUDA 支持
+
+### 软件依赖
+- qwen-asr >= 0.0.1
+- modelscope >= 1.0.0
+- torch, transformers 等依赖
+
+### 模型下载
+首次运行会自动从 modelscope 下载模型到 `_model_cache/` 目录：
+- **Qwen3-ASR-0.6B**：约 1.2GB（更快速度）
+- **Qwen3-ASR-1.7B**：约 3.5GB（更高准确率）
+- **Qwen3-ForcedAligner-0.6B**：约 1.2GB（时间戳对齐，必需）
 
 ---
 
@@ -138,14 +154,14 @@ uv run python -m streamlit run st.py
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `asr.runtime` | `gemini` | ASR 引擎：gemini（本地服务器）/ parakeet（本地 GPU） |
-| `asr.language` | `en` | 源语言 ISO 639-1 代码（如 en, zh, ja） |
-| `target_language` | `English` | 目标语言（自然语言描述） |
-| `max_workers` | `8` | 并发处理数（本地 LLM 建议设为 1） |
-| `pause_split_threshold` | `1` | 停顿切分阈值（秒），0 或 null 表示禁用 |
+| `asr.runtime` | `qwen` | ASR 引擎（此分支仅支持 qwen） |
+| `asr.model` | `Qwen3-ASR-0.6B` | 模型选择：Qwen3-ASR-0.6B / Qwen3-ASR-1.7B |
+| `asr.language` | `en` | 源语言 ISO 639-1 代码（如 en, zh, ja, ko） |
+| `target_language` | `简体中文` | 目标语言（自然语言描述） |
+| `max_workers` | `16` | 并发处理数（本地 LLM 建议设为 1） |
+| `pause_split_threshold` | `1` | 停顿切分阈值（秒） |
 | `vocal_separation.enabled` | `false` | 是否启用人声分离 |
 | `transcript_only` | `false` | 只转录模式，跳过翻译 |
-| `spacy_model_map` | - | spaCy 模型映射（多语言支持） |
 
 ---
 
