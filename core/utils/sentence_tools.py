@@ -332,5 +332,34 @@ def map_char_positions_to_chunks(sentence, char_positions: List[int]) -> List[in
 
 
 # ================================================================
+# 句子长度检查
+# ================================================================
+
+def should_split_by_origin_length(text: str) -> bool:
+    """
+    检查句子是否超过 origin_length 限制
+
+    Args:
+        text: 要检查的文本
+
+    Returns:
+        bool: True 表示需要切分，False 表示不需要切分
+    """
+    from core.utils.config_utils import load_key
+    from core.utils import get_joiner
+
+    asr_language = load_key("asr.language")
+    origin_length_config = load_key("origin_length")
+    max_length = origin_length_config.get(asr_language, 25)
+
+    joiner = get_joiner(asr_language)
+
+    if joiner:
+        return len(text.split()) > max_length
+    else:
+        return len(text) > max_length
+
+
+# ================================================================
 # 辅助功能：并行处理和批量操作
 # ================================================================

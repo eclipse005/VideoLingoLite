@@ -37,7 +37,7 @@ api_reflection:
   model: 'deepseek-chat'
 
 # *Number of LLM multi-threaded accesses, set to 1 if using local LLM
-max_workers: 8
+max_workers: 16
 
 # Language settings, written into the prompt, can be described in natural language
 target_language: '简体中文'
@@ -54,7 +54,7 @@ asr:
 
 # Vocal separation for noisy environments
 vocal_separation:
-  enabled: true   # Enable vocal separation to improve ASR accuracy in noisy environments
+  enabled: false  # Enable vocal separation to improve ASR accuracy in noisy environments
 
 # Transcript only mode (skip translation)
 transcript_only: false  # Skip translation process, only generate source subtitles
@@ -66,9 +66,9 @@ transcript_only: false  # Skip translation process, only generate source subtitl
 # For space-separated languages: word count
 # For non-space languages: character count
 origin_length:
-  en: 25
-  ja: 28
-  zh: 25
+  en: 22
+  ja: 25
+  zh: 22
   ko: 22
   es: 25
   fr: 25
@@ -109,7 +109,7 @@ summary_length: 8000
 reflect_translate: true
 
 # *Pause-based sentence split threshold (seconds). When time gap between consecutive words exceeds this value, a new batch is forced. Set to null or 0 to disable.
-pause_split_threshold: 2.5
+pause_split_threshold: 1
 
 # *Whether to pause after extracting professional terms and before translation, allowing users to manually adjust the terminology table output\log\terminology.json
 pause_before_translate: false

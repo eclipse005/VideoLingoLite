@@ -4,7 +4,7 @@ from typing import List
 from core.utils import rprint, load_key, get_joiner
 from core.spacy_utils.load_nlp_model import init_nlp, SPLIT_BY_CONNECTOR_FILE
 from core.utils.models import Sentence
-from core.utils.sentence_tools import map_char_positions_to_chunks
+from core.utils.sentence_tools import map_char_positions_to_chunks, should_split_by_origin_length
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -183,6 +183,10 @@ def split_by_connector(sentences: List[Sentence], nlp) -> List[Sentence]:
 
             for sent in current_sentences:
                 if len(sent.chunks) <= 1:
+                    new_sentences.append(sent)
+                    continue
+
+                if not should_split_by_origin_length(sent.text):
                     new_sentences.append(sent)
                     continue
 

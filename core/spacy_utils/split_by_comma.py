@@ -5,7 +5,7 @@ from typing import List
 from core.utils import rprint, load_key, get_joiner
 from core.spacy_utils.load_nlp_model import init_nlp, SPLIT_BY_COMMA_FILE
 from core.utils.models import Sentence
-from core.utils.sentence_tools import map_char_positions_to_chunks
+from core.utils.sentence_tools import map_char_positions_to_chunks, should_split_by_origin_length
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -95,6 +95,10 @@ def split_by_comma(sentences: List[Sentence], nlp) -> List[Sentence]:
             result.append(sentence)
             continue
 
+        if not should_split_by_origin_length(sentence.text):
+            result.append(sentence)
+            continue
+
         doc = nlp(sentence.text)
         split_char_positions = []
 
@@ -119,6 +123,8 @@ def split_by_comma(sentences: List[Sentence], nlp) -> List[Sentence]:
         else:
             # 使用公共函数映射到 Chunk 索引
             chunk_split_indices = map_char_positions_to_chunks(sentence, split_char_positions)
+
+            chunk_split_indices = [idx + 1 for idx in chunk_split_indices]
 
             # 按切分点分割 chunks
             split_points = [0] + chunk_split_indices + [len(sentence.chunks)]
