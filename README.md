@@ -130,15 +130,9 @@ uv run python -m streamlit run st.py
 
 ## 系统要求
 
-### 硬件要求
 - Python 3.10+
 - NVIDIA GPU（8GB+ 显存推荐）
 - CUDA 支持
-
-### 软件依赖
-- qwen-asr >= 0.0.1
-- modelscope >= 1.0.0
-- torch, transformers 等依赖
 
 ### 模型下载
 首次运行会自动从 modelscope 下载模型到 `_model_cache/` 目录：
