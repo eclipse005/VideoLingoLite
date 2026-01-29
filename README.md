@@ -37,7 +37,7 @@
 - **灵活重跑**：清除缓存即可重新执行特定阶段
 
 ### 多语言支持
-- **52 种语言**：Chinese (zh), English (en), Cantonese (yue), Arabic (ar), German (de), French (fr), Spanish (es), Portuguese (pt), Indonesian (id), Italian (it), Korean (ko), Russian (ru), Thai (th), Vietnamese (vi), Japanese (ja), Turkish (tr), Hindi (hi), Malay (ms), Dutch (nl), Swedish (sv), Danish (da), Finnish (fi), Polish (pl), Czech (cs), Filipino (fil), Persian (fa), Greek (el), Hungarian (hu), Macedonian (mk), Romanian (ro)
+- **52 种语言**：中文 (zh), 英语 (en), 粤语 (yue), 阿拉伯语 (ar), 德语 (de), 法语 (fr), 西班牙语 (es), 葡萄牙语 (pt), 印尼语 (id), 意大利语 (it), 韩语 (ko), 俄语 (ru), 泰语 (th), 越南语 (vi), 日语 (ja), 土耳其语 (tr), 印地语 (hi), 马来语 (ms), 荷兰语 (nl), 瑞典语 (sv), 丹麦语 (da), 芬兰语 (fi), 波兰语 (pl), 捷克语 (cs), 菲律宾语 (fil), 波斯语 (fa), 希腊语 (el), 匈牙利语 (hu), 马其顿语 (mk), 罗马尼亚语 (ro)
 - **22 种中文方言**：安徽、东北、福建、甘肃、贵州、河北、河南、湖北、湖南、江西、宁夏、山东、陕西、山西、四川、天津、云南、浙江、粤语（香港/广东）、吴语、闽南语
 - **CJK 优化**：针对中日韩语言的特殊分词和对齐处理
 
