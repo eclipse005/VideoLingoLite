@@ -8,7 +8,6 @@ import sys
 import logging
 import warnings
 import gc
-import io
 from typing import Optional
 
 # ------------
@@ -26,7 +25,6 @@ for logger_name in ['transformers', 'qwen_asr']:
 # Now safe to import libraries
 import torch
 import librosa
-import soundfile as sf
 from rich import print as rprint
 from core.utils import load_key, except_handler
 
@@ -174,11 +172,6 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
 
     audio, sr = librosa.load(vocal_audio_file, sr=16000, offset=start, duration=audio_length, mono=True)
 
-    # Save to temp buffer
-    audio_buffer = io.BytesIO()
-    sf.write(audio_buffer, audio, sr, format='WAV', subtype='PCM_16')
-    audio_buffer.seek(0)
-
     try:
         rprint(f"[bold green]Transcribing with Qwen3-ASR...[/bold green]")
 
@@ -221,9 +214,9 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
 
         language = lang_map.get(asr_language, None)  # None for auto-detect
 
-        # Transcribe
+        # Transcribe with (np.ndarray, sr) tuple
         results = model.transcribe(
-            audio=audio_buffer.getvalue(),
+            audio=(audio, sr),  # Pass as (numpy_array, sample_rate) tuple
             language=language,
             return_time_stamps=True,
         )
