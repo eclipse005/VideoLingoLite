@@ -131,7 +131,7 @@ def _load_qwen_model():
                 device_map=device,
             ),
             max_new_tokens=4096,  # Support long audio
-            max_inference_batch_size=16,
+            max_inference_batch_size=4,
         )
 
         rprint(f"[green]✅ Qwen3-ASR-{model_name} loaded successfully[/green]")
