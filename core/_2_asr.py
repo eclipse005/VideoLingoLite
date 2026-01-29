@@ -38,9 +38,6 @@ def transcribe():
         from core.asr_backend.qwen3_asr import transcribe_audio as ts
         model = load_key("asr.model", default="Qwen3-ASR-1.7B")
         rprint(f"[cyan]🎤 Transcribing audio with {model}...[/cyan]")
-    elif asr_runtime == "parakeet":
-        from core.asr_backend.parakeet_local import transcribe_audio as ts
-        rprint("[cyan]🎤 Transcribing audio with NVIDIA Parakeet...[/cyan]")
     else:
         raise ValueError(f"Unsupported ASR runtime: {asr_runtime}")
 
