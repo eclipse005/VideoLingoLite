@@ -9,7 +9,7 @@ import sys
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.utils import load_key
+from core.utils.config_utils import load_key
 from rich import print as rprint
 
 MODEL_DIR = load_key("model_dir", default="./_model_cache")

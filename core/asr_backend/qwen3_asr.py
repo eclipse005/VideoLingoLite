@@ -74,26 +74,42 @@ def _convert_qwen_to_standard_asr_format(result, start_offset=0):
     return {'segments': [segment], 'language': language}
 
 
+def _download_model_if_needed(model_path, repo_id):
+    """Download model from modelscope if not exists"""
+    if os.path.exists(model_path):
+        return
+
+    rprint(f"[yellow]📥 Model not found locally. Downloading {repo_id}...[/yellow]")
+    rprint(f"[dim]This may take a while on first run...[/dim]")
+
+    try:
+        from modelscope import snapshot_download
+        os.makedirs(ABS_MODEL_DIR, exist_ok=True)
+        snapshot_download(
+            repo_id,
+            local_dir=model_path,
+            revision="master",
+        )
+        rprint(f"[green]✅ Downloaded {repo_id}[/green]")
+    except ImportError:
+        raise ImportError(
+            "modelscope not installed. Please run: uv sync"
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to download {repo_id}: {e}")
+
+
 def _load_qwen_model():
-    """Load Qwen3-ASR model from local cache"""
+    """Load Qwen3-ASR model from local cache (auto-download if missing)"""
     model_name = load_key("asr.model", default="Qwen3-ASR-1.7B")
     asr_model_path = os.path.join(ABS_MODEL_DIR, model_name)
     aligner_model_path = os.path.join(ABS_MODEL_DIR, "Qwen3-ForcedAligner-0.6B")
 
+    # Auto-download if missing
+    _download_model_if_needed(asr_model_path, f"Qwen/{model_name}")
+    _download_model_if_needed(aligner_model_path, "Qwen/Qwen3-ForcedAligner-0.6B")
+
     rprint(f"[cyan]📥 Loading {model_name} from local cache...[/cyan]")
-
-    # Check if models exist
-    if not os.path.exists(asr_model_path):
-        raise FileNotFoundError(
-            f"Qwen3-ASR model not found at: {asr_model_path}\n"
-            f"Please run: python scripts/download_qwen_models.py"
-        )
-
-    if not os.path.exists(aligner_model_path):
-        raise FileNotFoundError(
-            f"ForcedAligner model not found at: {aligner_model_path}\n"
-            f"Please run: python scripts/download_qwen_models.py"
-        )
 
     try:
         from qwen_asr import Qwen3ASRModel
