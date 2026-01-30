@@ -53,7 +53,7 @@ asr:
   # Qwen3-ASR model
   # - Qwen3-ASR-1.7B: Higher accuracy, slower speed
   # - Qwen3-ASR-0.6B: Faster speed, lower accuracy
-  model: 'Qwen3-ASR-1.7B'
+  model: 'Qwen3-ASR-0.6B'
 
 # Vocal separation for noisy environments
 vocal_separation:
@@ -61,11 +61,11 @@ vocal_separation:
 
 # VAD-based audio segmentation (replaces FFMPEG silence detection when enabled)
 vad:
-  enabled: false  # Use VAD to detect speech segments for ASR (false = use FFMPEG silence detection)
-  threshold: 0.4       # VAD speech probability threshold (0-1)
+  enabled: true  # Use VAD to detect speech segments for ASR (false = use FFMPEG silence detection)
+  threshold: 0.5       # VAD speech probability threshold (0-1)
   min_speech_ms: 150   # Minimum speech duration (milliseconds)
   min_silence_ms: 200  # Silence duration to end speech segment (milliseconds)
-  merge_gap_ms: 150    # Merge adjacent segments with gap less than this (milliseconds)
+  merge_gap_ms: 1000    # Merge adjacent segments with gap less than this (milliseconds)
   max_segment_duration: 120  # Max duration per segment (seconds), force split if exceeded
 
 # Transcript only mode (skip translation)

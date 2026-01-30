@@ -21,6 +21,7 @@ def get_speech_segments(
     min_silence_ms=DEFAULT_MIN_SILENCE_MS,
     min_speech_ms=DEFAULT_MIN_SPEECH_MS,
     merge_gap_ms=DEFAULT_MERGE_GAP_MS,
+    max_segment_duration=None,
 ):
     """
     利用 Ten VAD 检测语音片段
@@ -33,6 +34,7 @@ def get_speech_segments(
       - min_silence_ms: 静音多久结束语音段（毫秒），默认200
       - min_speech_ms: 语音段最短时长（毫秒），默认150
       - merge_gap_ms: 合并间隔小于此值的相邻片段（毫秒），默认150
+      - max_segment_duration: 合并后的最大时长（秒），超过此值不再合并
 
     返回一个列表，每项为 (start, end) 单位秒。
     """
@@ -100,7 +102,12 @@ def get_speech_segments(
         if not merged or start_s - merged[-1][1] > merge_gap_ms / 1000:
             merged.append([start_s, end_s])
         else:
-            merged[-1][1] = end_s
+            # 检查合并后是否会超过 max_segment_duration
+            if max_segment_duration is None or end_s - merged[-1][0] <= max_segment_duration:
+                merged[-1][1] = end_s
+            else:
+                # 超过限制，不合并，开始新片段
+                merged.append([start_s, end_s])
 
     # 加上时间偏移并转为元组
     result = [(s + offset, e + offset) for s, e in merged]

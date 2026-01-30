@@ -81,39 +81,19 @@ def split_audio_by_vad(audio_file: str, max_segment_duration: float = None) -> L
 
     rprint("[blue]🎤 Using VAD to detect speech segments...[/blue]")
 
-    # 1. 使用 VAD 获取所有语音片段
+    # 使用 VAD 获取所有语音片段，在合并时考虑 max_segment_duration
     segments = get_speech_segments(
         audio_file,
         threshold=load_key("vad.threshold", default=0.4),
         min_silence_ms=load_key("vad.min_silence_ms", default=200),
         min_speech_ms=load_key("vad.min_speech_ms", default=150),
         merge_gap_ms=load_key("vad.merge_gap_ms", default=150),
+        max_segment_duration=max_segment_duration,  # 传递给 VAD，避免合并后超过限制
     )
 
     rprint(f"[green]✅ VAD detected {len(segments)} speech segments[/green]")
-
-    # 2. 对过长的语音段进行强制切分（避免显存溢出）
-    result = []
-    split_count = 0
-    for start, end in segments:
-        duration = end - start
-        if duration <= max_segment_duration:
-            result.append((start, end))
-        else:
-            # 切分长段
-            num_parts = int(duration // max_segment_duration) + 1
-            part_duration = duration / num_parts
-            for i in range(num_parts):
-                seg_start = start + i * part_duration
-                seg_end = min(start + (i + 1) * part_duration, end)
-                result.append((seg_start, seg_end))
-                split_count += 1
-
-    if split_count > 0:
-        rprint(f"[dim]  Split {split_count} long segments into {split_count + len(segments)} total parts[/dim]")
-
-    rprint(f"[green]🎙️ Total {len(result)} audio segments for ASR[/green]")
-    return result
+    rprint(f"[green]🎙️ Total {len(segments)} audio segments for ASR[/green]")
+    return segments
 
 def process_transcription(result: Dict) -> pd.DataFrame:
     all_words = []
