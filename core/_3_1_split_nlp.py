@@ -10,6 +10,7 @@ This module uses spaCy to perform rule-based sentence splitting:
 Output: split_by_nlp.txt (Stage 1 result)
 """
 
+import os
 from typing import List
 from spacy.language import Language
 
@@ -17,8 +18,8 @@ from core.spacy_utils import *
 # SudachiPy token length limit (bytes) - must match split_by_mark.py
 SUDACHI_MAX_LENGTH = 40000
 
-from core.utils.models import _3_1_SPLIT_BY_NLP, _CACHE_SENTENCES_NLP, Chunk, Sentence
-from core.utils import rprint, load_key, get_joiner, timer, cache_objects
+from core.utils.models import _3_1_SPLIT_BY_NLP, Chunk, Sentence
+from core.utils import rprint, load_key, get_joiner, timer
 from core._2_asr import load_chunks
 
 
@@ -270,6 +271,13 @@ def split_by_spacy() -> List[Sentence]:
     # 使用对象化流程生成 Sentence 对象
     sentences = split_by_nlp(nlp)
 
+    # 保存文本文件
+    dir_path = os.path.dirname(_3_1_SPLIT_BY_NLP)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(_3_1_SPLIT_BY_NLP, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(s.text for s in sentences))
+
     rprint(f"[green]✅ NLP 分句完成: {_3_1_SPLIT_BY_NLP}[/green]")
     return sentences
 
@@ -278,7 +286,6 @@ def split_by_spacy() -> List[Sentence]:
 # New NLP Split Function with Character Position Tracking
 # ------------
 
-@cache_objects(_CACHE_SENTENCES_NLP, _3_1_SPLIT_BY_NLP)
 def split_by_nlp(nlp: Language) -> List[Sentence]:
     """
     NLP 多步骤分句主函数

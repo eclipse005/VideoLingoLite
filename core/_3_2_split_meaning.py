@@ -1,12 +1,13 @@
 import concurrent.futures
 import math
+import os
 from typing import List
 
 from core.utils import *
 from core._2_asr import load_chunks
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, _CACHE_SENTENCES_SPLIT, Sentence
+from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, Sentence
 
 console = Console()
 
@@ -218,7 +219,6 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
     return [s for sublist in new_sentences for s in sublist]
 
 @timer("LLM 长句切分")
-@cache_objects(_CACHE_SENTENCES_SPLIT, _3_2_SPLIT_BY_MEANING)
 def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
     """
     主函数：切分长句 (Stage 2)
@@ -259,6 +259,13 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
         )
 
     console.print(f'[green]✅ 处理完成！最终句子数: {len(sentences)}[/green]')
+
+    # 保存文本文件
+    dir_path = os.path.dirname(_3_2_SPLIT_BY_MEANING)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(s.text for s in sentences))
 
     return sentences
 
