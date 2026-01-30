@@ -8,6 +8,15 @@
 
 ---
 
+## 分支说明
+
+| 分支 | ASR 引擎 | 语言支持 | 适用场景 |
+|------|----------|----------|----------|
+| **main** (当前) | **Gemini + Parakeet** | **25 种欧洲语言** | **欧洲语言转录** |
+| [feature/qwen3-asr](https://github.com/eclipse005/VideoLingoLite/tree/feature/qwen3-asr) | Qwen3-ASR | 52 种语言 + 22 中文方言 | 中日韩等多语言支持 |
+
+---
+
 ## 核心功能
 
 ### 语音转文字
