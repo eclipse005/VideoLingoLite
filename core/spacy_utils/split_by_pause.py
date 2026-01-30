@@ -4,7 +4,7 @@
 import pandas as pd
 import warnings
 from typing import List
-from core.utils.config_utils import load_key
+from core.utils.config_utils import load_key, get_joiner
 from core.utils import rprint
 from core.utils.models import Sentence
 
@@ -31,6 +31,10 @@ def split_by_pause(sentences: List[Sentence], pause_threshold: float) -> List[Se
     # 如果停顿切分未启用，直接返回
     if pause_threshold <= 0:
         return sentences
+
+    # 获取 joiner（根据语言决定使用空格或空字符串）
+    asr_language = load_key("asr.language")
+    joiner = get_joiner(asr_language)
 
     # 检查句子内部的停顿并切分
     result = []
@@ -66,7 +70,7 @@ def split_by_pause(sentences: List[Sentence], pause_threshold: float) -> List[Se
             new_chunks = sentence.chunks[start_idx:split_idx]
             new_sentence = Sentence(
                 chunks=new_chunks,
-                text=''.join(c.text for c in new_chunks),
+                text=joiner.join(c.text for c in new_chunks),
                 start=new_chunks[0].start,
                 end=new_chunks[-1].end,
                 translation=sentence.translation,
@@ -81,7 +85,7 @@ def split_by_pause(sentences: List[Sentence], pause_threshold: float) -> List[Se
             new_chunks = sentence.chunks[start_idx:]
             new_sentence = Sentence(
                 chunks=new_chunks,
-                text=''.join(c.text for c in new_chunks),
+                text=joiner.join(c.text for c in new_chunks),
                 start=new_chunks[0].start,
                 end=new_chunks[-1].end,
                 translation=sentence.translation,
