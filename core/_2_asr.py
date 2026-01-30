@@ -1,5 +1,5 @@
 from core.utils import *
-from core.asr_backend.audio_preprocess import process_transcription, convert_video_to_audio, split_audio, save_results
+from core.asr_backend.audio_preprocess import process_transcription, convert_video_to_audio, split_audio, split_audio_by_vad, save_results
 from core._1_ytdlp import find_video_files
 from core.utils.models import *
 import json
@@ -27,8 +27,11 @@ def transcribe():
     else:
         vocal_audio = _RAW_AUDIO_FILE
 
-    # 3. Extract audio
-    segments = split_audio(vocal_audio)
+    # 3. Extract audio segments (VAD or FFMPEG silence detection)
+    if load_key("vad.enabled", default=False):
+        segments = split_audio_by_vad(vocal_audio)
+    else:
+        segments = split_audio(vocal_audio)
 
     # 4. Select ASR backend (only qwen in this branch)
     from core.asr_backend.qwen3_asr import transcribe_batch

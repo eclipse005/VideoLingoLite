@@ -61,6 +61,60 @@ def split_audio(audio_file: str, target_len: float = 2*60, win: float = 60) -> L
     rprint(f"[green]🎙️ Audio split completed {len(segments)} segments[/green]")
     return segments
 
+
+def split_audio_by_vad(audio_file: str, max_segment_duration: float = None) -> List[Tuple[float, float]]:
+    """
+    使用 VAD 检测语音片段并进行切分
+
+    Args:
+        audio_file: 音频文件路径
+        max_segment_duration: 单段最大时长（秒），默认使用配置值
+
+    Returns:
+        List[Tuple[float, float]]: (start, end) 列表，单位秒
+    """
+    from core.utils.vad_processor import get_speech_segments
+
+    # 使用配置中的默认值
+    if max_segment_duration is None:
+        max_segment_duration = load_key("vad.max_segment_duration", default=120)
+
+    rprint("[blue]🎤 Using VAD to detect speech segments...[/blue]")
+
+    # 1. 使用 VAD 获取所有语音片段
+    segments = get_speech_segments(
+        audio_file,
+        threshold=load_key("vad.threshold", default=0.4),
+        min_silence_ms=load_key("vad.min_silence_ms", default=200),
+        min_speech_ms=load_key("vad.min_speech_ms", default=150),
+        merge_gap_ms=load_key("vad.merge_gap_ms", default=150),
+    )
+
+    rprint(f"[green]✅ VAD detected {len(segments)} speech segments[/green]")
+
+    # 2. 对过长的语音段进行强制切分（避免显存溢出）
+    result = []
+    split_count = 0
+    for start, end in segments:
+        duration = end - start
+        if duration <= max_segment_duration:
+            result.append((start, end))
+        else:
+            # 切分长段
+            num_parts = int(duration // max_segment_duration) + 1
+            part_duration = duration / num_parts
+            for i in range(num_parts):
+                seg_start = start + i * part_duration
+                seg_end = min(start + (i + 1) * part_duration, end)
+                result.append((seg_start, seg_end))
+                split_count += 1
+
+    if split_count > 0:
+        rprint(f"[dim]  Split {split_count} long segments into {split_count + len(segments)} total parts[/dim]")
+
+    rprint(f"[green]🎙️ Total {len(result)} audio segments for ASR[/green]")
+    return result
+
 def process_transcription(result: Dict) -> pd.DataFrame:
     all_words = []
     for segment in result['segments']:
