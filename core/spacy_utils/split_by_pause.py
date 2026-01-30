@@ -69,6 +69,10 @@ def fix_abnormal_words_in_sentence(sentence: Sentence, max_duration: float = 2.0
                        f"{duration:.2f}s → {avg_duration:.2f}s "
                        f"(end {original_end:.2f}s → {chunk.end:.2f}s)[/yellow]")
 
+            else:
+                # 句中词：情况复杂，暂不处理，仅记录
+                rprint(f"[dim]⚠️ 句中异常词 '{chunk.text}': {duration:.2f}s (跳过修正)[/dim]")
+
     # 更新句子的时间戳
     sentence.update_timestamps()
     return sentence
