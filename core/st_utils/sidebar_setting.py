@@ -104,6 +104,18 @@ def subtitle_settings_section():
             if transcript_only_enabled != load_key("transcript_only"):
                 update_key("transcript_only", transcript_only_enabled)
 
+        # 热词功能（开关在上方，输入框在下方）
+        hotword_enabled = st.toggle("热词", value=load_key("asr.hotword_enabled"),
+                                   help="启用热词提升专业术语识别准确率")
+        if hotword_enabled != load_key("asr.hotword_enabled"):
+            update_key("asr.hotword_enabled", hotword_enabled)
+
+        hotword = st.text_input("热词内容", value=load_key("asr.hotword", default=""),
+                               help="输入专业术语，用空格分隔，如：15 minute 交易 停滞",
+                               disabled=not load_key("asr.hotword_enabled"))
+        if hotword != load_key("asr.hotword", default=""):
+            update_key("asr.hotword", hotword)
+
         with c2:
             target_language = st.text_input("目标语言", value=load_key("target_language"), help="用自然语言输入任何语言,只要LLM能理解即可")
             if target_language != load_key("target_language"):

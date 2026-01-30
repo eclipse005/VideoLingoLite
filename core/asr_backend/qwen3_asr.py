@@ -8,11 +8,15 @@ import sys
 import logging
 import warnings
 import gc
-from typing import Optional
+import unicodedata
+from typing import Optional, List, Tuple
 
 # ------------
 # Suppress warnings (MUST be before library imports)
 # ------------
+
+# Suppress transformers warnings
+os.environ['TRANSFORMERS_VERBOSITY'] = 'error'
 
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.ERROR)
@@ -26,6 +30,7 @@ for logger_name in ['transformers', 'qwen_asr']:
 import torch
 import librosa
 from rich import print as rprint
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
 from core.utils import load_key, except_handler
 
 # Model cache directory
@@ -33,9 +38,136 @@ MODEL_DIR = load_key("model_dir")
 ABS_MODEL_DIR = os.path.abspath(MODEL_DIR)
 
 
+def _is_word_char(char: str) -> bool:
+    """
+    判断字符是否是"词字符"（使用 Unicode 标准分类）
+
+    基于 unicodedata.category():
+    - L* (Letter): 字母 - 保留
+    - N* (Number): 数字 - 保留
+    - P* (Punctuation): 标点 - 跳过
+    - S* (Symbol): 符号 - 跳过
+    - Z* (Separator): 分隔符 - 跳过（包括空格）
+    - C* (Control): 控制字符 - 跳过
+    """
+    if char.isspace():
+        return False
+
+    category = unicodedata.category(char)
+
+    # 保留字母(L*)和数字(N*)
+    # 这自动支持：中文、日文、韩文、英文、阿拉伯文等所有语言
+    if category.startswith('L') or category.startswith('N'):
+        return True
+
+    return False
+
+
+def _align_text_to_timestamps(full_text: str, word_timestamps: List[Tuple[str, float, float]]) -> List[Tuple[str, float, float]]:
+    """
+    将完整文本的所有字符（包括标点等）对齐到单词时间戳
+
+    使用 difflib 进行模糊匹配，处理格式不一致问题（如 "seventyone" vs "seventy-one"）
+
+    Args:
+        full_text: 完整文本，包含所有字符
+        word_timestamps: [(word, start_time, end_time), ...]
+
+    Returns:
+        [(text_with_following_chars, start_time, end_time), ...]
+    """
+    if not word_timestamps or not full_text:
+        return []
+
+    # Build cleaned version of full_text for matching (remove spaces but keep char positions)
+    # We need to maintain position mapping
+    full_text_chars = list(full_text)
+    clean_to_original_map = []  # Maps clean position -> original position
+    original_to_clean_map = []  # Maps original position -> clean position
+
+    for i, char in enumerate(full_text):
+        if _is_word_char(char):
+            original_to_clean_map.append(len(clean_to_original_map))
+            clean_to_original_map.append(i)
+        else:
+            original_to_clean_map.append(-1)  # Non-word chars map to -1
+
+    clean_text = ''.join([full_text[i] for i in clean_to_original_map])
+
+    # Clean each word from word_timestamps
+    cleaned_words = []
+    for word, start, end in word_timestamps:
+        cleaned = ''.join([c for c in word if _is_word_char(c)])
+        cleaned_words.append(cleaned)
+
+    # Build result using word-level alignment
+    result = []
+    word_idx = 0
+    clean_pos = 0  # Position in clean_text
+
+    while word_idx < len(word_timestamps) and clean_pos < len(clean_text):
+        current_clean_word = cleaned_words[word_idx]
+
+        # Try to find current_clean_word in clean_text starting at clean_pos
+        if clean_text[clean_pos:clean_pos + len(current_clean_word)].lower() == current_clean_word.lower():
+            # Found match - calculate original position
+            match_start_clean = clean_pos
+            match_end_clean = clean_pos + len(current_clean_word)
+
+            # Map back to original position
+            original_start = clean_to_original_map[match_start_clean]
+            original_end = clean_to_original_map[match_end_clean - 1] + 1
+
+            # Collect following non-word characters (punctuation, skip spaces)
+            following_original_end = original_end
+            # First skip any spaces after the word
+            while following_original_end < len(full_text) and full_text[following_original_end].isspace():
+                following_original_end += 1
+            # Then collect punctuation
+            while following_original_end < len(full_text):
+                char = full_text[following_original_end]
+                if _is_word_char(char):
+                    break
+                following_original_end += 1
+
+            # Get the text segment (original word + following punctuation, no trailing spaces)
+            text_segment = full_text[original_start:following_original_end].rstrip()
+
+            original_word, start, end = word_timestamps[word_idx]
+            result.append((text_segment, start, end))
+
+            # Move past this word
+            clean_pos = match_end_clean
+            word_idx += 1
+        else:
+            # Try to skip ahead in clean_text to find a match
+            # This handles cases where words appear in different order or with extra text
+            clean_pos += 1
+
+            # Safety: if we've gone too far without finding a match, advance word_idx
+            if clean_pos >= len(clean_text):
+                word_idx += 1
+                clean_pos = 0  # Reset and try to find next word
+
+    # Fallback: if alignment failed significantly, use original approach
+    if len(result) < len(word_timestamps) * 0.5:  # Less than 50% matched
+        import os
+        os.makedirs('output/log', exist_ok=True)
+        with open('output/log/debug_alignment_error.txt', 'a', encoding='utf-8') as f:
+            f.write(f"\n=== Alignment Partially Failed ===\n")
+            f.write(f"Total word_timestamps: {len(word_timestamps)}\n")
+            f.write(f"Matched words: {len(result)}\n")
+            f.write(f"Using fallback method...\n")
+
+        # Fallback: just use original words without punctuation attachment
+        return [(w[0], w[1], w[2]) for w in word_timestamps]
+
+    return result
+
+
 def _convert_qwen_to_standard_asr_format(result, start_offset=0):
     """
-    Convert Qwen3-ASR output to standard ASR format
+    Convert Qwen3-ASR output to standard ASR format with punctuation alignment
 
     Args:
         result: Qwen3-ASR result object with .language, .text, .time_stamps
@@ -50,17 +182,26 @@ def _convert_qwen_to_standard_asr_format(result, start_offset=0):
     # Extract language
     language = result.language if hasattr(result, 'language') else 'unknown'
 
-    # Build word list from timestamps
+    # Extract full text with punctuation
+    full_text = result.text if hasattr(result, 'text') else ''
+
+    # Convert timestamps to tuple list for alignment
+    word_timestamps = [(ts.text, ts.start_time, ts.end_time) for ts in result.time_stamps]
+
+    # Apply character alignment (attach punctuation to words)
+    aligned_timestamps = _align_text_to_timestamps(full_text, word_timestamps)
+
+    # Build word list from aligned timestamps
     words = []
-    for ts in result.time_stamps:
+    for text, start, end in aligned_timestamps:
         words.append({
-            'word': ts.text,
-            'start': round(ts.start_time + start_offset, 2),
-            'end': round(ts.end_time + start_offset, 2)
+            'word': text,
+            'start': round(start + start_offset, 2),
+            'end': round(end + start_offset, 2)
         })
 
-    # Combine all words into a single segment
-    segment_text = ' '.join([w['word'] for w in words])
+    # Use the original full_text for segment text
+    segment_text = full_text
 
     segment = {
         'start': round(words[0]['start'], 2) if words else round(start_offset, 2),
@@ -146,9 +287,73 @@ def _load_qwen_model():
 
 
 @except_handler("Qwen3-ASR processing error:")
+def transcribe_with_model(model, vocal_audio_file, start, end, language=None, context=None):
+    """
+    Transcribe a single audio segment using pre-loaded model
+
+    Args:
+        model: Pre-loaded Qwen3-ASR model
+        vocal_audio_file: Audio file path
+        start: Start time offset (seconds)
+        end: End time offset (seconds)
+        language: Language for ASR (optional, will load from config if None)
+        context: Hotword context (optional, will load from config if None)
+
+    Returns:
+        dict: Standard ASR format with segments
+    """
+    # Load audio segment
+    audio_length = end - start
+    audio, sr = librosa.load(vocal_audio_file, sr=16000, offset=start, duration=audio_length, mono=True)
+
+    # Load language setting if not provided
+    if language is None:
+        asr_language = load_key("asr.language")
+        lang_map = {
+            'zh': 'Chinese', 'en': 'English', 'ja': 'Japanese', 'ko': 'Korean',
+            'yue': 'Cantonese', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+            'it': 'Italian', 'ru': 'Russian', 'ar': 'Arabic', 'pt': 'Portuguese',
+            'th': 'Thai', 'vi': 'Vietnamese', 'id': 'Indonesian', 'tr': 'Turkish',
+            'hi': 'Hindi', 'ms': 'Malay', 'nl': 'Dutch', 'sv': 'Swedish',
+            'da': 'Danish', 'fi': 'Finnish', 'pl': 'Polish', 'cs': 'Czech',
+            'fil': 'Filipino', 'fa': 'Persian', 'el': 'Greek', 'hu': 'Hungarian',
+            'mk': 'Macedonian', 'ro': 'Romanian',
+        }
+        language = lang_map.get(asr_language, None)
+
+    # Load context if not provided
+    if context is None:
+        hotword_enabled = load_key("asr.hotword_enabled", default=False)
+        hotword = load_key("asr.hotword", default="")
+        context = hotword if (hotword_enabled and hotword) else None
+
+    # Transcribe
+    transcribe_kwargs = {
+        "audio": (audio, sr),
+        "language": language,
+        "return_time_stamps": True,
+    }
+    if context:
+        transcribe_kwargs["context"] = context
+
+    results = model.transcribe(**transcribe_kwargs)
+
+    if not results or len(results) == 0:
+        raise Exception("Qwen3-ASR returned empty result")
+
+    # Convert to standard format
+    result = _convert_qwen_to_standard_asr_format(results[0], start_offset=start)
+
+    # Clean up audio data to free GPU memory
+    del audio, results
+
+    return result
+
+
+@except_handler("Qwen3-ASR processing error:")
 def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
     """
-    Qwen3-ASR transcription main function
+    Qwen3-ASR transcription main function (single segment, loads model each time)
 
     Args:
         raw_audio_file: Original audio file path
@@ -163,75 +368,79 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    # Load model
     model = _load_qwen_model()
 
-    # Load audio segment
-    audio_length = end - start
-    rprint(f"[cyan]🎵 Loading audio segment ({audio_length:.1f}s)...[/cyan]")
+    try:
+        return transcribe_with_model(model, vocal_audio_file, start, end)
+    finally:
+        del model
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        rprint("[dim]♻️ Resources released[/dim]")
 
-    audio, sr = librosa.load(vocal_audio_file, sr=16000, offset=start, duration=audio_length, mono=True)
+
+@except_handler("Qwen3-ASR batch processing error:")
+def transcribe_batch(vocal_audio_file, segments):
+    """
+    Batch transcription with single model load (efficient for multi-segment audio)
+
+    Args:
+        vocal_audio_file: Audio file path
+        segments: List of (start, end) tuples in seconds
+
+    Returns:
+        List[dict]: Standard ASR format results for each segment
+    """
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    model = _load_qwen_model()
+
+    # Load language and context once
+    asr_language = load_key("asr.language")
+    lang_map = {
+        'zh': 'Chinese', 'en': 'English', 'ja': 'Japanese', 'ko': 'Korean',
+        'yue': 'Cantonese', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+        'it': 'Italian', 'ru': 'Russian', 'ar': 'Arabic', 'pt': 'Portuguese',
+        'th': 'Thai', 'vi': 'Vietnamese', 'id': 'Indonesian', 'tr': 'Turkish',
+        'hi': 'Hindi', 'ms': 'Malay', 'nl': 'Dutch', 'sv': 'Swedish',
+        'da': 'Danish', 'fi': 'Finnish', 'pl': 'Polish', 'cs': 'Czech',
+        'fil': 'Filipino', 'fa': 'Persian', 'el': 'Greek', 'hu': 'Hungarian',
+        'mk': 'Macedonian', 'ro': 'Romanian',
+    }
+    language = lang_map.get(asr_language, None)
+
+    hotword_enabled = load_key("asr.hotword_enabled", default=False)
+    hotword = load_key("asr.hotword", default="")
+    context = hotword if (hotword_enabled and hotword) else None
+
+    if context:
+        rprint(f"[cyan]🔥 Hotword enabled: {context}[/cyan]")
 
     try:
-        rprint(f"[bold green]Transcribing with Qwen3-ASR...[/bold green]")
+        results = []
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+        ) as progress:
+            task = progress.add_task("[cyan]正在转录音频...", total=len(segments))
+            for i, (start, end) in enumerate(segments, 1):
+                result = transcribe_with_model(model, vocal_audio_file, start, end, language, context)
+                results.append(result)
+                progress.update(task, advance=1)
 
-        # Get language setting
-        asr_language = load_key("asr.language")
+                # Clean up after each segment to prevent memory leak
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
-        # Map ISO code to natural language name for Qwen3-ASR
-        lang_map = {
-            'zh': 'Chinese',
-            'en': 'English',
-            'ja': 'Japanese',
-            'ko': 'Korean',
-            'yue': 'Cantonese',
-            'es': 'Spanish',
-            'fr': 'French',
-            'de': 'German',
-            'it': 'Italian',
-            'ru': 'Russian',
-            'ar': 'Arabic',
-            'pt': 'Portuguese',
-            'th': 'Thai',
-            'vi': 'Vietnamese',
-            'id': 'Indonesian',
-            'tr': 'Turkish',
-            'hi': 'Hindi',
-            'ms': 'Malay',
-            'nl': 'Dutch',
-            'sv': 'Swedish',
-            'da': 'Danish',
-            'fi': 'Finnish',
-            'pl': 'Polish',
-            'cs': 'Czech',
-            'fil': 'Filipino',
-            'fa': 'Persian',
-            'el': 'Greek',
-            'hu': 'Hungarian',
-            'mk': 'Macedonian',
-            'ro': 'Romanian',
-        }
-
-        language = lang_map.get(asr_language, None)  # None for auto-detect
-
-        # Transcribe with (np.ndarray, sr) tuple
-        results = model.transcribe(
-            audio=(audio, sr),  # Pass as (numpy_array, sample_rate) tuple
-            language=language,
-            return_time_stamps=True,
-        )
-
-        if not results or len(results) == 0:
-            raise Exception("Qwen3-ASR returned empty result")
-
-        # Convert to standard format
-        result = _convert_qwen_to_standard_asr_format(results[0], start_offset=start)
-
-        rprint(f"[green]✅ Transcription completed: {result['language']}[/green]")
-        return result
-
+        return results
     finally:
-        # Clean up
         del model
         gc.collect()
         if torch.cuda.is_available():

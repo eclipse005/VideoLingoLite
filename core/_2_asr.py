@@ -30,20 +30,24 @@ def transcribe():
     segments = split_audio(vocal_audio)
 
     # 4. Select ASR backend (only qwen in this branch)
-    from core.asr_backend.qwen3_asr import transcribe_audio as ts
+    from core.asr_backend.qwen3_asr import transcribe_batch
     model = load_key("asr.model", default="Qwen3-ASR-0.6B")
     rprint(f"[cyan]🎤 Transcribing audio with {model}...[/cyan]")
 
-    # 5. Transcribe audio by clips
-    all_results = []
-    for start, end in segments:
-        result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)
-        all_results.append(result)
+    # 5. Batch transcribe (load model once, process all segments)
+    rprint(f"[cyan]📋 Processing {len(segments)} audio segments...[/cyan]")
+    all_results = transcribe_batch(vocal_audio, segments)
+    rprint(f"[green]✅ Received {len(all_results)} transcription results[/green]")
 
-    # 6. Combine results
+    # 6. Combine results (keep multiple segments)
     combined_result = {'segments': []}
+    segment_count = 0
     for result in all_results:
-        combined_result['segments'].extend(result['segments'])
+        for segment in result.get('segments', []):
+            combined_result['segments'].append(segment)
+            segment_count += 1
+    rprint(f"[cyan]📊 Total segments in combined_result: {segment_count}[/cyan]")
+    combined_result['language'] = all_results[0].get('language', 'unknown') if all_results else 'unknown'
 
     # 7. Save ASR result to JSON
     asr_json_path = "output/log/asr.json"

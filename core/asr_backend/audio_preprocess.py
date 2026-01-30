@@ -21,12 +21,12 @@ def convert_video_to_audio(video_file: str):
         ], check=True, stderr=subprocess.PIPE)
         rprint(f"[green]🎬➡️🎵 Converted <{video_file}> to <{_RAW_AUDIO_FILE}> with FFmpeg\n[/green]")
 
-def split_audio(audio_file: str, target_len: float = 2*60, win: float = 60) -> List[Tuple[float, float]]:
-    ## 在 [target_len-win, target_len+win] 区间内用 pydub 检测静默，切分音频
+def split_audio(audio_file: str, target_len: float = 2*60, win: float = 30) -> List[Tuple[float, float]]:
+    ## 在 [target_len-win, target_len] 区间内向左查找静默点，切分音频（避免向右找导致音频过长爆显存）
     rprint(f"[blue]🎙️ Starting audio segmentation {audio_file} {target_len} {win}[/blue]")
     audio = AudioSegment.from_file(audio_file)
     duration = float(mediainfo(audio_file)["duration"])
-    if duration <= target_len + win:
+    if duration <= target_len:
         return [(0, duration)]
     segments, pos = [], 0.0
     safe_margin = 0.5  # 静默点前后安全边界，单位秒
@@ -36,24 +36,26 @@ def split_audio(audio_file: str, target_len: float = 2*60, win: float = 60) -> L
             segments.append((pos, duration)); break
 
         threshold = pos + target_len
-        ws, we = int((threshold - win) * 1000), int((threshold + win) * 1000)
-        
+        # 只向左找：在 [threshold-win, threshold] 范围内查找静音点
+        ws, we = int((threshold - win) * 1000), int(threshold * 1000)
+
         # 获取完整的静默区域
         silence_regions = detect_silence(audio[ws:we], min_silence_len=int(safe_margin*1000), silence_thresh=-30)
         silence_regions = [(s/1000 + (threshold - win), e/1000 + (threshold - win)) for s, e in silence_regions]
         # 筛选长度足够（至少1秒）且位置适合的静默区域
         valid_regions = [
-            (start, end) for start, end in silence_regions 
-            if (end - start) >= (safe_margin * 2) and threshold <= start + safe_margin <= threshold + win
+            (start, end) for start, end in silence_regions
+            if (end - start) >= (safe_margin * 2) and (threshold - win) <= start + safe_margin <= threshold
         ]
-        
+
         if valid_regions:
-            start, end = valid_regions[0]
+            # 选择最右侧的静默区域（最接近 threshold）
+            start, end = valid_regions[-1]
             split_at = start + safe_margin  # 在静默区域起始点后0.5秒处切分
         else:
             rprint(f"[yellow]⚠️ No valid silence regions found for {audio_file} at {threshold}s, using threshold[/yellow]")
             split_at = threshold
-            
+
         segments.append((pos, split_at)); pos = split_at
 
     rprint(f"[green]🎙️ Audio split completed {len(segments)} segments[/green]")
