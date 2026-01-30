@@ -165,13 +165,14 @@ def _align_text_to_timestamps(full_text: str, word_timestamps: List[Tuple[str, f
     return result
 
 
-def _convert_qwen_to_standard_asr_format(result, start_offset=0):
+def _convert_qwen_to_standard_asr_format(result, start_offset=0, align_punctuation=True):
     """
-    Convert Qwen3-ASR output to standard ASR format with punctuation alignment
+    Convert Qwen3-ASR output to standard ASR format
 
     Args:
         result: Qwen3-ASR result object with .language, .text, .time_stamps
         start_offset: Time offset for this audio segment
+        align_punctuation: Whether to attach punctuation to word timestamps
 
     Returns:
         dict: Standard ASR format with segments
@@ -182,31 +183,36 @@ def _convert_qwen_to_standard_asr_format(result, start_offset=0):
     # Extract language
     language = result.language if hasattr(result, 'language') else 'unknown'
 
-    # Extract full text with punctuation
+    # Extract full text
     full_text = result.text if hasattr(result, 'text') else ''
 
-    # Convert timestamps to tuple list for alignment
-    word_timestamps = [(ts.text, ts.start_time, ts.end_time) for ts in result.time_stamps]
+    if align_punctuation:
+        # Apply character alignment (attach punctuation to words)
+        word_timestamps = [(ts.text, ts.start_time, ts.end_time) for ts in result.time_stamps]
+        aligned_timestamps = _align_text_to_timestamps(full_text, word_timestamps)
 
-    # Apply character alignment (attach punctuation to words)
-    aligned_timestamps = _align_text_to_timestamps(full_text, word_timestamps)
-
-    # Build word list from aligned timestamps
-    words = []
-    for text, start, end in aligned_timestamps:
-        words.append({
-            'word': text,
-            'start': round(start + start_offset, 2),
-            'end': round(end + start_offset, 2)
-        })
-
-    # Use the original full_text for segment text
-    segment_text = full_text
+        # Build word list from aligned timestamps
+        words = []
+        for text, start, end in aligned_timestamps:
+            words.append({
+                'word': text,
+                'start': round(start + start_offset, 2),
+                'end': round(end + start_offset, 2)
+            })
+    else:
+        # Build word list from original timestamps (no punctuation alignment)
+        words = []
+        for ts in result.time_stamps:
+            words.append({
+                'word': ts.text,
+                'start': round(ts.start_time + start_offset, 2),
+                'end': round(ts.end_time + start_offset, 2)
+            })
 
     segment = {
         'start': round(words[0]['start'], 2) if words else round(start_offset, 2),
         'end': round(words[-1]['end'], 2) if words else round(start_offset, 2),
-        'text': segment_text,
+        'text': full_text,
         'words': words
     }
 
@@ -287,7 +293,7 @@ def _load_qwen_model():
 
 
 @except_handler("Qwen3-ASR processing error:")
-def transcribe_with_model(model, vocal_audio_file, start, end, language=None):
+def transcribe_with_model(model, vocal_audio_file, start, end, language=None, return_raw=False):
     """
     Transcribe a single audio segment using pre-loaded model
 
@@ -297,9 +303,11 @@ def transcribe_with_model(model, vocal_audio_file, start, end, language=None):
         start: Start time offset (seconds)
         end: End time offset (seconds)
         language: Language for ASR (optional, will load from config if None)
+        return_raw: If True, return both aligned and raw results
 
     Returns:
-        dict: Standard ASR format with segments
+        dict: Standard ASR format with segments (with punctuation alignment)
+        or tuple: (aligned_result, raw_result) if return_raw=True
     """
     # Load audio segment
     audio_length = end - start
@@ -330,13 +338,18 @@ def transcribe_with_model(model, vocal_audio_file, start, end, language=None):
     if not results or len(results) == 0:
         raise Exception("Qwen3-ASR returned empty result")
 
-    # Convert to standard format
-    result = _convert_qwen_to_standard_asr_format(results[0], start_offset=start)
+    # Convert to standard format (with punctuation alignment for processing)
+    aligned_result = _convert_qwen_to_standard_asr_format(results[0], start_offset=start, align_punctuation=True)
+
+    # Also generate raw version (without punctuation alignment) for debugging
+    raw_result = _convert_qwen_to_standard_asr_format(results[0], start_offset=start, align_punctuation=False)
 
     # Clean up audio data to free GPU memory
     del audio, results
 
-    return result
+    if return_raw:
+        return aligned_result, raw_result
+    return aligned_result
 
 
 @except_handler("Qwen3-ASR processing error:")
@@ -379,7 +392,7 @@ def transcribe_batch(vocal_audio_file, segments):
         segments: List of (start, end) tuples in seconds
 
     Returns:
-        List[dict]: Standard ASR format results for each segment
+        List[tuple]: List of (aligned_result, raw_result) for each segment
     """
     gc.collect()
     if torch.cuda.is_available():
@@ -412,8 +425,8 @@ def transcribe_batch(vocal_audio_file, segments):
         ) as progress:
             task = progress.add_task("[cyan]正在转录音频...", total=len(segments))
             for i, (start, end) in enumerate(segments, 1):
-                result = transcribe_with_model(model, vocal_audio_file, start, end, language)
-                results.append(result)
+                aligned, raw = transcribe_with_model(model, vocal_audio_file, start, end, language, return_raw=True)
+                results.append((aligned, raw))
                 progress.update(task, advance=1)
 
                 # Clean up after each segment to prevent memory leak
