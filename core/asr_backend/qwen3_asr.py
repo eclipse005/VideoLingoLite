@@ -287,7 +287,7 @@ def _load_qwen_model():
 
 
 @except_handler("Qwen3-ASR processing error:")
-def transcribe_with_model(model, vocal_audio_file, start, end, language=None, context=None):
+def transcribe_with_model(model, vocal_audio_file, start, end, language=None):
     """
     Transcribe a single audio segment using pre-loaded model
 
@@ -297,7 +297,6 @@ def transcribe_with_model(model, vocal_audio_file, start, end, language=None, co
         start: Start time offset (seconds)
         end: End time offset (seconds)
         language: Language for ASR (optional, will load from config if None)
-        context: Hotword context (optional, will load from config if None)
 
     Returns:
         dict: Standard ASR format with segments
@@ -321,22 +320,12 @@ def transcribe_with_model(model, vocal_audio_file, start, end, language=None, co
         }
         language = lang_map.get(asr_language, None)
 
-    # Load context if not provided
-    if context is None:
-        hotword_enabled = load_key("asr.hotword_enabled", default=False)
-        hotword = load_key("asr.hotword", default="")
-        context = hotword if (hotword_enabled and hotword) else None
-
     # Transcribe
-    transcribe_kwargs = {
-        "audio": (audio, sr),
-        "language": language,
-        "return_time_stamps": True,
-    }
-    if context:
-        transcribe_kwargs["context"] = context
-
-    results = model.transcribe(**transcribe_kwargs)
+    results = model.transcribe(
+        audio=(audio, sr),
+        language=language,
+        return_time_stamps=True,
+    )
 
     if not results or len(results) == 0:
         raise Exception("Qwen3-ASR returned empty result")
@@ -398,7 +387,7 @@ def transcribe_batch(vocal_audio_file, segments):
 
     model = _load_qwen_model()
 
-    # Load language and context once
+    # Load language once
     asr_language = load_key("asr.language")
     lang_map = {
         'zh': 'Chinese', 'en': 'English', 'ja': 'Japanese', 'ko': 'Korean',
@@ -412,13 +401,6 @@ def transcribe_batch(vocal_audio_file, segments):
     }
     language = lang_map.get(asr_language, None)
 
-    hotword_enabled = load_key("asr.hotword_enabled", default=False)
-    hotword = load_key("asr.hotword", default="")
-    context = hotword if (hotword_enabled and hotword) else None
-
-    if context:
-        rprint(f"[cyan]🔥 Hotword enabled: {context}[/cyan]")
-
     try:
         results = []
         with Progress(
@@ -430,7 +412,7 @@ def transcribe_batch(vocal_audio_file, segments):
         ) as progress:
             task = progress.add_task("[cyan]正在转录音频...", total=len(segments))
             for i, (start, end) in enumerate(segments, 1):
-                result = transcribe_with_model(model, vocal_audio_file, start, end, language, context)
+                result = transcribe_with_model(model, vocal_audio_file, start, end, language)
                 results.append(result)
                 progress.update(task, advance=1)
 

@@ -45,7 +45,7 @@ target_language: '简体中文'
 
 asr:
   # ASR (Automatic Speech Recognition) specified recognition language ISO 639-1
-  language: 'ja'
+  language: 'en'
   # ASR running mode: qwen (local model)
   # - qwen: Local model (52 languages + 22 Chinese dialects, requires GPU)
   #   Supported: zh, en, yue, ar, de, fr, es, pt, id, it, ko, ru, th, vi, ja, tr, hi, ms, nl, sv, da, fi, pl, cs, fil, fa, el, hu, mk, ro
@@ -53,10 +53,7 @@ asr:
   # Qwen3-ASR model
   # - Qwen3-ASR-1.7B: Higher accuracy, slower speed
   # - Qwen3-ASR-0.6B: Faster speed, lower accuracy
-  model: 'Qwen3-ASR-0.6B'
-  # Hotword/Context for ASR (helps improve recognition of specific terms)
-  hotword_enabled: false
-  hotword: ''
+  model: 'Qwen3-ASR-1.7B'
 
 # Vocal separation for noisy environments
 vocal_separation:
