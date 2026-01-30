@@ -21,7 +21,7 @@ def convert_video_to_audio(video_file: str):
         ], check=True, stderr=subprocess.PIPE)
         rprint(f"[green]🎬➡️🎵 Converted <{video_file}> to <{_RAW_AUDIO_FILE}> with FFmpeg\n[/green]")
 
-def split_audio(audio_file: str, target_len: float = 2*60, win: float = 30) -> List[Tuple[float, float]]:
+def split_audio(audio_file: str, target_len: float = 2*60, win: float = 60) -> List[Tuple[float, float]]:
     ## 在 [target_len-win, target_len] 区间内向左查找静默点，切分音频（避免向右找导致音频过长爆显存）
     rprint(f"[blue]🎙️ Starting audio segmentation {audio_file} {target_len} {win}[/blue]")
     audio = AudioSegment.from_file(audio_file)
