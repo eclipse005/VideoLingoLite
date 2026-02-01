@@ -82,7 +82,7 @@ def _get_api_config_for_log_title(log_title):
 # ask gpt once
 # ------------
 
-@except_handler("GPT request failed", retry=5)
+@except_handler("GPT request failed", retry=5, verbose=False)
 def ask_gpt(prompt, resp_type=None, valid_def=None, log_title="default"):
     # 根据 log_title 确定使用的API配置
     api_config_prefix = _get_api_config_for_log_title(log_title)

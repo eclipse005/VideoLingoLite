@@ -17,8 +17,8 @@ from core.spacy_utils import *
 # SudachiPy token length limit (bytes) - must match split_by_mark.py
 SUDACHI_MAX_LENGTH = 40000
 
-from core.utils.models import _3_1_SPLIT_BY_NLP, _CACHE_SENTENCES_NLP, Chunk, Sentence
-from core.utils import rprint, load_key, get_joiner, timer, cache_objects
+from core.utils.models import _3_1_SPLIT_BY_NLP, Chunk, Sentence
+from core.utils import rprint, load_key, get_joiner, timer
 from core._2_asr import load_chunks
 
 
@@ -278,7 +278,6 @@ def split_by_spacy() -> List[Sentence]:
 # New NLP Split Function with Character Position Tracking
 # ------------
 
-@cache_objects(_CACHE_SENTENCES_NLP, _3_1_SPLIT_BY_NLP)
 def split_by_nlp(nlp: Language) -> List[Sentence]:
     """
     NLP 多步骤分句主函数
