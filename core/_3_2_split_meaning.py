@@ -259,6 +259,13 @@ def split_sentences_by_meaning(sentences: List[Sentence]) -> List[Sentence]:
 
     console.print(f'[green]✅ 处理完成！最终句子数: {len(sentences)}[/green]')
 
+    # 保存到文件供用户查看
+    from pathlib import Path
+    Path(_3_2_SPLIT_BY_MEANING).parent.mkdir(parents=True, exist_ok=True)
+    with open(_3_2_SPLIT_BY_MEANING, 'w', encoding='utf-8') as f:
+        for s in sentences:
+            f.write(s.text + '\n')
+
     return sentences
 
 

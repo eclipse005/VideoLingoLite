@@ -324,6 +324,13 @@ def split_by_nlp(nlp: Language) -> List[Sentence]:
 
     rprint(f'[green]✅ 处理完成！共 {len(sentences)} 个句子[/green]')
 
+    # 保存到文件供用户查看
+    from pathlib import Path
+    Path(_3_1_SPLIT_BY_NLP).parent.mkdir(parents=True, exist_ok=True)
+    with open(_3_1_SPLIT_BY_NLP, 'w', encoding='utf-8') as f:
+        for s in sentences:
+            f.write(s.text + '\n')
+
     return sentences
 
 
