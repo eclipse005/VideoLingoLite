@@ -1,20 +1,22 @@
 """
-ASR 术语矫正模块 (Stage 1.5)
+ASR 热词矫正模块 (Stage 2)
 
 在 NLP 分句后进行，使用 LLM Agent 智能识别并矫正 ASR 错误
 
 输入: List[Sentence] (来自 _3_1_split_nlp.py)
-输出: List[Sentence] (矫正后，传递给 _3_2_split_meaning.py)
+输出: List[Sentence] (矫正后，传递给 _3_3_split_meaning.py)
 """
 
 import json
+import os
 import re
+import unicodedata
 from typing import List, Tuple, Dict, Any, Optional
 
 from core.utils import rprint, load_key, timer
 from core.utils.ask_gpt import ask_gpt_with_tools
-from core.utils.models import Sentence
-from core.utils.sentence_tools import clean_word
+from core.utils.models import Sentence, Chunk
+from core.utils.sentence_tools import get_joiner
 
 
 # ==================== 工具定义 ====================
@@ -284,30 +286,24 @@ class SentenceToolExecutor:
         self, sentence: Sentence, sent_idx: int,
         old_text: str, new_text: str
     ) -> int:
-        """在单个句子中查找并替换（只修改文本）"""
-        # 清洗文本用于匹配
-        sent_clean = clean_word(sentence.text)
-        old_clean = clean_word(old_text)
+        """
+        在单个句子中查找并替换（只修改文本）
 
-        # 查找所有匹配位置
-        matches = list(re.finditer(re.escape(old_clean), sent_clean))
-        if not matches:
-            return 0
-
-        # 在原始文本中进行替换（从后往前避免位置偏移）
+        使用多语言单词边界检查，支持：中、日、韩、英、德、俄等所有语言
+        """
         changes_count = 0
-        for match in reversed(matches):
-            # 在原始文本中找到对应位置
-            original_start, original_end = self._find_original_position(
-                sentence.text, sent_clean, match.start(), match.end()
-            )
 
-            if original_start is not None:
+        # 在原始文本中查找所有匹配位置
+        for match in re.finditer(re.escape(old_text), sentence.text):
+            start, end = match.span()
+
+            # 检查是否为单词边界
+            if self._is_word_boundary(sentence.text, start, end - start):
                 # 执行替换
                 sentence.text = (
-                    sentence.text[:original_start] +
+                    sentence.text[:start] +
                     new_text +
-                    sentence.text[original_end:]
+                    sentence.text[end:]
                 )
                 changes_count += 1
 
@@ -320,36 +316,37 @@ class SentenceToolExecutor:
 
         return changes_count
 
-    def _find_original_position(
-        self, original_text: str, cleaned_text: str,
-        clean_start: int, clean_end: int
-    ) -> Tuple[Optional[int], Optional[int]]:
+    def _is_word_boundary(self, text: str, pos: int, length: int) -> bool:
         """
-        在原始文本中找到清洗后文本对应的位置
+        检查指定位置是否为单词边界（多语言通用）
 
-        使用滑动窗口匹配，找到最可能的位置
+        策略：检查匹配位置前后是否为字母（L* 类别）
+             如果前后都不是字母，则为单词边界
+
+        支持：中、日、韩、英、德、俄、法、意、西等所有语言
+
+        Args:
+            text: 完整文本
+            pos: 匹配起始位置
+            length: 匹配长度
+
+        Returns:
+            bool: True 表示是单词边界，False 表示不是
         """
-        # 清洗前后的文本长度可能不同
-        # 使用滑动窗口在原始文本中查找匹配
-        window_size = clean_end - clean_start
+        # 检查前一个字符
+        if pos > 0:
+            prev_char = text[pos - 1]
+            if unicodedata.category(prev_char).startswith('L'):  # 前面是字母
+                return False
 
-        # 提取清洗后窗口内容
-        cleaned_window = cleaned_text[clean_start:clean_end]
+        # 检查后一个字符
+        end_pos = pos + length
+        if end_pos < len(text):
+            next_char = text[end_pos]
+            if unicodedata.category(next_char).startswith('L'):  # 后面是字母
+                return False
 
-        # 在原始文本中搜索
-        best_match = None
-        best_score = 0
-
-        for i in range(len(original_text) - window_size + 1):
-            window = original_text[i:i + window_size]
-            # 清洗窗口内容进行对比
-            from core.utils.sentence_tools import clean_word
-            if clean_word(window) == cleaned_window:
-                # 精确匹配
-                return i, i + window_size
-
-        # 如果没有精确匹配，返回 None
-        return None, None
+        return True  # 前后都不是字母，是单词边界
 
     def finish(self, summary: str) -> str:
         """完成矫正任务"""
@@ -362,32 +359,205 @@ class SentenceToolExecutor:
 
 # ==================== 主入口函数 ====================
 
-def _sync_chunks_to_text(sentences: List[Sentence]) -> None:
+def _sync_chunks_to_text(sentences: List[Sentence], original_texts: List[str]) -> None:
     """
-    同步 chunks 到矫正后的文本
+    同步 chunks 到矫正后的文本（使用 difflib 对比）
 
-    将矫正后的 sentence.text 作为一个整体 chunk，
-    时间戳使用原句子的 start/end。
+    策略：
+    - 使用 difflib 对比矫正前后的文本
+    - 未修改部分 → 保持原 chunks
+    - 修改部分 → 重建 chunks（切分 + 重新分配时间戳）
 
     Args:
         sentences: Sentence 对象列表（会就地修改）
+        original_texts: 矫正前的原始文本列表
     """
-    for sentence in sentences:
-        # 如果 sentence.text 被修改了，重建 chunks
-        # 简化策略：将整个 text 作为一个 chunk
-        new_chunk = Chunk(
-            text=sentence.text,
-            start=sentence.start,
-            end=sentence.end,
-            speaker_id=sentence.chunks[0].speaker_id if sentence.chunks else None,
-            index=0
-        )
-        sentence.chunks = [new_chunk]
+    from difflib import SequenceMatcher
+
+    for sent_idx, sentence in enumerate(sentences):
+        original_text = original_texts[sent_idx]
+
+        # 文本未修改，保持原 chunks
+        if original_text == sentence.text:
+            continue
+
+        # 使用 difflib 对比
+        matcher = SequenceMatcher(None, original_text, sentence.text)
+
+        new_chunks = []
+        current_orig_chunk_idx = 0
+        orig_chunks = sentence.chunks
+        asr_language = load_key("asr.language")
+        joiner = get_joiner(asr_language)
+
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+            if tag == 'equal':
+                # 未修改部分：保持原 chunks
+                # 通过字符位置找到对应的 chunks
+                char_pos = 0
+                for chunk in orig_chunks:
+                    chunk_end = char_pos + len(chunk.text)
+                    # 检查 chunk 是否完全在 [i1, i2) 范围内
+                    if char_pos >= i1 and chunk_end <= i2:
+                        new_chunks.append(chunk)
+                    elif chunk_end > i2:
+                        # 超出当前 equal 范围，停止处理
+                        break
+                    char_pos = chunk_end
+
+            elif tag == 'replace':
+                # 修改部分：重建 chunks
+                # 获取修改部分的原始时间范围
+                orig_start_time = None
+                orig_end_time = None
+
+                # 找到原始文本中对应位置的时间戳
+                char_pos = 0
+                for chunk in orig_chunks:
+                    chunk_text = chunk.text
+                    chunk_end = char_pos + len(chunk_text)
+
+                    if char_pos <= i1 and chunk_end >= i2:
+                        # chunk 完全在修改范围内
+                        if orig_start_time is None:
+                            orig_start_time = chunk.start
+                        orig_end_time = chunk.end
+                    elif char_pos <= i1 < chunk_end:
+                        # chunk 跨越修改开始边界
+                        if orig_start_time is None:
+                            orig_start_time = chunk.start
+                        orig_end_time = chunk.end
+                    elif i1 < char_pos <= i2:
+                        # chunk 在修改范围内
+                        orig_end_time = chunk.end
+
+                    char_pos += len(chunk_text)
+
+                # 如果找不到时间戳，使用句子的边界
+                if orig_start_time is None:
+                    orig_start_time = sentence.start
+                if orig_end_time is None:
+                    orig_end_time = sentence.end
+
+                # 切分新文本
+                new_text = sentence.text[j1:j2]
+                rebuilt_chunks = _split_text_into_chunks(
+                    new_text, orig_start_time, orig_end_time,
+                    asr_language, joiner,
+                    speaker_id=orig_chunks[0].speaker_id if orig_chunks else None
+                )
+                new_chunks.extend(rebuilt_chunks)
+
+            elif tag == 'delete':
+                # 删除部分：跳过
+                pass
+
+            elif tag == 'insert':
+                # 插入部分：使用原位置的时间戳
+                # 在 j1-j2 位置插入，使用附近的时间戳
+                new_chunks.extend(_split_text_into_chunks(
+                    sentence.text[j1:j2],
+                    sentence.start, sentence.end,
+                    asr_language, joiner,
+                    speaker_id=orig_chunks[0].speaker_id if orig_chunks else None
+                ))
+
+        # 更新 sentence 的 chunks
+        sentence.chunks = new_chunks
 
         # 确保 Sentence.start/end 与 chunks 一致
-        if sentence.chunks:
-            sentence.start = sentence.chunks[0].start
-            sentence.end = sentence.chunks[-1].end
+        if new_chunks:
+            sentence.start = new_chunks[0].start
+            sentence.end = new_chunks[-1].end
+
+
+def _split_text_into_chunks(
+    text: str, start_time: float, end_time: float,
+    asr_language: str, joiner: str,
+    speaker_id: Optional[str]
+) -> List[Chunk]:
+    """
+    将文本切分为 chunks 并分配时间戳
+
+    策略：
+    - 空格分隔语言：按空格切分
+    - CJK 语言：按字符切分
+    - 时间戳：平均分配，边界不变
+    """
+    # 根据语言选择切分方式
+    if asr_language in ['zh', 'ja', 'ko']:
+        # CJK 语言：按字符切分
+        parts = list(text)
+    else:
+        # 空格分隔语言：按空格切分
+        parts = text.split()
+        if joiner:
+            # 如果有空格连接符，重新添加以便正确分配时间
+            text_with_joiner = joiner.join(parts)
+            parts = text_with_joiner.split(joiner) if joiner else parts
+
+    if not parts:
+        return []
+
+    # 分配时间戳
+    total_duration = end_time - start_time
+    chunk_duration = total_duration / len(parts)
+
+    chunks = []
+    current_time = start_time
+
+    for i, part in enumerate(parts):
+        chunk_start = current_time
+        chunk_end = current_time + chunk_duration
+
+        # 最后一个 chunk 使用 end_time（避免浮点误差）
+        if i == len(parts) - 1:
+            chunk_end = end_time
+
+        chunks.append(Chunk(
+            text=part,
+            start=chunk_start,
+            end=chunk_end,
+            speaker_id=speaker_id,
+            index=i
+        ))
+
+        current_time = chunk_end
+
+    return chunks
+
+
+def _save_checkpoint(sentences: List[Sentence], path: str) -> None:
+    """保存矫正后的句子到断点文件"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        for sentence in sentences:
+            f.write(sentence.text + '\n')
+    rprint(f"[dim]💾 断点已保存: {path}[/dim]")
+
+
+def _load_checkpoint(sentences: List[Sentence], path: str) -> List[Sentence]:
+    """从断点文件加载矫正后的句子"""
+    with open(path, 'r', encoding='utf-8') as f:
+        corrected_texts = [line.rstrip('\n') for line in f]
+
+    # 验证数量一致
+    if len(corrected_texts) != len(sentences):
+        rprint(f"[yellow]⚠️ 断点文件句子数量不匹配 ({len(corrected_texts)} vs {len(sentences)})，重新执行矫正[/yellow]")
+        os.remove(path)
+        return sentences
+
+    # 保存原始文本（用于 chunk 同步）
+    original_texts = [s.text for s in sentences]
+
+    # 更新句子的文本
+    for sent, corrected_text in zip(sentences, corrected_texts):
+        sent.text = corrected_text
+
+    # 同步 chunks（矫正前 -> 矫正后）
+    _sync_chunks_to_text(sentences, original_texts)
+
+    return sentences
 
 
 @timer("ASR 术语矫正")
@@ -402,30 +572,39 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
         List[Sentence]: 矫正后的 Sentence 对象列表
     """
     # 1. 检查开关
-    enabled = load_key("asr_term_correction.enabled", default=False)
+    enabled = load_key("asr_term_correction.enabled")
     if not enabled:
         rprint("[yellow]⏭️ 术语矫正已禁用，跳过[/yellow]")
         return sentences
 
     # 2. 加载术语配置
-    terms_config = load_key("asr_term_correction.terms", default=[])
+    terms_config = load_key("asr_term_correction.terms")
     if not terms_config:
         rprint("[yellow]⏭️ 未配置术语，跳过矫正[/yellow]")
         return sentences
 
-    # 3. 解析术语列表
+    # 3. 检查断点文件
+    checkpoint_path = "output/log/hotword_correct.txt"
+    if os.path.exists(checkpoint_path):
+        rprint(f"[blue]📂 发现断点文件，直接加载矫正结果[/blue]")
+        return _load_checkpoint(sentences, checkpoint_path)
+
+    # 4. 解析术语列表
     terms_with_meanings = _parse_terms(terms_config)
     rprint(f"[blue]🔍 开始术语矫正，共 {len(terms_with_meanings)} 个术语[/blue]")
     for t in terms_with_meanings:
         rprint(f"  - {t['name']}" + (f": {t['meaning']}" if t['meaning'] else ""))
 
-    # 4. 创建工具执行器
+    # 5. 创建工具执行器
     tool_executor = SentenceToolExecutor(sentences)
 
-    # 5. 构建系统提示词
+    # 6. 保存原始文本（用于后续 chunk 同步）
+    original_texts = [s.text for s in sentences]
+
+    # 7. 构建系统提示词
     system_prompt = build_system_prompt(terms_with_meanings)
 
-    # 6. 调用 LLM Agent
+    # 8. 调用 LLM Agent
     user_task = f"请矫正这 {len(sentences)} 个句子中的术语错误"
 
     result = ask_gpt_with_tools(
@@ -434,10 +613,10 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
         tools=SENTENCES_TOOLS_DEFINITION,
         tool_executor=tool_executor,
         max_rounds=20,
-        log_title="asr_term_correction"
+        log_title="hotword_correction"
     )
 
-    # 7. 输出统计
+    # 9. 输出统计
     if result and result.get("is_finish"):
         changes_count = result.get("changes_count", 0)
         if changes_count > 0:
@@ -450,12 +629,13 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
                 rprint(f"  {change}: {count} 处")
         else:
             rprint("[green]✅ 未发现需要矫正的错误[/green]")
-
-        rprint(f"[dim]LLM 总结: {result.get('summary', 'N/A')}[/dim]")
     else:
         rprint("[yellow]⚠️ LLM 未正常完成，返回原始句子[/yellow]")
 
-    # 8. 同步 chunks 到矫正后的文本
-    _sync_chunks_to_text(sentences)
+    # 10. 同步 chunks（使用矫正前的文本进行对比）
+    _sync_chunks_to_text(sentences, original_texts)
+
+    # 11. 保存断点文件
+    _save_checkpoint(sentences, checkpoint_path)
 
     return sentences

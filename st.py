@@ -30,7 +30,7 @@ def text_processing_section():
         <p style='font-size: 20px;'>
             1. {"语音识别转录"}<br>
             2. {"使用LLM进行句子分段"}<br>
-            3. {"ASR术语矫正（可选）"}<br>
+            3. {"热词矫正（可选）"}<br>
             4. {"切分长句"}<br>
             5. {"摘要和多步翻译"}<br>
             6. {"切割和对齐长字幕"}<br>
@@ -59,12 +59,12 @@ def process_text():
     with st.spinner("正在进行NLP分句..."):
         # Stage 1: NLP 分句，返回 Sentence 对象
         sentences = _3_1_split_nlp.split_by_spacy()
-    with st.spinner("正在矫正ASR术语..."):
-        # Stage 1.5: ASR 术语矫正（可选）
-        sentences = _3_1_5_correct_terms.correct_terms_in_sentences(sentences)
+    with st.spinner("正在进行热词矫正..."):
+        # Stage 2: 热词矫正（可选）
+        sentences = _3_2_hotword.correct_terms_in_sentences(sentences)
     with st.spinner("正在使用LLM切分长句..."):
-        # Stage 2: LLM 切分长句，传入/返回 Sentence 对象
-        sentences = _3_2_split_meaning.split_sentences_by_meaning(sentences)
+        # Stage 3: LLM 切分长句，传入/返回 Sentence 对象
+        sentences = _3_3_split_meaning.split_sentences_by_meaning(sentences)
 
     # 根据模式选择后续流程
     if load_key("transcript_only"):

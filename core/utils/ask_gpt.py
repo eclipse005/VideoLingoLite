@@ -25,18 +25,21 @@ TOTAL_TOKENS = {
 
 # Mapping of log_title to specific API configurations
 LOG_TITLE_TO_API = {
-    # 分割功能
+    # Splitting
     'llm_sentence_segmentation': 'api_split',
     'split_single_sentence': 'api_split',
 
-    # 总结功能
+    # Summary
     'summary': 'api_summary',
 
-    # 翻译功能
+    # Translation
     'translate_faithfulness': 'api_translate',
 
-    # 反思功能
+    # Reflection
     'translate_expressiveness': 'api_reflection',
+
+    # Hotword correction
+    'hotword_correction': 'api_hotword',
 }
 
 def _save_cache(model, prompt, resp_content, resp_type, resp, message=None, log_title="default"):
@@ -236,28 +239,38 @@ def ask_gpt_with_tools(
                 TOTAL_TOKENS['completion_tokens'] += resp_raw.usage.completion_tokens
                 TOTAL_TOKENS['total_tokens'] += resp_raw.usage.total_tokens
 
-        # 添加助手响应到历史
-        messages.append(response_message)
+        # 添加助手响应到历史（转换为字典格式）
+        msg_dict = {
+            "role": "assistant",
+            "content": response_message.content if hasattr(response_message, 'content') else None
+        }
+        if response_message.tool_calls:
+            msg_dict["tool_calls"] = response_message.tool_calls
+        messages.append(msg_dict)
 
         # 检查是否有工具调用
-        if "tool_calls" in response_message and response_message["tool_calls"]:
-            tool_calls = response_message["tool_calls"]
-
+        tool_calls = response_message.tool_calls
+        if tool_calls:
             # 执行每个工具调用
             for tool_call in tool_calls:
-                func_name = tool_call["function"]["name"]
-                func_args = json.loads(tool_call["function"]["arguments"])
+                func_name = tool_call.function.name
+                # arguments 可能是字符串或字典
+                if isinstance(tool_call.function.arguments, str):
+                    func_args = json.loads(tool_call.function.arguments)
+                else:
+                    func_args = tool_call.function.arguments
 
                 # 调用执行器的方法
                 try:
                     result = getattr(tool_executor, func_name)(**func_args)
                 except Exception as e:
-                    result = f"错误：{str(e)}"
+                    import traceback
+                    result = f"错误：{str(e)}\n{traceback.format_exc()}"
 
                 # 添加工具结果到消息历史
                 messages.append({
                     "role": "tool",
-                    "tool_call_id": tool_call["id"],
+                    "tool_call_id": tool_call.id,
                     "content": result
                 })
 
@@ -266,9 +279,12 @@ def ask_gpt_with_tools(
                     return json.loads(result) if isinstance(result, str) else result
         else:
             # LLM 返回文本内容，没有工具调用
+            content = msg_dict.get("content") or ""
+            rprint(f"[yellow][{log_title}] LLM 返回了文本内容而非调用工具: {content[:200]}[/yellow]")
             break
 
     # 达到最大轮次或 LLM 停止调用工具
+    rprint(f"[yellow][{log_title}] LLM 未正常完成（达到最大轮次或停止调用工具）[/yellow]")
     return None
 
 
