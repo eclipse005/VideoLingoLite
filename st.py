@@ -30,10 +30,11 @@ def text_processing_section():
         <p style='font-size: 20px;'>
             1. {"语音识别转录"}<br>
             2. {"使用LLM进行句子分段"}<br>
-            3. {"切分长句"}<br>
-            4. {"摘要和多步翻译"}<br>
-            5. {"切割和对齐长字幕"}<br>
-            6. {"生成时间轴和字幕"}<br>
+            3. {"ASR术语矫正（可选）"}<br>
+            4. {"切分长句"}<br>
+            5. {"摘要和多步翻译"}<br>
+            6. {"切割和对齐长字幕"}<br>
+            7. {"生成时间轴和字幕"}<br>
         """, unsafe_allow_html=True)
 
         if not os.path.exists(SUB_VIDEO):
@@ -58,6 +59,9 @@ def process_text():
     with st.spinner("正在进行NLP分句..."):
         # Stage 1: NLP 分句，返回 Sentence 对象
         sentences = _3_1_split_nlp.split_by_spacy()
+    with st.spinner("正在矫正ASR术语..."):
+        # Stage 1.5: ASR 术语矫正（可选）
+        sentences = _3_1_5_correct_terms.correct_terms_in_sentences(sentences)
     with st.spinner("正在使用LLM切分长句..."):
         # Stage 2: LLM 切分长句，传入/返回 Sentence 对象
         sentences = _3_2_split_meaning.split_sentences_by_meaning(sentences)
