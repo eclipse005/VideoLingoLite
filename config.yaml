@@ -74,12 +74,13 @@ asr_term_correction:
   # Meaning description is optional, helps LLM understand context
   # LLM will automatically detect various error forms (based on pronunciation similarity, context semantics)
   terms:
-    - "LLM : Large Language Model"
-    - "API : Application Programming Interface"
-    - "JSON : JavaScript Object Notation"
-    - "HTTP"
-    # Add more terms...
-
+    - "FVG : fair value gap"
+    - "iFVG : inverse fair value gap"
+    - "POI"
+    - "CISD : Change in State of Delivery"
+    - "virgin wick"
+    # Add more terms...    
+ 
 
 ## ======================== Advanced Settings ======================== ##
 
