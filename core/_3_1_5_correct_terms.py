@@ -362,6 +362,34 @@ class SentenceToolExecutor:
 
 # ==================== 主入口函数 ====================
 
+def _sync_chunks_to_text(sentences: List[Sentence]) -> None:
+    """
+    同步 chunks 到矫正后的文本
+
+    将矫正后的 sentence.text 作为一个整体 chunk，
+    时间戳使用原句子的 start/end。
+
+    Args:
+        sentences: Sentence 对象列表（会就地修改）
+    """
+    for sentence in sentences:
+        # 如果 sentence.text 被修改了，重建 chunks
+        # 简化策略：将整个 text 作为一个 chunk
+        new_chunk = Chunk(
+            text=sentence.text,
+            start=sentence.start,
+            end=sentence.end,
+            speaker_id=sentence.chunks[0].speaker_id if sentence.chunks else None,
+            index=0
+        )
+        sentence.chunks = [new_chunk]
+
+        # 确保 Sentence.start/end 与 chunks 一致
+        if sentence.chunks:
+            sentence.start = sentence.chunks[0].start
+            sentence.end = sentence.chunks[-1].end
+
+
 @timer("ASR 术语矫正")
 def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
     """
@@ -426,5 +454,8 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
         rprint(f"[dim]LLM 总结: {result.get('summary', 'N/A')}[/dim]")
     else:
         rprint("[yellow]⚠️ LLM 未正常完成，返回原始句子[/yellow]")
+
+    # 8. 同步 chunks 到矫正后的文本
+    _sync_chunks_to_text(sentences)
 
     return sentences
