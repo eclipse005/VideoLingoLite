@@ -11,7 +11,8 @@ import json
 import re
 from typing import List, Tuple, Dict, Any, Optional
 
-from core.utils import load_key
+from core.utils import rprint, load_key, timer
+from core.utils.ask_gpt import ask_gpt_with_tools
 from core.utils.models import Sentence
 from core.utils.sentence_tools import clean_word
 
@@ -176,6 +177,27 @@ batch_replace(replacements=[
 """
 
 
+def _parse_terms(terms_config: List[str]) -> List[dict]:
+    """解析术语列表，支持 '术语 : 含义' 格式"""
+    parsed = []
+    for term in terms_config:
+        if ' : ' in term:
+            parts = term.split(' : ', 1)
+        elif ': ' in term:
+            parts = term.split(': ', 1)
+        elif '：' in term:
+            parts = term.split('：', 1)
+        else:
+            parsed.append({'name': term.strip(), 'meaning': None})
+            continue
+
+        parsed.append({
+            'name': parts[0].strip(),
+            'meaning': parts[1].strip() if len(parts) > 1 else None
+        })
+    return parsed
+
+
 class SentenceToolExecutor:
     """Sentence 对象的工具执行器"""
 
@@ -336,3 +358,73 @@ class SentenceToolExecutor:
             "summary": summary,
             "is_finish": True
         }, ensure_ascii=False)
+
+
+# ==================== 主入口函数 ====================
+
+@timer("ASR 术语矫正")
+def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
+    """
+    主函数：对句子列表进行术语矫正
+
+    Args:
+        sentences: NLP 分句后的 Sentence 对象列表
+
+    Returns:
+        List[Sentence]: 矫正后的 Sentence 对象列表
+    """
+    # 1. 检查开关
+    enabled = load_key("asr_term_correction.enabled", default=False)
+    if not enabled:
+        rprint("[yellow]⏭️ 术语矫正已禁用，跳过[/yellow]")
+        return sentences
+
+    # 2. 加载术语配置
+    terms_config = load_key("asr_term_correction.terms", default=[])
+    if not terms_config:
+        rprint("[yellow]⏭️ 未配置术语，跳过矫正[/yellow]")
+        return sentences
+
+    # 3. 解析术语列表
+    terms_with_meanings = _parse_terms(terms_config)
+    rprint(f"[blue]🔍 开始术语矫正，共 {len(terms_with_meanings)} 个术语[/blue]")
+    for t in terms_with_meanings:
+        rprint(f"  - {t['name']}" + (f": {t['meaning']}" if t['meaning'] else ""))
+
+    # 4. 创建工具执行器
+    tool_executor = SentenceToolExecutor(sentences)
+
+    # 5. 构建系统提示词
+    system_prompt = build_system_prompt(terms_with_meanings)
+
+    # 6. 调用 LLM Agent
+    user_task = f"请矫正这 {len(sentences)} 个句子中的术语错误"
+
+    result = ask_gpt_with_tools(
+        system_prompt=system_prompt,
+        prompt=user_task,
+        tools=SENTENCES_TOOLS_DEFINITION,
+        tool_executor=tool_executor,
+        max_rounds=20,
+        log_title="asr_term_correction"
+    )
+
+    # 7. 输出统计
+    if result and result.get("is_finish"):
+        changes_count = result.get("changes_count", 0)
+        if changes_count > 0:
+            rprint(f"[green]✅ 矫正完成: {changes_count} 处修改[/green]")
+
+            # 显示修改明细
+            from collections import Counter
+            stats = Counter(f"{c['old_text']} → {c['new_text']}" for c in tool_executor.changes)
+            for change, count in stats.most_common():
+                rprint(f"  {change}: {count} 处")
+        else:
+            rprint("[green]✅ 未发现需要矫正的错误[/green]")
+
+        rprint(f"[dim]LLM 总结: {result.get('summary', 'N/A')}[/dim]")
+    else:
+        rprint("[yellow]⚠️ LLM 未正常完成，返回原始句子[/yellow]")
+
+    return sentences
