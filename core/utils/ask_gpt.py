@@ -2,6 +2,7 @@ import os
 import json
 import re
 from threading import Lock
+from typing import List, Dict, Any, Optional
 import json_repair
 from openai import OpenAI
 from core.utils.config_utils import load_key
@@ -162,6 +163,113 @@ def reset_token_usage():
         TOTAL_TOKENS['prompt_tokens'] = 0
         TOTAL_TOKENS['completion_tokens'] = 0
         TOTAL_TOKENS['total_tokens'] = 0
+
+
+# ------------
+# ask gpt with tools (function calling)
+# ------------
+
+def ask_gpt_with_tools(
+    system_prompt: str,
+    prompt: str,
+    tools: List[dict],
+    tool_executor: object,
+    max_rounds: int = 10,
+    log_title: str = "default"
+) -> Any:
+    """
+    支持 Function Calling 的 LLM 调用
+
+    Args:
+        system_prompt: 系统提示词
+        prompt: 用户任务描述
+        tools: Function Calling 工具定义列表
+        tool_executor: 工具执行器实例（需要有 execute_tool 方法）
+        max_rounds: 最大对话轮次
+        log_title: 日志标题（用于缓存和 API 配置选择）
+
+    Returns:
+        工具执行器的最终结果
+    """
+    # 根据 log_title 确定使用的 API 配置
+    api_config_prefix = _get_api_config_for_log_title(log_title)
+
+    # 检查 API 密钥
+    api_key = load_key(f"{api_config_prefix}.key")
+    if not api_key:
+        raise ValueError(f"API key for {api_config_prefix} is not set")
+
+    model = load_key(f"{api_config_prefix}.model")
+    base_url = load_key(f"{api_config_prefix}.base_url")
+
+    if 'ark' in base_url:
+        base_url = "https://ark.cn-beijing.volces.com/api/v3"
+    elif 'v1' not in base_url:
+        base_url = base_url.strip('/') + '/v1'
+
+    client = OpenAI(api_key=api_key, base_url=base_url)
+
+    # 构建初始消息
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": prompt}
+    ]
+
+    # 多轮对话循环
+    for round_num in range(max_rounds):
+        # 调用 LLM
+        params = dict(
+            model=model,
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            timeout=300
+        )
+
+        resp_raw = client.chat.completions.create(**params)
+        response_message = resp_raw.choices[0].message
+
+        # 累加 Token 统计
+        if hasattr(resp_raw, 'usage') and resp_raw.usage is not None:
+            with LOCK:
+                TOTAL_TOKENS['prompt_tokens'] += resp_raw.usage.prompt_tokens
+                TOTAL_TOKENS['completion_tokens'] += resp_raw.usage.completion_tokens
+                TOTAL_TOKENS['total_tokens'] += resp_raw.usage.total_tokens
+
+        # 添加助手响应到历史
+        messages.append(response_message)
+
+        # 检查是否有工具调用
+        if "tool_calls" in response_message and response_message["tool_calls"]:
+            tool_calls = response_message["tool_calls"]
+
+            # 执行每个工具调用
+            for tool_call in tool_calls:
+                func_name = tool_call["function"]["name"]
+                func_args = json.loads(tool_call["function"]["arguments"])
+
+                # 调用执行器的方法
+                try:
+                    result = getattr(tool_executor, func_name)(**func_args)
+                except Exception as e:
+                    result = f"错误：{str(e)}"
+
+                # 添加工具结果到消息历史
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call["id"],
+                    "content": result
+                })
+
+                # 检查是否完成
+                if func_name == "finish":
+                    return json.loads(result) if isinstance(result, str) else result
+        else:
+            # LLM 返回文本内容，没有工具调用
+            break
+
+    # 达到最大轮次或 LLM 停止调用工具
+    return None
 
 
 if __name__ == '__main__':
