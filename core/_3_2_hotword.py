@@ -109,6 +109,12 @@ def build_system_prompt(terms_with_meanings: List[dict]) -> str:
 ## 术语列表及含义
 {terms_info}
 
+## ⚠️ 重要限制（必须遵守）
+**只能矫正上述术语列表中的术语**，不要矫正其他内容。
+- 如果文本中没有上述术语的错误形式，直接调用 finish
+- 不要自创术语或矫正不在列表中的内容
+- 只处理指定的 {len(terms_with_meanings)} 个术语
+
 ## 可用工具
 1. read_sentences - 读取句子内容
 2. get_context - 查看某句的上下文（前后几句）

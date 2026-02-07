@@ -68,7 +68,7 @@ transcript_only: false  # Skip translation process, only generate source subtitl
 # Hotword correction configuration (after NLP sentence splitting)
 asr_term_correction:
   # Enable hotword correction
-  enabled: false
+  enabled: true
 
   # Term configuration: format "correct_term : meaning_description"
   # Meaning description is optional, helps LLM understand context
