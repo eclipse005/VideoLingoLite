@@ -16,6 +16,166 @@ from core.utils.models import Sentence
 from core.utils.sentence_tools import clean_word
 
 
+# ==================== 工具定义 ====================
+
+SENTENCES_TOOLS_DEFINITION = [
+    {
+        "type": "function",
+        "function": {
+            "name": "read_sentences",
+            "description": "读取句子内容，返回全部或指定索引范围",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_idx": {"type": "integer", "description": "起始索引（可选，从0开始）"},
+                    "end_idx": {"type": "integer", "description": "结束索引（可选）"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_context",
+            "description": "获取某句子的上下文（前后各N句）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sentence_idx": {"type": "integer"},
+                    "context_count": {"type": "integer", "default": 2}
+                },
+                "required": ["sentence_idx"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "batch_replace",
+            "description": "批量执行多处替换。在所有句子中查找并替换多种错误形式",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "replacements": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "old_text": {"type": "string", "description": "要查找的错误文本"},
+                                "new_text": {"type": "string", "description": "替换后的正确术语"}
+                            },
+                            "required": ["old_text", "new_text"]
+                        }
+                    }
+                },
+                "required": ["replacements"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "finish",
+            "description": "完成矫正任务",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "summary": {"type": "string", "description": "修改总结"}
+                },
+                "required": ["summary"]
+            }
+        }
+    }
+]
+
+
+# ==================== System Prompt ====================
+
+def build_system_prompt(terms_with_meanings: List[dict]) -> str:
+    """构建 System Prompt（完全复用 agent_correct.py）"""
+    terms_info = "\n".join([
+        f"  - {t['name']}" + (f": {t['meaning']}" if t['meaning'] else "")
+        for t in terms_with_meanings
+    ])
+
+    return f"""你是一个专业的 ASR（自动语音识别）术语矫正专家。
+
+## 任务
+矫正文本中被语音识别错误的专业术语。
+
+## 术语列表及含义
+{terms_info}
+
+## 可用工具
+1. read_sentences - 读取句子内容
+2. get_context - 查看某句的上下文（前后几句）
+3. batch_replace - 批量替换（在所有句子中执行多个替换规则）
+4. finish - 完成矫正
+
+## 高效工作流程（重要！）
+
+1. **先全局扫描**：用 read_sentences 查看句子内容
+2. **记录所有疑似错误**：在心中/草稿中记录所有发现的错误位置和形式
+3. **批量处理**：阅读完成后，使用 batch_replace 一次性完成所有替换
+4. **最后调用 finish**
+
+### 批量操作示例
+
+**推荐方式：使用 batch_replace**
+如果发现多种错误模式，用一次 batch_replace 完成所有替换：
+```
+batch_replace(replacements=[
+  {{"old_text": "L L M", "new_text": "LLM"}},
+  {{"old_text": "j son", "new_text": "JSON"}},
+  {{"old_text": "A P I", "new_text": "API"}}
+])
+```
+
+### 使用 batch_replace 的关键原则（重要！）
+
+**一次提交所有规则，包括复数形式**：
+- 如果术语在文本中有复数出现，必须为单数和复数各写一条规则
+- 不要先替换再回头修复复数，一次到位
+
+示例：假设术语是 "ABC"，文本中发现错误形式 "A B C" 和 "A B Cs"
+```
+batch_replace(replacements=[
+  {{"old_text": "A B C", "new_text": "ABC"}},
+  {{"old_text": "A B Cs", "new_text": "ABCs"}}
+])
+```
+
+错误做法：
+- 只提交 {{"old_text": "A B Cs", "new_text": "ABC"}}（丢失复数）
+- 先提交单数规则，后续再补充复数规则（浪费轮次）
+
+## 重要原则
+
+### 复数形式
+- 根据上下文判断是否需要复数形式
+- 如果语境是复数（these/those/all/multiple/several 等标记），替换时使用复数形式
+
+示例：
+- "these L L M models" → 替换为 "these LLM models"（复数）
+- "a L L M model" → 替换为 "a LLM model"（单数）
+
+### 谨慎修正
+- 只修改明确是 ASR 误识别的情况
+- 如果某个词在当前上下文中是合理的，不要修改
+
+示例：
+- "I can see the point" → "see" 是正确的，不要改成 "C" 或 "sea"
+- "We use API calls" → "API" 是正确的，不需要修改
+
+## 常见 ASR 错误模式参考
+- 空格插入：字母间被插入空格（L L M → LLM）
+- 大小写错误：首字母未大写或全小写（json → JSON）
+- 同音近音：发音相似的错误替换
+
+请开始工作，记住：批量处理，不要逐个处理。
+"""
+
+
 class SentenceToolExecutor:
     """Sentence 对象的工具执行器"""
 
