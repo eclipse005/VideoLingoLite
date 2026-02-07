@@ -9,13 +9,11 @@ ASR 术语矫正模块 (Stage 1.5)
 
 import json
 import re
-from typing import List, Tuple, Dict, Any
-from difflib import SequenceMatcher
+from typing import List, Tuple, Dict, Any, Optional
 
-from core.utils import rprint, load_key, get_joiner, timer
-from core.utils.models import Sentence, Chunk
+from core.utils import load_key
+from core.utils.models import Sentence
 from core.utils.sentence_tools import clean_word
-from core.utils.ask_gpt import ask_gpt_with_tools
 
 
 class SentenceToolExecutor:
@@ -69,11 +67,9 @@ class SentenceToolExecutor:
         return "\n".join(result)
 
     def batch_replace(self, replacements: list) -> str:
-        """批量替换术语，智能重新分配时间戳"""
+        """批量替换术语（只修改文本，不动 chunks 和时间戳）"""
         results = []
         total_changes = 0
-        asr_language = load_key("asr.language")
-        joiner = get_joiner(asr_language)
 
         for replacement in replacements:
             old_text = replacement.get("old_text", "")
@@ -85,9 +81,8 @@ class SentenceToolExecutor:
 
             # 在所有句子中查找并替换
             for sent_idx, sentence in enumerate(self.sentences):
-                # 使用 _find_and_replace_in_sentence 处理单个句子
-                changes_count = self._find_and_replace_in_sentence(
-                    sentence, sent_idx, old_text, new_text, joiner
+                changes_count = self._replace_in_sentence(
+                    sentence, sent_idx, old_text, new_text
                 )
                 total_changes += changes_count
 
@@ -103,11 +98,11 @@ class SentenceToolExecutor:
             "details": results
         }, ensure_ascii=False)
 
-    def _find_and_replace_in_sentence(
+    def _replace_in_sentence(
         self, sentence: Sentence, sent_idx: int,
-        old_text: str, new_text: str, joiner: str
+        old_text: str, new_text: str
     ) -> int:
-        """在单个句子中查找并替换"""
+        """在单个句子中查找并替换（只修改文本）"""
         # 清洗文本用于匹配
         sent_clean = clean_word(sentence.text)
         old_clean = clean_word(old_text)
@@ -117,97 +112,62 @@ class SentenceToolExecutor:
         if not matches:
             return 0
 
-        # 字符位置到 Chunk 索引的映射
-        char_to_chunk = []
-        for chunk_idx, chunk in enumerate(sentence.chunks):
-            chunk_clean = clean_word(chunk.text)
-            char_to_chunk.extend([chunk_idx] * len(chunk_clean))
-
+        # 在原始文本中进行替换（从后往前避免位置偏移）
         changes_count = 0
-
-        # 从后往前替换，避免位置偏移
         for match in reversed(matches):
-            start_char = match.start()
-            end_char = match.end()
-
-            if start_char >= len(char_to_chunk) or end_char > len(char_to_chunk):
-                continue
-
-            start_chunk_idx = char_to_chunk[start_char]
-            end_chunk_idx = char_to_chunk[end_char - 1]
-
-            # 提取旧 Chunk
-            old_chunks = sentence.chunks[start_chunk_idx:end_chunk_idx + 1]
-
-            # 创建新 Chunk
-            new_chunks = self._create_new_chunks(new_text, old_chunks)
-
-            # 重新分配时间戳
-            new_chunks = self._redistribute_timestamps(old_chunks, new_chunks)
-
-            # 替换
-            sentence.chunks = (
-                sentence.chunks[:start_chunk_idx] +
-                new_chunks +
-                sentence.chunks[end_chunk_idx + 1:]
+            # 在原始文本中找到对应位置
+            original_start, original_end = self._find_original_position(
+                sentence.text, sent_clean, match.start(), match.end()
             )
 
-            # 更新句子文本
-            sentence.text = joiner.join(c.text for c in sentence.chunks)
+            if original_start is not None:
+                # 执行替换
+                sentence.text = (
+                    sentence.text[:original_start] +
+                    new_text +
+                    sentence.text[original_end:]
+                )
+                changes_count += 1
 
-            # 记录修改
-            self.changes.append({
-                "sentence_idx": sent_idx,
-                "old_text": old_text,
-                "new_text": new_text,
-                "old_count": len(old_chunks),
-                "new_count": len(new_chunks)
-            })
-            changes_count += 1
+                # 记录修改
+                self.changes.append({
+                    "sentence_idx": sent_idx,
+                    "old_text": old_text,
+                    "new_text": new_text
+                })
 
         return changes_count
 
-    def _create_new_chunks(self, text: str, source_chunks: List[Chunk]) -> List[Chunk]:
-        """创建新的 Chunk 对象"""
-        # 简化实现：将新文本作为一个 Chunk
-        # TODO: 如果需要保留 speaker_id，可以从 source_chunks[0] 获取
-        new_chunk = Chunk(
-            text=text,
-            start=0.0,  # 时间戳会在 _redistribute_timestamps 中设置
-            end=0.0,
-            speaker_id=source_chunks[0].speaker_id if source_chunks else None,
-            index=source_chunks[0].index if source_chunks else 0
-        )
-        return [new_chunk]
+    def _find_original_position(
+        self, original_text: str, cleaned_text: str,
+        clean_start: int, clean_end: int
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """
+        在原始文本中找到清洗后文本对应的位置
 
-    def _redistribute_timestamps(
-        self, old_chunks: List[Chunk], new_chunks: List[Chunk]
-    ) -> List[Chunk]:
-        """重新分配时间戳"""
-        old_count = len(old_chunks)
-        new_count = len(new_chunks)
+        使用滑动窗口匹配，找到最可能的位置
+        """
+        # 清洗前后的文本长度可能不同
+        # 使用滑动窗口在原始文本中查找匹配
+        window_size = clean_end - clean_start
 
-        # 边界永远不变
-        boundary_start = old_chunks[0].start
-        boundary_end = old_chunks[-1].end
-        total_duration = boundary_end - boundary_start
+        # 提取清洗后窗口内容
+        cleaned_window = cleaned_text[clean_start:clean_end]
 
-        if old_count == new_count:
-            # 数量相同，1对1复制
-            for i, new_chunk in enumerate(new_chunks):
-                new_chunk.start = old_chunks[i].start
-                new_chunk.end = old_chunks[i].end
-        else:
-            # 数量不同，平均分配
-            avg_duration = total_duration / new_count
-            current_time = boundary_start
+        # 在原始文本中搜索
+        best_match = None
+        best_score = 0
 
-            for new_chunk in new_chunks:
-                new_chunk.start = current_time
-                new_chunk.end = current_time + avg_duration
-                current_time = new_chunk.end
+        for i in range(len(original_text) - window_size + 1):
+            window = original_text[i:i + window_size]
+            # 清洗窗口内容进行对比
+            from core.utils.sentence_tools import clean_word
+            if clean_word(window) == cleaned_window:
+                # 精确匹配
+                return i, i + window_size
 
-        return new_chunks
+        # 如果没有精确匹配，返回 None
+        return None, None
 
     def finish(self, summary: str) -> str:
         """完成矫正任务"""
