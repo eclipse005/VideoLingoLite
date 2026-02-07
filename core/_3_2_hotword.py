@@ -114,7 +114,7 @@ def build_system_prompt(terms_with_meanings: List[dict]) -> str:
 - 如果文本中没有上述术语的错误形式，直接调用 finish
 - 不要自创术语或矫正不在列表中的内容
 - 只处理指定的 {len(terms_with_meanings)} 个术语
-- **复数形式也允许**：根据上下文判断（如 FVGs, APIs）
+- **复数形式也允许**：根据上下文判断（如 APIs, URLs）
 
 ## 可用工具
 1. read_sentences - 读取句子内容
