@@ -59,6 +59,20 @@ vocal_separation:
 # Transcript only mode (skip translation)
 transcript_only: false  # Skip translation process, only generate source subtitles
 
+# ASR 术语矫正配置（在 NLP 分句后进行）
+asr_term_correction:
+  # 是否启用术语矫正
+  enabled: false
+
+  # 术语配置：格式为 "正确术语 : 含义说明"
+  # 含义说明可选，用于帮助 LLM 理解上下文
+  # LLM 会自动识别各种可能的错误形式（基于发音相似性、上下文语义）
+  terms:
+    - "LLM : Large Language Model"
+    - "API : Application Programming Interface"
+    - "JSON : JavaScript Object Notation"
+    # 添加更多术语...
+
 
 ## ======================== Advanced Settings ======================== ##
 
