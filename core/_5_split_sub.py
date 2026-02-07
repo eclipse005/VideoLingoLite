@@ -64,7 +64,7 @@ def process_single_sentence_split(sent: Sentence, num_parts: int, index: int, as
     Returns:
         拆分对齐后的 Sentence 对象列表
     """
-    from core._3_2_split_meaning import find_br_positions_in_original
+    from core._3_3_split_meaning import find_br_positions_in_original
     from core.utils.sentence_tools import clean_word
 
     # 使用 LLM 拆分原文
