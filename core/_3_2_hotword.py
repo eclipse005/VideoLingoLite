@@ -17,6 +17,7 @@ from core.utils import rprint, load_key, timer
 from core.utils.ask_gpt import ask_gpt_with_tools
 from core.utils.models import Sentence, Chunk, Correction
 from core.utils.sentence_tools import get_joiner
+from core.utils.cache_utils import cache
 
 
 # ==================== 工具定义 ====================
@@ -502,6 +503,7 @@ def _split_text_into_chunks(
 
 
 @timer("ASR 术语矫正")
+@cache(cache_dir="output/log")
 def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
     """
     主函数：对句子列表进行术语矫正
