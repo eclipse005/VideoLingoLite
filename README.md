@@ -25,6 +25,10 @@
 - **词级时间戳**：精确到每个词的时间定位
 - **只转录模式**：跳过翻译，仅生成原文字幕
 
+### ASR 术语矫正
+- **自动矫正**：根据配置的术语列表，自动修正 ASR 识别错误（L L M → LLM）
+- **适用场景**：视频中的专业术语、人名、地名等容易被语音识别错误时
+
 ### 智能翻译
 - **两阶段翻译**：先直译，再意译，确保译文自然流畅
 - **上下文感知**：结合前后文和术语表进行翻译
@@ -154,6 +158,9 @@ uv run python -m streamlit run st.py
 | `pause_split_threshold` | `1` | 停顿切分阈值（秒），0 或 null 表示禁用 |
 | `vocal_separation.enabled` | `false` | 是否启用人声分离 |
 | `transcript_only` | `false` | 只转录模式，跳过翻译 |
+| `asr_term_correction.enabled` | `true` | 是否启用术语矫正 |
+| `asr_term_correction.terms` | - | 术语列表，格式 `"术语 : 含义"`（含义可选） |
+| `api_hotword` | - | 术语矫正专用 API 配置 |
 | `spacy_model_map` | - | spaCy 模型映射（多语言支持） |
 
 ---
