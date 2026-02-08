@@ -37,7 +37,7 @@ def convert_to_srt_format(start_time: float, end_time: float) -> str:
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         seconds = seconds % 60
-        milliseconds = int(seconds * 1000) % 1000
+        milliseconds = int(round(seconds * 1000)) % 1000
         return f"{hours:02d}:{minutes:02d}:{int(seconds):02d},{milliseconds:03d}"
 
     start_srt = seconds_to_hmsm(start_time)
