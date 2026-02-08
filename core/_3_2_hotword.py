@@ -565,6 +565,9 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
             stats = Counter(f"{c['old_text']} → {c['new_text']}" for c in tool_executor.changes)
             for change, count in stats.most_common():
                 rprint(f"  {change}: {count} 处")
+
+            # 保存矫正记录到文件（与控制台输出一致）
+            _save_correction_log(stats, changes_count)
         else:
             rprint("[green]✅ 未发现需要矫正的错误[/green]")
     else:
@@ -574,3 +577,19 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
     _rebuild_chunks_from_corrections(sentences)
 
     return sentences
+
+
+def _save_correction_log(stats, changes_count):
+    """保存矫正日志到 output/log/hotword_correct.txt"""
+    log_path = "output/log/hotword_correct.txt"
+
+    with open(log_path, 'w', encoding='utf-8') as f:
+        if changes_count > 0:
+            f.write(f"✅ 矫正完成: {changes_count} 处修改\n")
+            f.write("\n")
+            for change, count in stats.most_common():
+                f.write(f"  {change}: {count} 处\n")
+        else:
+            f.write("✅ 未发现需要矫正的错误\n")
+
+    rprint(f"[dim]📝 矫正日志已保存: {log_path}[/dim]")
