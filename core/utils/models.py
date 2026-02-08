@@ -18,6 +18,15 @@ class Chunk:
 
 
 @dataclass
+class Correction:
+    """ASR 术语矫正记录"""
+    old_text: str       # 原始错误文本（如 "FEG"）
+    new_text: str       # 矫正后的文本（如 "FVG"）
+    start_idx: int      # 在原始 sentence.text 中的起始位置
+    end_idx: int        # 在原始 sentence.text 中的结束位置
+
+
+@dataclass
 class Sentence:
     """句子级别的对象，由多个 Chunk 组成"""
     chunks: List[Chunk]     # 组成这句话的所有 Chunk
@@ -27,6 +36,8 @@ class Sentence:
     translation: str = ""   # 翻译文本
     index: int = 0          # 句子序号
     is_split: bool = False  # 是否被 LLM 切分过
+    corrections: List[Correction] = field(default_factory=list)  # ASR 术语矫正记录
+    original_text: str = "" # LLM 矫正前的原始文本（用于 chunk 重建）
 
     @property
     def duration(self) -> float:
@@ -83,6 +94,7 @@ _AUDIO_TMP_DIR = "output/audio/tmp"
 __all__ = [
     "Chunk",
     "Sentence",
+    "Correction",
     "_2_CLEANED_CHUNKS",
     "_3_1_SPLIT_BY_NLP",
     "_3_2_SPLIT_BY_MEANING_RAW",
