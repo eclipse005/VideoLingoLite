@@ -24,6 +24,9 @@ def cache(cache_dir: str = "output/log"):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            # 导入 rprint
+            from core.utils import rprint
+
             # 将参数转换为可序列化的格式
             serializable_args = _make_serializable(args)
             serializable_kwargs = _make_serializable(kwargs)
@@ -34,7 +37,7 @@ def cache(cache_dir: str = "output/log"):
 
             # 检查缓存
             if os.path.exists(cache_path):
-                print(f"[dim][Cache] 加载缓存: {os.path.basename(cache_path)}[/dim]")
+                rprint(f"[dim][Cache] 加载缓存: {os.path.basename(cache_path)}[/dim]")
                 with open(cache_path, 'rb') as f:
                     return pickle.load(f)
 
@@ -53,7 +56,7 @@ def cache(cache_dir: str = "output/log"):
             # 保存新缓存
             with open(cache_path, 'wb') as f:
                 pickle.dump(result, f)
-            print(f"[dim][Cache] 保存缓存: {os.path.basename(cache_path)}[/dim]")
+            rprint(f"[dim][Cache] 保存缓存: {os.path.basename(cache_path)}[/dim]")
 
             return result
 
