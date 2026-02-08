@@ -270,7 +270,7 @@ We have {src_lang} and {targ_lang} original subtitles for a Netflix program, as 
 Your task is to create the best splitting scheme for the {targ_lang} subtitles based on this information.
 
 1. Analyze the word order and structural correspondence between {src_lang} and {targ_lang} subtitles
-2. Split the {targ_lang} subtitles according to the pre-processed {src_lang} split version
+2. Split the {targ_lang} subtitles according to the pre-processed {src_lang} split version, keeping each part with similar length
 3. Never leave empty lines. If it's difficult to split based on meaning, you may appropriately rewrite the sentences that need to be aligned
 4. Do not add comments or explanations in the translation, as the subtitles are for the audience to read
 

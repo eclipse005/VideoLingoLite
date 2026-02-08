@@ -11,21 +11,23 @@ import glob
 from functools import wraps
 
 
-def cache(cache_dir: str = "output/log"):
+def cache():
     """
     缓存装饰器：基于参数序列化自动计算 hash
-
-    Args:
-        cache_dir: 缓存目录路径
-
-    Returns:
-        装饰器函数
     """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # 导入 rprint
             from core.utils import rprint
+            from core.utils.config_utils import load_key
+
+            cache_dir = "output/log"
+
+            # 检查术语矫正开关（仅对 correct_terms_in_sentences 函数）
+            if func.__name__ == "correct_terms_in_sentences":
+                if not load_key("asr_term_correction.enabled"):
+                    # 开关关闭，不缓存，直接执行函数
+                    return func(*args, **kwargs)
 
             # 将参数转换为可序列化的格式
             serializable_args = _make_serializable(args)

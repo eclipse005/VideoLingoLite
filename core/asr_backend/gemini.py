@@ -61,7 +61,7 @@ def transcribe_audio_gemini(raw_audio_path: str, audio_path: str, start: float =
     files = {"audio": (os.path.basename(audio_path), audio_buffer.getvalue(), "audio/wav"),
              "start": (None, str(start) if start is not None else ""),
              "end": (None, str(end) if end is not None else ""),
-             "filename": (None, os.path.basename(raw_audio_path))}
+             "filename": (None, os.path.basename(audio_path))}
     response = requests.post("http://localhost:5000/transcribe", headers=headers, files=files, proxies={'http': None, 'https': None})
     if response.status_code != 200:
         raise Exception(f"Transcription failed with status {response.status_code}: {response.text}")
