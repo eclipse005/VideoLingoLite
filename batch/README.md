@@ -1,0 +1,60 @@
+# VideoLingo Batch Mode
+
+[English](./README.md) | [简体中文](./README.zh.md)
+
+在使用批处理模式前，请确保你已经使用过 Web UI 并正确设置了 `config.yaml` 中的参数。
+
+## 使用方法
+
+### 1. 准备视频文件
+
+将要处理的视频文件放入 `input` 文件夹。
+
+### 2. 生成任务配置（可选）
+
+如果 `input` 文件夹中有多个视频文件，可以使用 `OneKeyGenerateTasks.bat` 自动生成 `tasks_setting.csv` 配置文件：
+
+1. 双击运行 `OneKeyGenerateTasks.bat`
+2. 程序会自动扫描 `input` 文件夹中的视频文件
+3. 按提示配置：
+   - **Source Language**：源语言（如 `en`, `zh`）
+   - **Target Language**：翻译语言（如 `简体中文`, `English`）
+4. 预览生成的配置，确认后保存
+
+或者手动编辑 `tasks_setting.csv` 文件：
+
+| 字段 | 说明 | 可选值 |
+|------|------|--------|
+| Video File | 视频文件名（无需 `input/` 前缀） | - |
+| Source Language | 源语言 | 'en', 'zh', ... 或留空使用默认设置 |
+| Target Language | 翻译语言 | 使用自然语言描述，或留空使用默认设置 |
+
+示例：
+
+| Video File | Source Language | Target Language |
+|------------|-----------------|-----------------|
+| Kungfu Panda.mp4 | | German |
+| Tutorial.mp4 | |  |
+
+### 3. 运行批处理
+
+1. 双击运行 `OneKeyBatch.bat`
+2. 输出文件将保存在 `output` 文件夹
+3. 任务状态可在 `tasks_setting.csv` 的 `Status` 列查看
+
+> 注意在运行时保持 `tasks_setting.csv` 关闭，否则会因占用无法写入而中断。
+
+## 注意事项
+
+### 中断处理
+
+如果中途关闭命令行，`config.yaml` 中的语言设置可能会改变。重试前请检查设置。
+
+### 错误处理
+
+- 处理失败的文件会被移至 `output/ERROR` 文件夹
+- 错误信息记录在 `tasks_setting.csv` 的 `Status` 列
+- 如需重试：
+  1. 将 `ERROR` 下的单个视频文件夹移至根目录
+  2. 重命名为 `output`
+  3. 使用 Web UI 重新执行

@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "VideoLingoLite"
+version = "3.0.0"
+description = "A tool for video language processing and subtitle generation"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Eclipse005"}
+]
+requires-python = "==3.10.*"
+dependencies = [
+    # 音频处理 - 仅列出包名
+    "torch==2.8.0",
+    "torchaudio==2.8.0",
+    "librosa==0.11.0",
+    "pydub==0.25.1",
+    # 数据处理 - 依赖版本锁定
+    "pandas==2.2.3",
+    # AI & API
+    "openai==2.9.0",
+    "requests==2.32.5",
+    # 配置与工具
+    "PyYAML==6.0.3",
+    "ruamel.yaml==0.18.16",
+    "json-repair==0.54.2",
+    "autocorrect-py==2.14.0",
+    "pysrt==1.1.2",
+    "nemo-toolkit[asr]==2.6.1",
+    "pyarrow==22.0.0",
+    "numpy==2.2.6",
+    "audio-separator[gpu]==0.41.0",
+    "rich==14.2.0",
+    "pip==25.3",
+    "onnx2torch==1.5.15",
+    # Web API (新增)
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "typer>=0.21.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "uv>=0.2.0",
+]
+
+
+
+[project.urls]
+Homepage = "https://github.com/eclipse005/VideoLingoLite"
+Repository = "https://github.com/eclipse005/VideoLingoLite.git"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "batch*", "translations*"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+torch = [
+  # 1. CUDA Index: Windows (any arch) OR Linux (x86_64)
+  { index = "pytorch-cuda", marker = "sys_platform == 'win32' or (sys_platform == 'linux' and platform_machine == 'x86_64')" },
+  
+  # 2. CPU Index: macOS (any arch) OR (非 x86_64 且非 Windows 的机器)
+  { index = "pytorch-cpu", marker = "sys_platform == 'darwin' or (platform_machine != 'x86_64' and sys_platform != 'win32')" },
+]
+torchaudio = [
+  # 1. CUDA Index: Windows (any arch) OR Linux (x86_64)
+  { index = "pytorch-cuda", marker = "sys_platform == 'win32' or (sys_platform == 'linux' and platform_machine == 'x86_64')" },
+  
+  # 2. CPU Index: macOS (any arch) OR (非 x86_64 且非 Windows 的机器)
+  { index = "pytorch-cpu", marker = "sys_platform == 'darwin' or (platform_machine != 'x86_64' and sys_platform != 'win32')" },
+]
+
+
+# 定义 CUDA 12.8 专用索引
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true 
+
+# 定义 CPU 专用索引
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
