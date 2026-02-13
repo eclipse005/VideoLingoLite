@@ -77,12 +77,18 @@ def convert_yaml_to_app_config() -> AppConfig:
         target_language = load_key("target_language")
         transcript_only = load_key("transcript_only")
 
-        # 读取热词矫正配置
-        hotword_terms = load_key("asr_term_correction.terms") or []
-        hotword_enabled = load_key("asr_term_correction.enabled")
+        # 读取热词矫正配置（分组结构）
+        hotword_groups = load_key("asr_term_correction.groups") or []
+        hotword_enabled = load_key("asr_term_correction.enabled") or False
+        hotword_active_group_id = load_key("asr_term_correction.active_group_id") or "group-0"
+
+        if not hotword_groups:
+            hotword_groups = [{"id": "group-0", "name": "默认分组", "keyterms": []}]
+
         hotword_correction = {
             "enabled": hotword_enabled,
-            "terms": hotword_terms
+            "active_group_id": hotword_active_group_id,
+            "groups": hotword_groups
         }
 
         # 读取人声分离配置
@@ -136,9 +142,10 @@ def convert_app_config_to_yaml(config: AppConfig):
         updates["target_language"] = config.target_language
         updates["transcript_only"] = config.transcript_only
 
-        # 热词矫正配置
-        updates["asr_term_correction.terms"] = config.hotword_correction.terms
+        # 热词矫正配置（分组结构）
         updates["asr_term_correction.enabled"] = config.hotword_correction.enabled
+        updates["asr_term_correction.active_group_id"] = config.hotword_correction.active_group_id
+        updates["asr_term_correction.groups"] = [g.model_dump() for g in config.hotword_correction.groups]
 
         # 人声分离配置
         updates["vocal_separation.enabled"] = config.vocal_separation.enabled
@@ -235,6 +242,8 @@ async def reset_config():
             "target_language": "简体中文",
             "transcript_only": False,
             "asr_term_correction.enabled": False,
+            "asr_term_correction.active_group_id": "group-0",
+            "asr_term_correction.groups": [{"id": "group-0", "name": "默认分组", "keyterms": []}],
 
             # 人声分离
             "vocal_separation.enabled": False,
