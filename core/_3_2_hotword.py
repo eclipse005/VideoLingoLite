@@ -578,16 +578,30 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
     Returns:
         List[Sentence]: 矫正后的 Sentence 对象列表
     """
+    # 0. 初始化热词分组（如果需要）
+    from core.utils.config_utils import init_hotword_groups
+    init_hotword_groups()
+
     # 1. 检查开关
     enabled = load_key("asr_term_correction.enabled")
     if not enabled:
         rprint("[yellow]⏭️ 术语矫正已禁用，跳过[/yellow]")
         return sentences
 
-    # 2. 加载术语配置
-    terms_config = load_key("asr_term_correction.terms")
+    # 2. 加载激活分组的热词配置
+    active_group_id = load_key("asr_term_correction.active_group_id")
+    groups = load_key("asr_term_correction.groups") or []
+
+    # 找到激活分组
+    active_group = next((g for g in groups if g["id"] == active_group_id), None)
+
+    if not active_group:
+        rprint("[yellow]⚠️ 未找到激活的热词分组，跳过矫正[/yellow]")
+        return sentences
+
+    terms_config = active_group.get("keyterms", [])
     if not terms_config:
-        rprint("[yellow]⏭️ 未配置术语，跳过矫正[/yellow]")
+        rprint(f"[yellow]⏭️ 分组 '{active_group['name']}' 中未配置热词，跳过矫正[/yellow]")
         return sentences
 
     # 3. 解析术语列表

@@ -3,6 +3,41 @@ import math
 import pandas as pd
 from .config_manager import load_key, update_key, update_keys
 
+
+# -----------------------
+# Hotword groups initialization
+# -----------------------
+
+def init_hotword_groups():
+    """
+    初始化热词分组，如果没有 groups 则创建默认分组
+    Returns: 是否进行了初始化
+    """
+    groups = load_key('asr_term_correction.groups', default=None)
+    active_group_id = load_key('asr_term_correction.active_group_id', default=None)
+
+    # 如果已经有分组结构，直接返回
+    if groups is not None and len(groups) > 0:
+        if active_group_id is None:
+            # 有分组但没有 active_group_id，设置第一个为激活分组
+            update_key('asr_term_correction.active_group_id', groups[0]['id'])
+        return False
+
+    # 创建默认分组
+    default_group = {
+        'id': 'group-0',
+        'name': '默认分组',
+        'keyterms': []
+    }
+
+    updates = {
+        'asr_term_correction.groups': [default_group],
+        'asr_term_correction.active_group_id': 'group-0'
+    }
+
+    update_keys(updates)
+    return True
+
 # -----------------------
 # Safe CSV reading with encoding detection
 # -----------------------

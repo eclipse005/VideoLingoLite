@@ -103,11 +103,20 @@ class AsrConfig(BaseModel):
     runtime: Literal["custom", "parakeet"] = Field(default="custom", description="ASR 引擎")
 
 
+# ============ 热词分组 ============
+class HotwordGroup(BaseModel):
+    """热词分组"""
+    id: str = Field(..., description="分组唯一标识")
+    name: str = Field(..., description="分组显示名称")
+    keyterms: List[str] = Field(default_factory=list, description="热词列表")
+
+
 # ============ 热词矫正配置 ============
 class HotwordCorrectionConfig(BaseModel):
     """热词矫正配置"""
     enabled: bool = Field(default=False, description="是否启用")
-    terms: List[str] = Field(default_factory=list, description="热词列表")
+    active_group_id: str = Field(default="group-0", description="激活分组 ID")
+    groups: List[HotwordGroup] = Field(default_factory=list, description="分组列表")
 
 
 # ============ 人声分离配置 ============

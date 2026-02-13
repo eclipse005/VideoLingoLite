@@ -90,11 +90,20 @@ const SettingsManager = {
     targetLanguage: '简体中文',
 
 
-    // 热词矫正
+    // 热词矫正（分组结构）
     hotwordCorrection: {
-      enabled: true,
-      terms: ['FVG:fair value gap', 'POI']
+      enabled: false,
+      activeGroupId: 'group-0',
+      groups: [
+        { id: 'group-0', name: '默认分组', keyterms: [] }
+      ]
     },
+
+    // 分组 UI 状态
+    nextGroupIndex: 1,
+    editingGroupId: null,
+    editingGroupName: '',
+    newGroupName: '',
 
     // 人声分离
     vocalSeparation: {
@@ -130,11 +139,26 @@ const SettingsManager = {
       // 加载其他配置
       this.data.targetLanguage = config.target_language || '简体中文';
 
-      // 加载热词矫正配置
-      this.data.hotwordCorrection = {
-        enabled: config.hotword_correction?.enabled || false,
-        terms: config.hotword_correction?.terms || []
-      };
+      // 加载热词矫正配置（分组结构）
+      const hwGroups = config.hotword_correction?.groups || [];
+      if (hwGroups.length > 0) {
+        this.data.hotwordCorrection = {
+          enabled: config.hotword_correction?.enabled || false,
+          activeGroupId: config.hotword_correction?.active_group_id || hwGroups[0].id,
+          groups: hwGroups
+        };
+        // 计算下一个分组索引
+        const maxIndex = Math.max(...hwGroups.map(g => parseInt(g.id.replace('group-', '')) || 0);
+        this.data.nextGroupIndex = maxIndex + 1;
+      } else {
+        // 如果没有分组，创建默认分组
+        this.data.hotwordCorrection = {
+          enabled: config.hotword_correction?.enabled || false,
+          activeGroupId: 'group-0',
+          groups: [{ id: 'group-0', name: '默认分组', keyterms: [] }]
+        };
+        this.data.nextGroupIndex = 1;
+      }
 
       // 加载人声分离配置
       this.data.vocalSeparation = {
@@ -340,7 +364,8 @@ const SettingsManager = {
         target_language: document.getElementById('targetLanguage')?.value || this.data.targetLanguage,
         hotword_correction: {
           enabled: document.getElementById('hotwordEnabled')?.checked ?? this.data.hotwordCorrection.enabled,
-          terms: this.data.hotwordCorrection.terms
+          active_group_id: this.data.hotwordCorrection.activeGroupId,
+          groups: this.data.hotwordCorrection.groups
         },
         vocal_separation: {
           enabled: document.getElementById('vocalSeparation')?.checked ?? this.data.vocalSeparation.enabled
@@ -375,6 +400,170 @@ const SettingsManager = {
     }
   },
 
+  // ==================== 分组管理方法 ====================
+
+  // 切换激活分组
+  activateGroup(groupId) {
+    this.data.hotwordCorrection.activeGroupId = groupId;
+    this.renderGroups();
+    this.renderHotwords();
+  },
+
+  // 显示新建分组输入框
+  showNewGroupInput() {
+    this.data.newGroupName = '新建分组';
+    this.renderGroups();
+  },
+
+  // 添加分组
+  addGroup() {
+    const name = this.data.newGroupName.trim();
+    if (!name) {
+      showToast('请输入分组名称', 'error');
+      return;
+    }
+
+    const newGroup = {
+      id: `group-${this.data.nextGroupIndex++}`,
+      name: name,
+      keyterms: []
+    };
+
+    this.data.hotwordCorrection.groups.push(newGroup);
+    this.data.hotwordCorrection.activeGroupId = newGroup.id;
+    this.data.newGroupName = '';
+    this.renderGroups();
+    this.renderHotwords();
+  },
+
+  // 删除分组
+  deleteGroup(groupId) {
+    if (this.data.hotwordCorrection.groups.length <= 1) {
+      showToast('至少保留一个分组', 'error');
+      return;
+    }
+
+    const idx = this.data.hotwordCorrection.groups.findIndex(g => g.id === groupId);
+    this.data.hotwordCorrection.groups.splice(idx, 1);
+
+    // 如果删除的是激活分组，激活第一个
+    if (this.data.hotwordCorrection.activeGroupId === groupId) {
+      this.data.hotwordCorrection.activeGroupId = this.data.hotwordCorrection.groups[0].id;
+    }
+
+    this.renderGroups();
+    this.renderHotwords();
+  },
+
+  // 开始编辑分组名
+  startEditGroup(groupId, currentName) {
+    this.data.editingGroupId = groupId;
+    this.data.editingGroupName = currentName;
+    this.renderGroups();
+  },
+
+  // 保存编辑的分组名
+  saveEditGroup() {
+    const group = this.data.hotwordCorrection.groups.find(
+      g => g.id === this.data.editingGroupId
+    );
+    if (group && this.data.editingGroupName.trim()) {
+      group.name = this.data.editingGroupName.trim();
+    }
+    this.data.editingGroupId = null;
+    this.data.editingGroupName = '';
+    this.renderGroups();
+  },
+
+  // 渲染分组标签栏
+  renderGroups() {
+    const container = document.getElementById('groupsTabs');
+    if (!container) return;
+
+    const groups = this.data.hotwordCorrection.groups;
+    const activeId = this.data.hotwordCorrection.activeGroupId;
+
+    container.innerHTML = groups.map(group => {
+      const isActive = group.id === activeId;
+      const isEditing = this.data.editingGroupId === group.id;
+
+      return `
+        <div class="hotword-group-tab ${isActive ? 'active' : ''}"
+             data-group-id="${group.id}"
+             onclick="SettingsManager.activateGroup('${group.id}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          ${isEditing ? `
+            <input type="text" class="group-name-input"
+                   value="${Utils.escapeHtml(this.data.editingGroupName)}"
+                   onkeydown="if(event.key==='Enter') SettingsManager.saveEditGroup()"
+                   onblur="SettingsManager.saveEditGroup()"
+                   onclick="event.stopPropagation()"
+                   autofocus>
+          ` : `
+            <span class="group-name">${Utils.escapeHtml(group.name)}</span>
+          `}
+          <span class="group-count">(${group.keyterms.length})</span>
+          <div class="group-actions" onclick="event.stopPropagation()">
+            ${!isEditing ? `
+              <button class="group-action-btn" onclick="SettingsManager.startEditGroup('${group.id}', '${Utils.escapeHtml(group.name).replace(/'/g, "\\'")}')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              ${groups.length > 1 ? `
+                <button class="group-action-btn" onclick="SettingsManager.deleteGroup('${group.id}')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
+              ` : ''}
+            ` : `
+              <button class="group-action-btn" onclick="SettingsManager.saveEditGroup()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 新建分组输入框或按钮
+    if (this.data.newGroupName) {
+      container.innerHTML += `
+        <div class="hotword-group-tab">
+          <input type="text" class="group-name-input"
+                 value="${Utils.escapeHtml(this.data.newGroupName)}"
+                 onkeydown="if(event.key==='Enter') SettingsManager.addGroup()"
+                 onblur="if(SettingsManager.data.newGroupName.trim()) SettingsManager.addGroup(); else SettingsManager.data.newGroupName=''; SettingsManager.renderGroups();"
+                 onclick="event.stopPropagation()">
+          <button class="group-action-btn" onclick="event.stopPropagation(); SettingsManager.addGroup()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    } else {
+      container.innerHTML += `
+        <button class="hotword-group-tab" onclick="SettingsManager.showNewGroupInput()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>新建分组</span>
+        </button>
+      `;
+    }
+  },
+
+  // ==================== 热词管理方法 ====================
+
   // 添加热词（支持英文逗号批量添加）
   addHotword() {
     const termInput = document.getElementById('newHotword');
@@ -382,6 +571,16 @@ const SettingsManager = {
 
     if (!input) {
       showToast('请输入热词', 'error');
+      return;
+    }
+
+    // 找到激活分组
+    const activeGroup = this.data.hotwordCorrection.groups.find(
+      g => g.id === this.data.hotwordCorrection.activeGroupId
+    );
+
+    if (!activeGroup) {
+      showToast('未找到激活分组', 'error');
       return;
     }
 
@@ -398,8 +597,8 @@ const SettingsManager = {
         return;
       }
 
-      // 批量添加
-      this.data.hotwordCorrection.terms.push(...terms);
+      // 批量添加到激活分组
+      activeGroup.keyterms.push(...terms);
       this.renderHotwords();
 
       if (termInput) {
@@ -408,8 +607,8 @@ const SettingsManager = {
 
       showToast(`已添加 ${terms.length} 个热词`, 'success');
     } else {
-      // 单个热词添加（保持原有逻辑）
-      this.data.hotwordCorrection.terms.push(input);
+      // 单个热词添加
+      activeGroup.keyterms.push(input);
       this.renderHotwords();
 
       if (termInput) {
@@ -421,66 +620,74 @@ const SettingsManager = {
   },
 
   // 删除热词
-  removeHotword(index) {
-    this.data.hotwordCorrection.terms.splice(index, 1);
-    this.renderHotwords();
+  removeHotword(term) {
+    const activeGroup = this.data.hotwordCorrection.groups.find(
+      g => g.id === this.data.hotwordCorrection.activeGroupId
+    );
+
+    if (!activeGroup) {
+      return;
+    }
+
+    const idx = activeGroup.keyterms.indexOf(term);
+    if (idx > -1) {
+      activeGroup.keyterms.splice(idx, 1);
+      this.renderHotwords();
+    }
   },
 
-  // 渲染热词列表
+  // 渲染热词列表（当前激活分组的热词）
   renderHotwords() {
     const container = document.getElementById('hotwordsList');
     if (!container) return;
 
-    if (this.data.hotwordCorrection.terms.length === 0) {
+    // 找到激活分组
+    const activeGroup = this.data.hotwordCorrection.groups.find(
+      g => g.id === this.data.hotwordCorrection.activeGroupId
+    );
+
+    if (!activeGroup || activeGroup.keyterms.length === 0) {
       container.innerHTML = '';
       return;
     }
 
-    container.innerHTML = this.data.hotwordCorrection.terms.map((term, index) => {
+    container.innerHTML = activeGroup.keyterms.map((term) => {
       // 解析热词格式：如果有冒号，分成原文和译文
       if (term.includes(':')) {
         const [original, translation] = term.split(':');
         return `
-          <div class="hotword-item" data-index="${index}">
-            <div class="hotword-content">
-              <span class="hotword-original">${Utils.escapeHtml(original.trim())}</span>
-              <span class="hotword-arrow">→</span>
-              <span class="hotword-translation">${Utils.escapeHtml(translation.trim())}</span>
-            </div>
-            <div class="hotword-actions" onclick="event.stopPropagation(); SettingsManager.removeHotword(${index})">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <div class="hotword-item">
+            <span class="hotword-original">${Utils.escapeHtml(original.trim())}</span>
+            <span class="hotword-arrow">→</span>
+            <span class="hotword-translation">${Utils.escapeHtml(translation.trim())}</span>
+            <button class="hotword-remove" onclick="SettingsManager.removeHotword('${Utils.escapeHtml(term).replace(/'/g, "\\'")}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
-            </div>
+            </button>
           </div>
         `;
       } else {
         return `
-          <div class="hotword-item" data-index="${index}">
-            <div class="hotword-content">
-              <span class="hotword-text">${Utils.escapeHtml(term)}</span>
-            </div>
-            <div class="hotword-actions" onclick="event.stopPropagation(); SettingsManager.removeHotword(${index})">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <div class="hotword-item">
+            <span class="hotword-text">${Utils.escapeHtml(term)}</span>
+            <button class="hotword-remove" onclick="SettingsManager.removeHotword('${Utils.escapeHtml(term).replace(/'/g, "\\'")}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
-            </div>
+            </button>
           </div>
         `;
       }
     }).join('');
+  },
 
-    // 添加点击事件监听
-    container.querySelectorAll('.hotword-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        // 移除其他选中状态
-        container.querySelectorAll('.hotword-item.selected').forEach(i => i.classList.remove('selected'));
-        // 切换当前选中状态
-        item.classList.toggle('selected');
-      });
-    });
+  // 渲染热词列表 HTML（兼容方法，调用 renderHotwords）
+  renderHotwordsList() {
+    this.renderHotwords();
+    return '';
   },
 
   // 渲染整个界面
@@ -637,7 +844,14 @@ const SettingsManager = {
                   </label>
                 </div>
 
+                <!-- 分组标签栏 -->
+                <div class="hotword-groups-tabs" id="groupsTabs"></div>
+
+                <!-- 当前分组热词列表 -->
                 <div class="hotwords-config">
+                  <div class="hotwords-list" id="hotwordsList"></div>
+
+                  <!-- 添加热词输入框 -->
                   <div class="hotwords-add">
                     <input type="text" id="newHotword" class="apple-input" placeholder="单个添加：AI:Artificial Intelligence | 批量添加：API, SDK, CLI（英文逗号分隔）">
                     <button id="addHotwordBtn" class="apple-button apple-button-secondary">
@@ -648,8 +862,22 @@ const SettingsManager = {
                       添加
                     </button>
                   </div>
-                  <div class="hotwords-list" id="hotwordsList">
-                    ${this.renderHotwordsList()}
+                </div>
+              </div>
+
+              <!-- 说明信息 -->
+              <div class="settings-section">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4" style="background-color: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px;">
+                  <div class="flex items-start gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0066cc" stroke-width="2">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <div style="font-size: 14px; color: #0066cc;">
+                      <p style="font-weight: 500; margin: 0 0 4px 0;">热词分组说明</p>
+                      <p style="color: #0066cc; margin: 0;">
+                        按领域分组管理热词，提高专业术语识别准确率。只有激活分组的热词会用于 ASR 矫正。
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
