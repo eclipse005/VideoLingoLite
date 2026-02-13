@@ -539,6 +539,7 @@ const SettingsManager = {
         <div class="hotword-group-tab">
           <input type="text" class="group-name-input"
                  value="${Utils.escapeHtml(this.data.newGroupName)}"
+                 oninput="SettingsManager.data.newGroupName = this.value"
                  onkeydown="if(event.key==='Enter') SettingsManager.addGroup()"
                  onblur="if(SettingsManager.data.newGroupName.trim()) SettingsManager.addGroup(); else SettingsManager.data.newGroupName=''; SettingsManager.renderGroups();"
                  onclick="event.stopPropagation()">
