@@ -148,7 +148,7 @@ const SettingsManager = {
           groups: hwGroups
         };
         // 计算下一个分组索引
-        const maxIndex = Math.max(...hwGroups.map(g => parseInt(g.id.replace('group-', '')) || 0);
+        const maxIndex = Math.max(...hwGroups.map(g => parseInt(g.id.replace('group-', '')) || 0));
         this.data.nextGroupIndex = maxIndex + 1;
       } else {
         // 如果没有分组，创建默认分组
@@ -185,6 +185,9 @@ const SettingsManager = {
 
     // 渲染 API 配置
     this.renderApiConfig();
+
+    // 渲染分组标签栏
+    this.renderGroups();
 
     // 渲染热词列表
     this.renderHotwords();
@@ -314,7 +317,6 @@ const SettingsManager = {
       model: document.getElementById('apiModel').value
     };
 
-    console.log('测试 API 连接:', config);
     const toast = showProgressToast(`正在测试 ${API_CHANNELS[this.data.currentApiChannel]} 连接...`, 'info');
 
     try {
@@ -322,12 +324,10 @@ const SettingsManager = {
 
       if (result.success) {
         toast.success(result.message);
-        console.log('测试结果详情:', result.details);
       } else {
         toast.error(`连接失败: ${result.message}`);
       }
     } catch (error) {
-      console.error('测试连接失败:', error);
       toast.error(`测试失败: ${error.message || '网络错误'}`);
     }
   },
@@ -372,9 +372,6 @@ const SettingsManager = {
         },
         advanced: this.data.advanced
       };
-
-      // 调试日志
-      console.log('Sending settings to backend:', JSON.stringify(settings, null, 2));
 
       // 调用后端 API 保存配置
       await apiPut('/config', settings);
@@ -464,6 +461,8 @@ const SettingsManager = {
 
   // 保存编辑的分组名
   saveEditGroup() {
+    if (!this.data.editingGroupId) return;
+
     const group = this.data.hotwordCorrection.groups.find(
       g => g.id === this.data.editingGroupId
     );
@@ -497,6 +496,7 @@ const SettingsManager = {
           ${isEditing ? `
             <input type="text" class="group-name-input"
                    value="${Utils.escapeHtml(this.data.editingGroupName)}"
+                   oninput="SettingsManager.data.editingGroupName = this.value"
                    onkeydown="if(event.key==='Enter') SettingsManager.saveEditGroup()"
                    onblur="SettingsManager.saveEditGroup()"
                    onclick="event.stopPropagation()"
@@ -551,12 +551,11 @@ const SettingsManager = {
       `;
     } else {
       container.innerHTML += `
-        <button class="hotword-group-tab" onclick="SettingsManager.showNewGroupInput()">
+        <button class="hotword-group-tab hotword-group-add-btn" onclick="SettingsManager.showNewGroupInput()" title="新建分组">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          <span>新建分组</span>
         </button>
       `;
     }
@@ -861,23 +860,6 @@ const SettingsManager = {
                       </svg>
                       添加
                     </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 说明信息 -->
-              <div class="settings-section">
-                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4" style="background-color: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px;">
-                  <div class="flex items-start gap-3">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0066cc" stroke-width="2">
-                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <div style="font-size: 14px; color: #0066cc;">
-                      <p style="font-weight: 500; margin: 0 0 4px 0;">热词分组说明</p>
-                      <p style="color: #0066cc; margin: 0;">
-                        按领域分组管理热词，提高专业术语识别准确率。只有激活分组的热词会用于 ASR 矫正。
-                      </p>
-                    </div>
                   </div>
                 </div>
               </div>
