@@ -126,7 +126,7 @@ async def delete_file(file_id: str):
             task = tasks_module.tasks_storage[task_id]
 
             # 如果任务正在运行，不允许删除
-            if task.status in [TaskStatus.ASR, TaskStatus.NLP_SPLIT, TaskStatus.HOTWORD_CORRECTION,
+            if task.status in [TaskStatus.ASR, TaskStatus.HOTWORD_CORRECTION,
                               TaskStatus.MEANING_SPLIT, TaskStatus.SUMMARIZING, TaskStatus.GENERATING]:
                 raise HTTPException(status_code=400, detail="任务正在运行中，无法删除文件")
 

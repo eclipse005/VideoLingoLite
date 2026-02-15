@@ -53,7 +53,10 @@ def transcribe():
             rprint(f"[dim]Processing segment {i+1}/{len(segments)}...[/dim]")
             # 报告细粒度进度
             report_progress(i + 1, len(segments), f"转录片段 {i+1}/{len(segments)}")
-            result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end, model=model)
+            if asr_runtime == "parakeet":
+                result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end, model=model)
+            else:
+                result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)
             all_results.append(result)
 
         # 6. Combine results

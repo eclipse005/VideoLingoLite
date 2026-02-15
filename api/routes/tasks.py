@@ -210,9 +210,7 @@ async def process_task_task(task_id: str, file_id: str, file_name: str, task_typ
 
         _2_asr.transcribe()
 
-        # NLP 分句（无细粒度进度，直接设置为 ASR 完成后的进度）
-        update_task_status(task_id, TaskStatus.NLP_SPLIT, 20, "NLP 分句中", "正在进行NLP分句...")
-
+        # NLP 分句（无细粒度进度，保持在ASR后的进度）
         if task_cancel_flags.get(task_id):
             update_task_status(task_id, TaskStatus.CANCELLED, message="任务已取消")
             return
@@ -282,6 +280,16 @@ async def process_task_task(task_id: str, file_id: str, file_name: str, task_typ
                 return
 
             sentences = _4_2_translate.translate_all(sentences)
+
+            # 生成 dub.srt（用断句前的 sentences，保持连贯性，适合配音）
+            from core._6_gen_sub import generate_subtitles_from_sentences
+            from core.utils.models import _OUTPUT_DIR
+            generate_subtitles_from_sentences(
+                sentences,
+                subtitle_output_configs=[('dub.srt', ['Translation'])],
+                output_dir=_OUTPUT_DIR,
+                for_display=False  # 保持原始标点，不做显示美化
+            )
 
             update_task_status(task_id, TaskStatus.GENERATING, 76, "处理对齐中", "正在处理和对齐字幕...")
 

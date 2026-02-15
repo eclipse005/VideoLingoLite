@@ -21,7 +21,6 @@ class TaskStatus(str, Enum):
     PENDING = "pending"
     QUEUED = "queued"
     ASR = "asr"
-    NLP_SPLIT = "nlp_split"
     HOTWORD_CORRECTION = "hotword_correction"
     MEANING_SPLIT = "meaning_split"
     SUMMARIZING = "summarizing"
