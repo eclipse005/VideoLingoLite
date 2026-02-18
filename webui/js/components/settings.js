@@ -22,8 +22,14 @@ const Utils = {
 
 // ASR 运行时选项
 const ASR_RUNTIMES = {
-  'parakeet': 'Parakeet（本地 GPU，25 种欧洲语言）',
+  'qwen': 'Qwen3-ASR（本地 GPU，52 种语言 + 22 种中文方言）',
   'custom': '自定义 API（用户配置端点）'
+};
+
+// Qwen3-ASR 模型选项
+const QWEN_MODELS = {
+  'Qwen3-ASR-0.6B': 'Qwen3-ASR-0.6B（速度快，精度较低）',
+  'Qwen3-ASR-1.7B': 'Qwen3-ASR-1.7B（高精度，速度较慢）'
 };
 
 // 语言选项
@@ -84,7 +90,8 @@ const SettingsManager = {
 
     // ASR 设置
     asrLanguage: 'en',
-    asrRuntime: 'parakeet',
+    asrRuntime: 'qwen',
+    asrModel: 'Qwen3-ASR-0.6B',
 
     // 目标语言
     targetLanguage: '简体中文',
@@ -134,7 +141,8 @@ const SettingsManager = {
 
       // 加载 ASR 配置
       this.data.asrLanguage = config.asr?.language || 'en';
-      this.data.asrRuntime = config.asr?.runtime || 'custom';
+      this.data.asrRuntime = config.asr?.runtime || 'qwen';
+      this.data.asrModel = config.asr?.model || 'Qwen3-ASR-0.6B';
 
       // 加载其他配置
       this.data.targetLanguage = config.target_language || '简体中文';
@@ -265,6 +273,21 @@ const SettingsManager = {
       });
     }
 
+    // ASR 运行时切换（显示/隐藏模型选择）
+    const asrRuntimeSelect = document.getElementById('asrRuntime');
+    if (asrRuntimeSelect) {
+      asrRuntimeSelect.addEventListener('change', (e) => {
+        const modelGroup = document.getElementById('asrModelGroup');
+        if (modelGroup) {
+          if (e.target.value === 'qwen') {
+            modelGroup.style.display = '';
+          } else {
+            modelGroup.style.display = 'none';
+          }
+        }
+      });
+    }
+
     // 测试 API 按钮
     const testBtn = document.getElementById('testApiBtn');
     if (testBtn) {
@@ -359,7 +382,8 @@ const SettingsManager = {
         api_channels: this.data.apiChannels,
         asr: {
           language: document.getElementById('asrLanguage')?.value || this.data.asrLanguage,
-          runtime: document.getElementById('asrRuntime')?.value || this.data.asrRuntime
+          runtime: document.getElementById('asrRuntime')?.value || this.data.asrRuntime,
+          model: document.getElementById('asrModel')?.value || this.data.asrModel
         },
         target_language: document.getElementById('targetLanguage')?.value || this.data.targetLanguage,
         hotword_correction: {
@@ -813,6 +837,15 @@ const SettingsManager = {
                     <select id="asrRuntime" class="apple-select">
                       ${Object.entries(ASR_RUNTIMES).map(([key, label]) => `
                         <option value="${key}" ${this.data.asrRuntime === key ? 'selected' : ''}>${label}</option>
+                      `).join('')}
+                    </select>
+                  </div>
+
+                  <div class="form-group" id="asrModelGroup" style="${this.data.asrRuntime === 'qwen' ? '' : 'display: none;'}">
+                    <label>模型</label>
+                    <select id="asrModel" class="apple-select">
+                      ${Object.entries(QWEN_MODELS).map(([key, label]) => `
+                        <option value="${key}" ${this.data.asrModel === key ? 'selected' : ''}>${label}</option>
                       `).join('')}
                     </select>
                   </div>
