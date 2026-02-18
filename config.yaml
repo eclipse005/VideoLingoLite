@@ -70,7 +70,7 @@ vocal_separation:
 
 # VAD-based audio segmentation (replaces FFMPEG silence detection when enabled)
 vad:
-  enabled: false  # Use VAD to detect speech segments for ASR (false = use FFMPEG silence detection)
+  enabled: true  # Use VAD to detect speech segments for ASR (false = use FFMPEG silence detection)
   threshold: 0.5       # VAD speech probability threshold (0-1)
   min_speech_ms: 150   # Minimum speech duration (milliseconds)
   min_silence_ms: 200  # Silence duration to end speech segment (milliseconds)
