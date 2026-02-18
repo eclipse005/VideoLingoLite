@@ -66,12 +66,13 @@ def transcribe():
         # Combine results (keep multiple segments) - use aligned version for processing
         combined_result = {'segments': []}
         segment_count = 0
-        for aligned, raw in all_results:
-            for segment in aligned.get('segments', []):
+        for result in all_results:
+            # New separated architecture returns List[dict] directly (not tuple)
+            for segment in result.get('segments', []):
                 combined_result['segments'].append(segment)
                 segment_count += 1
         rprint(f"[cyan]📊 Total segments in combined_result: {segment_count}[/cyan]")
-        combined_result['language'] = all_results[0][0].get('language', 'unknown') if all_results else 'unknown'
+        combined_result['language'] = all_results[0].get('language', 'unknown') if all_results else 'unknown'
 
         # Save ASR result to JSON (use aligned version with punctuation)
         asr_json_path = "output/log/asr.json"
