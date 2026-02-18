@@ -11,9 +11,10 @@ import json
 import os
 from typing import List
 
-from core.utils import rprint, timer
+from core.utils import rprint, timer, load_key
 from core.utils.models import _3_1_SPLIT_BY_PUNCTUATION, Chunk, Sentence
 from core.utils.sentence_splitting import group_words_into_sentences_dicts, is_sentence_terminator
+from core.utils.config_utils import get_joiner
 
 
 def load_asr_json() -> dict:
@@ -42,6 +43,10 @@ def segments_to_sentences(asr_data: dict) -> List[Sentence]:
     if not segments:
         rprint("[yellow]⚠️ 未找到 ASR segments[/yellow]")
         return []
+
+    # 获取语言类型和 joiner
+    asr_language = load_key("asr.language")
+    joiner = get_joiner(asr_language)
 
     all_sentences = []
     sentence_idx = 0
@@ -77,7 +82,7 @@ def segments_to_sentences(asr_data: dict) -> List[Sentence]:
                     chunks.append(chunk)
 
                 # 创建 Sentence 对象
-                text = ''.join([w['word'] for w in word_group])
+                text = joiner.join([w['word'] for w in word_group])
                 start = word_group[0]['start']
                 end = word_group[-1]['end']
 
