@@ -1,9 +1,9 @@
 """
 ASR 热词矫正模块 (Stage 2)
 
-在 NLP 分句后进行，使用 LLM Agent 智能识别并矫正 ASR 错误
+在标点分句后进行，使用 LLM Agent 智能识别并矫正 ASR 错误
 
-输入: List[Sentence] (来自 _3_1_split_nlp.py)
+输入: List[Sentence] (来自 _3_1_split_by_punctuation.py)
 输出: List[Sentence] (矫正后，传递给 _3_3_split_meaning.py)
 """
 

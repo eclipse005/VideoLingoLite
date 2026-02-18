@@ -2,7 +2,6 @@ import os
 import json
 import requests
 import time
-import unicodedata
 from typing import Optional, List, Dict
 import io
 import librosa
@@ -10,71 +9,6 @@ import soundfile as sf
 from rich import print as rprint
 
 OUTPUT_LOG_DIR = "output/log"
-
-def is_sentence_terminator(char: str) -> bool:
-    """
-    判断字符是否为句子结束符号（使用 Unicode 类别）。
-
-    涵盖多语言：
-    - 中文/日文：。！？
-    - 英文：.!?
-    - 其他语言的句子结束符号
-    """
-    if not char:
-        return False
-
-    # 常见句子结束符号（作为补充）
-    terminators = {'.', '!', '?', '。', '！', '？', '‼', '⁇', '⁈', '⁉'}
-    if char in terminators:
-        return True
-
-    # 使用 Unicode 类别判断
-    # Po: Other punctuation（包含大多数标点符号）
-    category = unicodedata.category(char)
-    if category == 'Po':
-        # 进一步过滤，只保留句子结束类的标点
-        # 排除逗号、顿号、引号等非句子结束符号
-        non_terminators = {',', '，', '、', ';', '；', ':', '：', '"', "'", '「', '」', '『', '』', '（', '）', '(', ')', '[', ']', '{', '}', '・', '·', '•'}
-        if char not in non_terminators:
-            return True
-
-    return False
-
-
-def group_words_into_sentences(word_response: List[Dict]) -> List[List[Dict]]:
-    """
-    根据句子结束符号将 words 分组为句子。
-
-    Args:
-        word_response: [{'word': str, 'start': float, 'end': float}, ...]
-
-    Returns:
-        List of sentence groups, each group is a list of words
-    """
-    if not word_response:
-        return []
-
-    sentences = []
-    current_sentence = []
-
-    for word_info in word_response:
-        word = word_info['word']
-        current_sentence.append(word_info)
-
-        # 检查该词是否包含句子结束符号
-        if word:
-            # 检查词的最后一个字符（或任意字符）是否为句子结束符
-            for char in word:
-                if is_sentence_terminator(char):
-                    sentences.append(current_sentence)
-                    current_sentence = []
-                    break
-
-    # 处理剩余的词
-    if current_sentence:
-        sentences.append(current_sentence)
-
-    return sentences
 
 
 def convert_custom_response(word_response: list, start_time_offset: Optional[float] = None) -> dict:
@@ -86,42 +20,35 @@ def convert_custom_response(word_response: list, start_time_offset: Optional[flo
         start_time_offset: Optional time offset for chunked audio
 
     Returns:
-        Dictionary with segments containing words with timestamps
+        Dictionary with single segment containing all words with timestamps
     """
-    # 根据标点符号将 words 分组为句子
-    sentence_groups = group_words_into_sentences(word_response)
+    if not word_response:
+        return {"segments": []}
 
-    segments = []
+    # 应用时间偏移
+    words_with_offset = []
+    for word in word_response:
+        start = word['start'] + start_time_offset if start_time_offset else word['start']
+        end = word['end'] + start_time_offset if start_time_offset else word['end']
+        words_with_offset.append({
+            'word': word['word'],
+            'start': start,
+            'end': end
+        })
 
-    for sentence_words in sentence_groups:
-        if not sentence_words:
-            continue
+    # 构建单个 segment（与 qwen3_asr.py 格式一致）
+    # 句子分割由 _3_1_split_by_punctuation.py 处理
+    seg_start = words_with_offset[0]['start']
+    seg_end = words_with_offset[-1]['end']
+    seg_text = ''.join([w['word'] for w in words_with_offset])
 
-        # 应用时间偏移
-        words_with_offset = []
-        for word in sentence_words:
-            start = word['start'] + start_time_offset if start_time_offset else word['start']
-            end = word['end'] + start_time_offset if start_time_offset else word['end']
-            words_with_offset.append({
-                'word': word['word'],
-                'start': start,
-                'end': end
-            })
-
-        # 构建 segment（带 text, start, end，与 Parakeet 格式一致）
-        seg_start = words_with_offset[0]['start']
-        seg_end = words_with_offset[-1]['end']
-        seg_text = ''.join([w['word'] for w in words_with_offset])
-
-        segments.append({
+    return {
+        "segments": [{
             'start': seg_start,
             'end': seg_end,
             'text': seg_text,
             'words': words_with_offset
-        })
-
-    return {
-        "segments": segments
+        }]
     }
 
 def transcribe_audio_custom(raw_audio_path: str, audio_path: str, start: float = None, end: float = None):

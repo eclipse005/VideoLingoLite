@@ -7,7 +7,7 @@ from core._2_asr import load_chunks
 from core.utils.progress_callback import report_progress
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, Sentence
+from core.utils.models import _3_2_SPLIT_BY_MEANING, Sentence
 
 console = Console()
 

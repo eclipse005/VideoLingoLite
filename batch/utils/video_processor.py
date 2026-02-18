@@ -76,7 +76,7 @@ def process_input_file(file):
     return {'video_file': video_file}
 
 def split_sentences():
-    sentences = _3_1_split_nlp.split_by_spacy()
+    sentences = _3_1_split_by_punctuation.split_by_punctuation()
     sentences = _3_2_hotword.correct_terms_in_sentences(sentences)
     sentences = _3_3_split_meaning.split_sentences_by_meaning(sentences)
     return {'sentences': sentences}

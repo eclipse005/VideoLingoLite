@@ -196,7 +196,7 @@ async def process_task_task(task_id: str, file_id: str, file_name: str, task_typ
 
     try:
         # 导入VideoLingoLite核心模块
-        from core import _2_asr, _3_1_split_nlp, _3_2_hotword, _3_3_split_meaning
+        from core import _2_asr, _3_1_split_by_punctuation, _3_2_hotword, _3_3_split_meaning
         from core import _4_1_summarize, _4_2_translate, _5_split_sub, _6_gen_sub
         from core.utils.onekeycleanup import cleanup
 
@@ -215,7 +215,7 @@ async def process_task_task(task_id: str, file_id: str, file_name: str, task_typ
             update_task_status(task_id, TaskStatus.CANCELLED, message="任务已取消")
             return
 
-        sentences = _3_1_split_nlp.split_by_spacy()
+        sentences = _3_1_split_by_punctuation.split_by_punctuation()
 
         # 根据任务类型决定后续流程
         if task_type == TaskType.TRANSCRIBE_ONLY:
