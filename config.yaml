@@ -89,19 +89,23 @@ asr_term_correction:
   # Meaning description is optional, helps LLM understand context
   # LLM will automatically detect various error forms (based on pronunciation similarity, context semantics)
   terms:
-    - "FVG : fair value gap"
-    - "iFVG : inverse fair value gap"
-    - "POI"
-    - "CISD : Change in State of Delivery"
-    - "virgin wick"
+  - "FVG : fair value gap"
+  - "iFVG : inverse fair value gap"
+  - "POI"
+  - "CISD : Change in State of Delivery"
+  - "virgin wick"
     # Add more terms...    
- 
 
 ## ======================== Advanced Settings ======================== ##
 
 # Original text length limit (for sentence splitting)
 # For space-separated languages: word count
 # For non-space languages: character count
+  groups:
+  - id: group-0
+    name: 默认分组
+    keyterms: []
+  active_group_id: group-0
 origin_length:
   en: 22
   ja: 25
