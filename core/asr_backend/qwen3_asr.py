@@ -38,72 +38,6 @@ MODEL_DIR = load_key("model_dir")
 ABS_MODEL_DIR = os.path.abspath(MODEL_DIR)
 
 
-def is_sentence_terminator(char: str) -> bool:
-    """
-    判断字符是否为句子结束符号（使用 Unicode 类别）
-
-    涵盖多语言：
-    - 中文/日文：。！？
-    - 英文：.!?
-    - 其他语言的句子结束符号
-    """
-    if not char:
-        return False
-
-    # 常见句子结束符号（作为补充）
-    terminators = {'.', '!', '?', '。', '！', '？', '‼', '⁇', '⁈', '⁉'}
-    if char in terminators:
-        return True
-
-    # 使用 Unicode 类别判断
-    # Po: Other punctuation（包含大多数标点符号）
-    category = unicodedata.category(char)
-    if category == 'Po':
-        # 进一步过滤，只保留句子结束类的标点
-        # 排除逗号、顿号、引号等非句子结束符号
-        non_terminators = {',', '，', '、', ';', '；', ':', '：', '"', "'", '「', '」', '『', '』', '（', '）', '(', ')', '[', ']', '{', '}', '・', '·', '•'}
-        if char not in non_terminators:
-            return True
-
-    return False
-
-
-def group_words_into_sentences(word_response: List[Tuple[str, float, float]]) -> List[List[Tuple[str, float, float]]]:
-    """
-    根据句子结束符号将 words 分组为句子
-
-    Args:
-        word_response: [(word, start, end), ...]
-
-    Returns:
-        List of sentence groups, each group is a list of (word, start, end)
-    """
-    if not word_response:
-        return []
-
-    sentences = []
-    current_sentence = []
-
-    for word_info in word_response:
-        word = word_info[0]  # word is the first element
-        current_sentence.append(word_info)
-
-        # 检查该词是否包含句子结束符号
-        if word:
-            # 检查词的最后一个字符（或任意字符）是否为句子结束符
-            for char in word:
-                if is_sentence_terminator(char):
-                    sentences.append(current_sentence)
-                    current_sentence = []
-                    break
-
-    # 处理剩余的词
-    if current_sentence:
-        sentences.append(current_sentence)
-
-    return sentences
-
-
 def _is_word_char(char: str) -> bool:
     """
     判断字符是否是"词字符"（使用 Unicode 标准分类）
@@ -235,8 +169,6 @@ def _convert_qwen_to_standard_asr_format(result, start_offset=0):
     """
     Convert Qwen3-ASR output to standard ASR format with punctuation alignment
 
-    按标点符号分句，每个句子作为一个独立的 segment
-
     Args:
         result: Qwen3-ASR result object with .language, .text, .time_stamps
         start_offset: Time offset for this audio segment
@@ -257,83 +189,38 @@ def _convert_qwen_to_standard_asr_format(result, start_offset=0):
     word_timestamps = [(ts.text, ts.start_time, ts.end_time) for ts in result.time_stamps]
     aligned_timestamps = _align_text_to_timestamps(full_text, word_timestamps)
 
-    # 将 aligned_timestamps 转换为字典格式，方便后续处理
-    aligned_words_dict = []
+    aligned_words = []
     for text, start, end in aligned_timestamps:
-        aligned_words_dict.append({
+        aligned_words.append({
             'word': text,
             'start': round(start + start_offset, 2),
             'end': round(end + start_offset, 2)
         })
 
     # Build raw version (original timestamps without punctuation alignment)
-    raw_words_dict = []
+    raw_words = []
     for ts in result.time_stamps:
-        raw_words_dict.append({
+        raw_words.append({
             'word': ts.text,
             'start': round(ts.start_time + start_offset, 2),
             'end': round(ts.end_time + start_offset, 2)
         })
 
-    # 按句子分组（使用 aligned 版本）
-    sentence_groups = group_words_into_sentences(aligned_timestamps)
+    aligned_segment = {
+        'start': round(aligned_words[0]['start'], 2) if aligned_words else round(start_offset, 2),
+        'end': round(aligned_words[-1]['end'], 2) if aligned_words else round(start_offset, 2),
+        'text': full_text,
+        'words': aligned_words
+    }
 
-    # 为每个句子创建一个 segment
-    aligned_segments = []
-    for sentence_words in sentence_groups:
-        if not sentence_words:
-            continue
+    raw_segment = {
+        'start': round(raw_words[0]['start'], 2) if raw_words else round(start_offset, 2),
+        'end': round(raw_words[-1]['end'], 2) if raw_words else round(start_offset, 2),
+        'text': full_text,
+        'words': raw_words
+    }
 
-        # 构建 segment
-        seg_start = sentence_words[0][1] + start_offset  # start
-        seg_end = sentence_words[-1][2] + start_offset  # end
-        seg_text = ''.join([w[0] for w in sentence_words])
-
-        # 构建 words 列表
-        seg_words = []
-        for text, start, end in sentence_words:
-            seg_words.append({
-                'word': text,
-                'start': round(start + start_offset, 2),
-                'end': round(end + start_offset, 2)
-            })
-
-        aligned_segments.append({
-            'start': round(seg_start, 2),
-            'end': round(seg_end, 2),
-            'text': seg_text,
-            'words': seg_words
-        })
-
-    # Raw 版本也按同样方式分组（使用 raw timestamp）
-    raw_timestamps = [(ts.text, ts.start_time, ts.end_time) for ts in result.time_stamps]
-    raw_sentence_groups = group_words_into_sentences(raw_timestamps)
-
-    raw_segments = []
-    for sentence_words in raw_sentence_groups:
-        if not sentence_words:
-            continue
-
-        seg_start = sentence_words[0][1] + start_offset
-        seg_end = sentence_words[-1][2] + start_offset
-        seg_text = ''.join([w[0] for w in sentence_words])
-
-        seg_words = []
-        for text, start, end in sentence_words:
-            seg_words.append({
-                'word': text,
-                'start': round(start + start_offset, 2),
-                'end': round(end + start_offset, 2)
-            })
-
-        raw_segments.append({
-            'start': round(seg_start, 2),
-            'end': round(seg_end, 2),
-            'text': seg_text,
-            'words': seg_words
-        })
-
-    return {'segments': aligned_segments, 'language': language}, {'segments': raw_segments, 'language': language}
+    return {'segments': [aligned_segment], 'language': language}, {'segments': [raw_segment], 'language': language}
 
 
 def _download_model_if_needed(model_path, repo_id):
