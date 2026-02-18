@@ -1,6 +1,7 @@
 # ------------
-# Qwen3-ASR Backend
-# Local ASR with 52 language support + 22 Chinese dialects
+# Qwen3-ASR Backend (Separated Architecture)
+# Stage 1: ASR Transcription (text only)
+# Stage 2: Forced Alignment (timestamps)
 # ------------
 
 import os
@@ -165,28 +166,23 @@ def _align_text_to_timestamps(full_text: str, word_timestamps: List[Tuple[str, f
     return result
 
 
-def _convert_qwen_to_standard_asr_format(result, start_offset=0):
+def _convert_aligner_to_standard_asr_format(aligner_result, full_text: str, start_offset=0):
     """
-    Convert Qwen3-ASR output to standard ASR format with punctuation alignment
+    Convert Aligner output to standard ASR format with punctuation alignment
 
     Args:
-        result: Qwen3-ASR result object with .language, .text, .time_stamps
+        aligner_result: Qwen3ForcedAligner result (list of timestamps)
+        full_text: Full text with punctuation
         start_offset: Time offset for this audio segment
 
     Returns:
-        tuple: (aligned_result, raw_result)
+        dict: Standard ASR format with segments
     """
-    if not result or not result.time_stamps:
-        return {'segments': [], 'language': 'unknown'}, {'segments': [], 'language': 'unknown'}
+    if not aligner_result:
+        return {'segments': [], 'language': 'unknown'}
 
-    # Extract language
-    language = result.language if hasattr(result, 'language') else 'unknown'
-
-    # Extract full text
-    full_text = result.text if hasattr(result, 'text') else ''
-
-    # Build aligned version (with punctuation attached to words)
-    word_timestamps = [(ts.text, ts.start_time, ts.end_time) for ts in result.time_stamps]
+    # Build word timestamps from aligner result
+    word_timestamps = [(ts.text, ts.start_time, ts.end_time) for ts in aligner_result]
     aligned_timestamps = _align_text_to_timestamps(full_text, word_timestamps)
 
     aligned_words = []
@@ -197,30 +193,17 @@ def _convert_qwen_to_standard_asr_format(result, start_offset=0):
             'end': round(end + start_offset, 2)
         })
 
-    # Build raw version (original timestamps without punctuation alignment)
-    raw_words = []
-    for ts in result.time_stamps:
-        raw_words.append({
-            'word': ts.text,
-            'start': round(ts.start_time + start_offset, 2),
-            'end': round(ts.end_time + start_offset, 2)
-        })
+    if not aligned_words:
+        return {'segments': [], 'language': 'unknown'}
 
-    aligned_segment = {
-        'start': round(aligned_words[0]['start'], 2) if aligned_words else round(start_offset, 2),
-        'end': round(aligned_words[-1]['end'], 2) if aligned_words else round(start_offset, 2),
+    segment = {
+        'start': round(aligned_words[0]['start'], 2),
+        'end': round(aligned_words[-1]['end'], 2),
         'text': full_text,
         'words': aligned_words
     }
 
-    raw_segment = {
-        'start': round(raw_words[0]['start'], 2) if raw_words else round(start_offset, 2),
-        'end': round(raw_words[-1]['end'], 2) if raw_words else round(start_offset, 2),
-        'text': full_text,
-        'words': raw_words
-    }
-
-    return {'segments': [aligned_segment], 'language': language}, {'segments': [raw_segment], 'language': language}
+    return {'segments': [segment], 'language': 'unknown'}
 
 
 def _download_model_if_needed(model_path, repo_id):
@@ -248,17 +231,15 @@ def _download_model_if_needed(model_path, repo_id):
         raise RuntimeError(f"Failed to download {repo_id}: {e}")
 
 
-def _load_qwen_model():
-    """Load Qwen3-ASR model from local cache (auto-download if missing)"""
+def _load_qwen_asr_model():
+    """Load Qwen3-ASR model ONLY (without forced_aligner) for transcription"""
     model_name = load_key("asr.model", default="Qwen3-ASR-1.7B")
     asr_model_path = os.path.join(ABS_MODEL_DIR, model_name)
-    aligner_model_path = os.path.join(ABS_MODEL_DIR, "Qwen3-ForcedAligner-0.6B")
 
     # Auto-download if missing
     _download_model_if_needed(asr_model_path, f"Qwen/{model_name}")
-    _download_model_if_needed(aligner_model_path, "Qwen/Qwen3-ForcedAligner-0.6B")
 
-    rprint(f"[cyan]📥 Loading {model_name} from local cache...[/cyan]")
+    rprint(f"[cyan]📥 Loading ASR model {model_name}...[/cyan]")
 
     try:
         from qwen_asr import Qwen3ASRModel
@@ -271,21 +252,16 @@ def _load_qwen_model():
             device = "cpu"
             rprint(f"[bold yellow]⚠️ No GPU found | Using CPU (will be slow)[/bold yellow]")
 
-        # Initialize model
+        # Initialize ASR model ONLY (no forced_aligner)
         asr_model = Qwen3ASRModel.from_pretrained(
             asr_model_path,
             dtype=torch.bfloat16,
             device_map=device,
-            forced_aligner=aligner_model_path,
-            forced_aligner_kwargs=dict(
-                dtype=torch.bfloat16,
-                device_map=device,
-            ),
             max_new_tokens=4096,  # Support long audio
             max_inference_batch_size=4,
         )
 
-        rprint(f"[green]✅ Qwen3-ASR-{model_name} loaded successfully[/green]")
+        rprint(f"[green]✅ ASR model loaded (no aligner)[/green]")
         return asr_model
 
     except ImportError:
@@ -296,108 +272,44 @@ def _load_qwen_model():
         raise RuntimeError(f"Failed to load Qwen3-ASR model: {e}")
 
 
-@except_handler("Qwen3-ASR processing error:")
-def transcribe_with_model(model, vocal_audio_file, start, end, language=None):
-    """
-    Transcribe a single audio segment using pre-loaded model
+def _load_aligner_model():
+    """Load Qwen3-ForcedAligner model ONLY for alignment"""
+    aligner_model_path = os.path.join(ABS_MODEL_DIR, "Qwen3-ForcedAligner-0.6B")
 
-    Args:
-        model: Pre-loaded Qwen3-ASR model
-        vocal_audio_file: Audio file path
-        start: Start time offset (seconds)
-        end: End time offset (seconds)
-        language: Language for ASR (optional, will load from config if None)
+    # Auto-download if missing
+    _download_model_if_needed(aligner_model_path, "Qwen/Qwen3-ForcedAligner-0.6B")
 
-    Returns:
-        tuple: (aligned_result, raw_result)
-    """
-    # Load audio segment
-    audio_length = end - start
-    audio, sr = librosa.load(vocal_audio_file, sr=16000, offset=start, duration=audio_length, mono=True)
-
-    # Load language setting if not provided
-    if language is None:
-        asr_language = load_key("asr.language")
-        lang_map = {
-            'zh': 'Chinese', 'en': 'English', 'ja': 'Japanese', 'ko': 'Korean',
-            'yue': 'Cantonese', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
-            'it': 'Italian', 'ru': 'Russian', 'ar': 'Arabic', 'pt': 'Portuguese',
-            'th': 'Thai', 'vi': 'Vietnamese', 'id': 'Indonesian', 'tr': 'Turkish',
-            'hi': 'Hindi', 'ms': 'Malay', 'nl': 'Dutch', 'sv': 'Swedish',
-            'da': 'Danish', 'fi': 'Finnish', 'pl': 'Polish', 'cs': 'Czech',
-            'fil': 'Filipino', 'fa': 'Persian', 'el': 'Greek', 'hu': 'Hungarian',
-            'mk': 'Macedonian', 'ro': 'Romanian',
-        }
-        language = lang_map.get(asr_language, None)
-
-    # Transcribe
-    results = model.transcribe(
-        audio=(audio, sr),
-        language=language,
-        return_time_stamps=True,
-    )
-
-    if not results or len(results) == 0:
-        raise Exception("Qwen3-ASR returned empty result")
-
-    # Convert to standard format (returns both aligned and raw versions)
-    aligned_result, raw_result = _convert_qwen_to_standard_asr_format(results[0], start_offset=start)
-
-    # Clean up audio data to free GPU memory
-    del audio, results
-
-    return aligned_result, raw_result
-
-
-@except_handler("Qwen3-ASR processing error:")
-def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
-    """
-    Qwen3-ASR transcription main function (single segment, loads model each time)
-
-    Args:
-        raw_audio_file: Original audio file path
-        vocal_audio_file: Vocal-separated audio (or original if not separated)
-        start: Start time offset (seconds)
-        end: End time offset (seconds)
-
-    Returns:
-        dict: Standard ASR format with segments
-    """
-    gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-
-    model = _load_qwen_model()
+    rprint(f"[cyan]📥 Loading Aligner model...[/cyan]")
 
     try:
-        return transcribe_with_model(model, vocal_audio_file, start, end)
-    finally:
-        del model
-        gc.collect()
+        from qwen_asr import Qwen3ForcedAligner
+
+        # Detect device
         if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        rprint("[dim]♻️ Resources released[/dim]")
+            device = "cuda:0"
+        else:
+            device = "cpu"
+
+        # Initialize Aligner model ONLY
+        aligner_model = Qwen3ForcedAligner.from_pretrained(
+            aligner_model_path,
+            dtype=torch.bfloat16,
+            device_map=device,
+        )
+
+        rprint(f"[green]✅ Aligner model loaded[/green]")
+        return aligner_model
+
+    except ImportError:
+        raise ImportError(
+            "qwen-asr package not found. Please run: uv sync"
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to load Aligner model: {e}")
 
 
-@except_handler("Qwen3-ASR batch processing error:")
-def transcribe_batch(vocal_audio_file, segments):
-    """
-    Batch transcription with single model load (efficient for multi-segment audio)
-
-    Args:
-        vocal_audio_file: Audio file path
-        segments: List of (start, end) tuples in seconds
-
-    Returns:
-        List[tuple]: List of (aligned_result, raw_result) for each segment
-    """
-    gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-
-    model = _load_qwen_model()
-
-    # Load language once
+def _get_language():
+    """Get language setting from config"""
     asr_language = load_key("asr.language")
     lang_map = {
         'zh': 'Chinese', 'en': 'English', 'ja': 'Japanese', 'ko': 'Korean',
@@ -409,27 +321,193 @@ def transcribe_batch(vocal_audio_file, segments):
         'fil': 'Filipino', 'fa': 'Persian', 'el': 'Greek', 'hu': 'Hungarian',
         'mk': 'Macedonian', 'ro': 'Romanian',
     }
-    language = lang_map.get(asr_language, None)
+    return lang_map.get(asr_language, None)
+
+
+# ------------
+# Stage 1: Transcription (text only)
+# ------------
+
+@except_handler("Qwen3-ASR transcription error:")
+def transcribe_text_only(model, vocal_audio_file, start, end, language=None):
+    """
+    Transcribe a single audio segment, return text only (no timestamps)
+
+    Args:
+        model: Pre-loaded Qwen3-ASR model
+        vocal_audio_file: Audio file path
+        start: Start time offset (seconds)
+        end: End time offset (seconds)
+        language: Language for ASR (optional)
+
+    Returns:
+        str: Transcribed text
+    """
+    # Load audio segment
+    audio_length = end - start
+    audio, sr = librosa.load(vocal_audio_file, sr=16000, offset=start, duration=audio_length, mono=True)
+
+    # Load language setting if not provided
+    if language is None:
+        language = _get_language()
+
+    # Transcribe (NO timestamps)
+    results = model.transcribe(
+        audio=(audio, sr),
+        language=language,
+        return_time_stamps=False,  # Text only
+    )
+
+    if not results or len(results) == 0:
+        raise Exception("Qwen3-ASR returned empty result")
+
+    text = results[0].text
+
+    # Clean up audio data to free GPU memory
+    del audio, results
+
+    return text
+
+
+@except_handler("Qwen3-ASR batch transcription error:")
+def transcribe_batch_for_text(vocal_audio_file, segments, progress=None):
+    """
+    Stage 1: Batch transcription (text only), then unload model
+
+    Args:
+        vocal_audio_file: Audio file path
+        segments: List of (start, end) tuples in seconds
+        progress: Rich Progress object (optional)
+
+    Returns:
+        List[str]: Transcribed text for each segment
+    """
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    model = _load_qwen_asr_model()
+    language = _get_language()
+
+    try:
+        texts = []
+        total = len(segments)
+
+        for i, (start, end) in enumerate(segments, 1):
+            text = transcribe_text_only(model, vocal_audio_file, start, end, language)
+            texts.append(text)
+
+            # Update progress (0% - 45% for transcription stage)
+            if progress:
+                percent = int((i / total) * 45)
+                progress.update(progress.tasks[0], completed=percent, description=f"[cyan]正在转录音频... ({i}/{total})")
+
+            # Clean up after each segment to prevent memory leak
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        return texts
+    finally:
+        del model
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        rprint("[dim]♻️ ASR model unloaded[/dim]")
+
+
+# ------------
+# Stage 2: Alignment (timestamps)
+# ------------
+
+@except_handler("Qwen3-Aligner alignment error:")
+def align_with_text(model, vocal_audio_file, start, end, text, language=None):
+    """
+    Align audio segment with text to get timestamps
+
+    Args:
+        model: Pre-loaded Qwen3ForcedAligner model
+        vocal_audio_file: Audio file path
+        start: Start time offset (seconds)
+        end: End time offset (seconds)
+        text: Transcribed text
+        language: Language for alignment (optional)
+
+    Returns:
+        dict: Standard ASR format with segments
+    """
+    # Load audio segment
+    audio_length = end - start
+    audio, sr = librosa.load(vocal_audio_file, sr=16000, offset=start, duration=audio_length, mono=True)
+
+    # Load language setting if not provided
+    if language is None:
+        language = _get_language()
+
+    # Clean text: remove empty lines, merge to single line
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    clean_text = " ".join(lines)
+
+    # Align
+    aligner_results = model.align(
+        audio=(audio, sr),
+        text=clean_text,
+        language=language,
+    )
+
+    if not aligner_results or len(aligner_results) == 0:
+        raise Exception("Qwen3-Aligner returned empty result")
+
+    # Convert to standard format
+    result = _convert_aligner_to_standard_asr_format(aligner_results[0], clean_text, start_offset=start)
+
+    # Clean up audio data to free GPU memory
+    del audio, aligner_results
+
+    return result
+
+
+@except_handler("Qwen3-Aligner batch alignment error:")
+def align_batch_with_text(vocal_audio_file, segments, texts, progress=None):
+    """
+    Stage 2: Batch alignment, then unload model
+
+    Args:
+        vocal_audio_file: Audio file path
+        segments: List of (start, end) tuples in seconds
+        texts: List of transcribed texts (must match segments length)
+        progress: Rich Progress object (optional)
+
+    Returns:
+        List[dict]: Standard ASR format for each segment
+    """
+    if len(segments) != len(texts):
+        raise ValueError(f"Segments count ({len(segments)}) != texts count ({len(texts)})")
+
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    model = _load_aligner_model()
+    language = _get_language()
 
     try:
         results = []
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeRemainingColumn(),
-        ) as progress:
-            task = progress.add_task("[cyan]正在转录音频...", total=len(segments))
-            for i, (start, end) in enumerate(segments, 1):
-                aligned, raw = transcribe_with_model(model, vocal_audio_file, start, end, language)
-                results.append((aligned, raw))
-                progress.update(task, advance=1)
+        total = len(segments)
 
-                # Clean up after each segment to prevent memory leak
-                gc.collect()
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
+        for i, ((start, end), text) in enumerate(zip(segments, texts), 1):
+            result = align_with_text(model, vocal_audio_file, start, end, text, language)
+            results.append(result)
+
+            # Update progress (45% - 95% for alignment stage)
+            if progress:
+                percent = 45 + int((i / total) * 50)
+                progress.update(progress.tasks[0], completed=percent, description=f"[cyan]正在对齐音频... ({i}/{total})")
+
+            # Clean up after each segment to prevent memory leak
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         return results
     finally:
@@ -437,7 +515,73 @@ def transcribe_batch(vocal_audio_file, segments):
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        rprint("[dim]♻️ Resources released[/dim]")
+        rprint("[dim]♻️ Aligner model unloaded[/dim]")
+
+
+# ------------
+# Main: Combined two-stage pipeline
+# ------------
+
+@except_handler("Qwen3-ASR batch processing error:")
+def transcribe_batch(vocal_audio_file, segments):
+    """
+    Batch transcription with two-stage separated architecture
+
+    Stage 1: ASR transcription (text only)  →  0% - 45%
+    Stage 2: Forced alignment (timestamps)  → 45% - 95%
+    Cleanup:                              → 95% - 100%
+
+    Args:
+        vocal_audio_file: Audio file path
+        segments: List of (start, end) tuples in seconds
+
+    Returns:
+        List[dict]: Standard ASR format for each segment
+    """
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TimeRemainingColumn(),
+    ) as progress:
+        task = progress.add_task("[cyan]准备中...", total=100)
+
+        # Stage 1: Transcription (text only)
+        rprint(f"[blue]📝 Stage 1: ASR 转录 ({len(segments)} segments)[/blue]")
+        texts = transcribe_batch_for_text(vocal_audio_file, segments, progress)
+        progress.update(task, completed=45, description="[cyan]转录完成，正在加载对齐模型...")
+
+        # Stage 2: Alignment (timestamps)
+        rprint(f"[blue]🔗 Stage 2: 强制对齐 ({len(segments)} segments)[/blue]")
+        results = align_batch_with_text(vocal_audio_file, segments, texts, progress)
+
+        progress.update(task, completed=100, description="[green]✅ 完成")
+
+    return results
+
+
+# ------------
+# Legacy: Single segment transcription (for compatibility)
+# ------------
+
+@except_handler("Qwen3-ASR processing error:")
+def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
+    """
+    Qwen3-ASR transcription main function (single segment, two-stage)
+
+    Args:
+        raw_audio_file: Original audio file path
+        vocal_audio_file: Vocal-separated audio (or original if not separated)
+        start: Start time offset (seconds)
+        end: End time offset (seconds)
+
+    Returns:
+        dict: Standard ASR format with segments
+    """
+    # Single segment = batch with one item
+    results = transcribe_batch(vocal_audio_file, [(start, end)])
+    return results[0]
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ from rich.console import Console
 console = Console()
 
 # 模型配置
-VOCAL_MODEL = "Kim_Vocal_2.onnx"
+VOCAL_MODEL = "UVR-MDX-NET-Inst_HQ_3.onnx"
 MODEL_DIR = load_key("model_dir")
 
 
@@ -22,7 +22,7 @@ def separate_vocals(input_file=None, output_file=None, model_name=None):
     Args:
         input_file: 输入音频文件路径（默认使用 config.yaml 中的 RAW_AUDIO_FILE）
         output_file: 输出人声文件路径（默认使用 output/audio/vocals.wav）
-        model_name: 分离模型名称（默认 Kim_Vocal_2.onnx）
+        model_name: 分离模型名称（默认 UVR-MDX-NET-Inst_HQ_3.onnx）
 
     Returns:
         bool: 成功返回 True，失败返回 False
