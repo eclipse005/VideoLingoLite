@@ -22,14 +22,14 @@ const Utils = {
 
 // ASR 运行时选项
 const ASR_RUNTIMES = {
-  'qwen': 'Qwen3-ASR（本地 GPU，52 种语言 + 22 种中文方言）',
-  'custom': '自定义 API（用户配置端点）'
+  'qwen': 'Qwen3-ASR',
+  'custom': '自定义 API'
 };
 
 // Qwen3-ASR 模型选项
 const QWEN_MODELS = {
-  'Qwen3-ASR-0.6B': 'Qwen3-ASR-0.6B（速度快，精度较低）',
-  'Qwen3-ASR-1.7B': 'Qwen3-ASR-1.7B（高精度，速度较慢）'
+  'Qwen3-ASR-0.6B': '0.6B',
+  'Qwen3-ASR-1.7B': '1.7B'
 };
 
 // 语言选项
