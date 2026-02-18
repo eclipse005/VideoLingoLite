@@ -790,7 +790,7 @@ const SettingsManager = {
                   </div>
 
                   <div class="form-group">
-                    <label>模型</label>
+                    <label>参数</label>
                     <input type="text" id="apiModel" class="apple-input" placeholder="deepseek-chat">
                   </div>
 
@@ -842,7 +842,7 @@ const SettingsManager = {
                   </div>
 
                   <div class="form-group" id="asrModelGroup" style="${this.data.asrRuntime === 'qwen' ? '' : 'display: none;'}">
-                    <label>模型</label>
+                    <label>参数</label>
                     <select id="asrModel" class="apple-select">
                       ${Object.entries(QWEN_MODELS).map(([key, label]) => `
                         <option value="${key}" ${this.data.asrModel === key ? 'selected' : ''}>${label}</option>

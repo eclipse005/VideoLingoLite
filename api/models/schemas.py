@@ -99,7 +99,8 @@ class ApiChannelConfig(BaseModel):
 class AsrConfig(BaseModel):
     """ASR 配置"""
     language: str = Field(default="en", description="源语言 ISO 639-1 代码")
-    runtime: Literal["custom", "parakeet"] = Field(default="custom", description="ASR 引擎")
+    runtime: Literal["custom", "qwen"] = Field(default="qwen", description="ASR 引擎")
+    model: Optional[str] = Field(default="Qwen3-ASR-0.6B", description="ASR 模型（仅 qwen）")
 
 
 # ============ 热词分组 ============

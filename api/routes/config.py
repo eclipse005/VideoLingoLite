@@ -70,7 +70,8 @@ def convert_yaml_to_app_config() -> AppConfig:
         # 读取 ASR 配置
         asr_config = {
             "language": load_key("asr.language"),
-            "runtime": load_key("asr.runtime")
+            "runtime": load_key("asr.runtime"),
+            "model": load_key("asr.model", default="Qwen3-ASR-0.6B")
         }
 
         # 读取其他配置
@@ -137,6 +138,7 @@ def convert_app_config_to_yaml(config: AppConfig):
         # ASR 配置
         updates["asr.language"] = config.asr.language
         updates["asr.runtime"] = config.asr.runtime
+        updates["asr.model"] = config.asr.model
 
         # 其他配置
         updates["target_language"] = config.target_language
@@ -236,7 +238,8 @@ async def reset_config():
 
             # ASR 配置
             "asr.language": "en",
-            "asr.runtime": "custom",
+            "asr.runtime": "qwen",
+            "asr.model": "Qwen3-ASR-0.6B",
 
             # 其他配置
             "target_language": "简体中文",
