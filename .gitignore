@@ -236,4 +236,5 @@ custom_terms*.csv
 # ==================== API Runtime Files ====================
 api/state.json
 api/uploads/
-api/logs/
+api/logs//qwen3-asr/
+/qwen3-asr/
