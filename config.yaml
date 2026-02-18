@@ -52,15 +52,30 @@ target_language: '简体中文'
 asr:
   # ASR (Automatic Speech Recognition) specified recognition language ISO 639-1
   language: 'en'
-  # ASR running mode ["gemini", "parakeet"]. Specifies where to run
-  # - gemini: Cloud API (multilingual including Chinese, requires API key)
+  # ASR running mode ["custom", "qwen", "parakeet"]. Specifies where to run
+  # - custom: User-defined ASR API endpoint
+  # - qwen: Local model (52 languages + 22 Chinese dialects, requires GPU)
+  #   Supported: zh, en, yue, ar, de, fr, es, pt, id, it, ko, ru, th, vi, ja, tr, hi, ms, nl, sv, da, fi, pl, cs, fil, fa, el, hu, mk, ro
   # - parakeet: Local model (NVIDIA GPU required, 25 European languages only, auto language detection)
   #   Supported: bg, hr, cs, da, nl, en, et, fi, fr, de, el, hu, it, lv, lt, mt, pl, pt, ro, sk, sl, es, sv, ru, uk
-  runtime: 'parakeet'
+  runtime: 'qwen'
+  # Qwen3-ASR model (only used when runtime is "qwen")
+  # - Qwen3-ASR-1.7B: Higher accuracy, slower speed
+  # - Qwen3-ASR-0.6B: Faster speed, lower accuracy
+  model: 'Qwen3-ASR-0.6B'
 
 # Vocal separation for noisy environments
 vocal_separation:
   enabled: false  # Enable vocal separation to improve ASR accuracy in noisy environments
+
+# VAD-based audio segmentation (replaces FFMPEG silence detection when enabled)
+vad:
+  enabled: true  # Use VAD to detect speech segments for ASR (false = use FFMPEG silence detection)
+  threshold: 0.5       # VAD speech probability threshold (0-1)
+  min_speech_ms: 150   # Minimum speech duration (milliseconds)
+  min_silence_ms: 200  # Silence duration to end speech segment (milliseconds)
+  merge_gap_ms: 1000    # Merge adjacent segments with gap less than this (milliseconds)
+  max_segment_duration: 120  # Max duration per segment (seconds), force split if exceeded
 
 # Transcript only mode (skip translation)
 transcript_only: false  # Skip translation process, only generate source subtitles

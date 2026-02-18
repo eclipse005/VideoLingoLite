@@ -29,7 +29,9 @@ dependencies = [
     "json-repair==0.54.2",
     "autocorrect-py==2.14.0",
     "pysrt==1.1.2",
-    "nemo-toolkit[asr]==2.6.1",
+    "qwen-asr>=0.0.1",  # Qwen3-ASR
+    "modelscope>=1.0.0",  # For Qwen3-ASR model download
+    "ten-vad>=1.0.6.8",  # For VAD-based audio segmentation
     "pyarrow==22.0.0",
     "numpy==2.2.6",
     "audio-separator[gpu]==0.41.0",

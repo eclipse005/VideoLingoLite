@@ -80,6 +80,46 @@ def split_audio(audio_file: str, target_len: float = 30*60, win: float = 60) -> 
     rprint(f"[green]🎙️ Audio split completed {len(segments)} segments[/green]")
     return segments
 
+
+def split_audio_by_vad(audio_file: str, max_segment_duration: float = None) -> List[Tuple[float, float]]:
+    """
+    使用 VAD 检测语音片段并进行切分
+
+    Args:
+        audio_file: 音频文件路径
+        max_segment_duration: 单段最大时长（秒），默认使用配置值
+
+    Returns:
+        List[Tuple[float, float]]: (start, end) 列表，单位秒
+    """
+    from core.utils.vad_processor import get_speech_segments
+
+    # 使用配置中的默认值
+    if max_segment_duration is None:
+        max_segment_duration = load_key("vad.max_segment_duration", default=120)
+
+    # VAD 参数
+    threshold = load_key("vad.threshold", default=0.5)
+    min_speech_ms = load_key("vad.min_speech_ms", default=150)
+    min_silence_ms = load_key("vad.min_silence_ms", default=200)
+    merge_gap_ms = load_key("vad.merge_gap_ms", default=1000)
+
+    rprint(f"[cyan]🎙️ Using VAD for audio segmentation...[/cyan]")
+    rprint(f"[dim]  threshold: {threshold}, min_speech: {min_speech_ms}ms, min_silence: {min_silence_ms}ms, merge_gap: {merge_gap_ms}ms[/dim]")
+
+    segments = get_speech_segments(
+        audio_file,
+        threshold=threshold,
+        min_speech_ms=min_speech_ms,
+        min_silence_ms=min_silence_ms,
+        merge_gap_ms=merge_gap_ms,
+        max_segment_duration=max_segment_duration
+    )
+
+    rprint(f"[green]🎙️ VAD split completed: {len(segments)} segments[/green]")
+    return segments
+
+
 def process_transcription(result: Dict) -> pd.DataFrame:
     all_words = []
     for segment in result['segments']:

@@ -1,5 +1,5 @@
 from core.utils import *
-from core.asr_backend.audio_preprocess import process_transcription, convert_video_to_audio, split_audio, save_results
+from core.asr_backend.audio_preprocess import process_transcription, convert_video_to_audio, split_audio, split_audio_by_vad, save_results
 from core._1_ytdlp import find_video_files
 from core.utils.models import *
 from core.utils.progress_callback import report_progress
@@ -8,6 +8,7 @@ import os
 import pandas as pd
 from typing import List
 
+@timer("ASR 转录")
 @check_file_exists(_2_CLEANED_CHUNKS)
 def transcribe():
     # 1. video to audio
@@ -27,58 +28,75 @@ def transcribe():
     else:
         vocal_audio = _RAW_AUDIO_FILE
 
-    # 3. Extract audio
-    segments = split_audio(vocal_audio)
+    # 3. Extract audio segments (VAD or FFMPEG silence detection)
+    if load_key("vad.enabled", default=False):
+        segments = split_audio_by_vad(vocal_audio)
+    else:
+        segments = split_audio(vocal_audio)
 
     # 4. Select ASR backend based on config
     asr_runtime = load_key("asr.runtime")
     if asr_runtime == "custom":
         from core.asr_backend.custom_asr import transcribe_audio_custom as ts
         rprint("[cyan]🎤 Transcribing audio with Custom ASR API...[/cyan]")
-        model = None  # Custom ASR doesn't need model
-    elif asr_runtime == "parakeet":
-        from core.asr_backend.parakeet_local import transcribe_audio as ts, _load_or_download_model, _setup_model_device, release_model
-        rprint("[cyan]🎤 Transcribing audio with NVIDIA Parakeet...[/cyan]")
 
-        # ✅ 优化：只加载一次模型
-        model, _ = _load_or_download_model()
-        device = _setup_model_device(model)  # 配置模型设备
-    else:
-        raise ValueError(f"Unsupported ASR runtime: {asr_runtime}")
-
-    try:
-        # 5. Transcribe audio by clips（使用已加载的模型）
+        # Custom API processing
         all_results = []
         for i, (start, end) in enumerate(segments):
             rprint(f"[dim]Processing segment {i+1}/{len(segments)}...[/dim]")
-            # 报告细粒度进度
             report_progress(i + 1, len(segments), f"转录片段 {i+1}/{len(segments)}")
-            if asr_runtime == "parakeet":
-                result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end, model=model)
-            else:
-                result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)
+            result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)
             all_results.append(result)
 
-        # 6. Combine results
+        # Combine results
         combined_result = {'segments': []}
         for result in all_results:
             combined_result['segments'].extend(result['segments'])
 
-        # 7. Save ASR result to JSON
+    elif asr_runtime == "qwen":
+        from core.asr_backend.qwen3_asr import transcribe_batch
+        model = load_key("asr.model", default="Qwen3-ASR-0.6B")
+        rprint(f"[cyan]🎤 Transcribing audio with {model}...[/cyan]")
+
+        # Batch transcribe (load model once, process all segments)
+        rprint(f"[cyan]📋 Processing {len(segments)} audio segments...[/cyan]")
+        all_results = transcribe_batch(vocal_audio, segments)
+        rprint(f"[green]✅ Received {len(all_results)} transcription results[/green]")
+
+        # Combine results (keep multiple segments) - use aligned version for processing
+        combined_result = {'segments': []}
+        combined_raw_result = {'segments': []}  # Raw version for asr.json
+        segment_count = 0
+        for aligned, raw in all_results:
+            for segment in aligned.get('segments', []):
+                combined_result['segments'].append(segment)
+                segment_count += 1
+            for segment in raw.get('segments', []):
+                combined_raw_result['segments'].append(segment)
+        rprint(f"[cyan]📊 Total segments in combined_result: {segment_count}[/cyan]")
+        combined_result['language'] = all_results[0][0].get('language', 'unknown') if all_results else 'unknown'
+        combined_raw_result['language'] = all_results[0][1].get('language', 'unknown') if all_results else 'unknown'
+
+        # Save ASR result to JSON (use raw version for debugging)
+        asr_json_path = "output/log/asr.json"
+        os.makedirs(os.path.dirname(asr_json_path), exist_ok=True)
+        with open(asr_json_path, 'w', encoding='utf-8') as f:
+            json.dump(combined_raw_result, f, indent=2, ensure_ascii=False)
+        rprint(f"[green]💾 ASR result saved to: {asr_json_path}[/green]")
+    else:
+        raise ValueError(f"Unsupported ASR runtime: {asr_runtime}")
+
+    # 5. Save ASR result to JSON (skip if already saved for qwen)
+    if asr_runtime != "qwen":
         asr_json_path = "output/log/asr.json"
         os.makedirs(os.path.dirname(asr_json_path), exist_ok=True)
         with open(asr_json_path, 'w', encoding='utf-8') as f:
             json.dump(combined_result, f, indent=2, ensure_ascii=False)
         rprint(f"[green]💾 ASR result saved to: {asr_json_path}[/green]")
 
-        # 8. Process df (always generate cleaned_chunks.csv for word-level data)
-        df = process_transcription(combined_result)
-        save_results(df)
-
-    finally:
-        # ✅ 优化：只释放一次模型（Parakeet）
-        if asr_runtime == "parakeet":
-            release_model()
+    # 6. Process df (use aligned version for processing)
+    df = process_transcription(combined_result)
+    save_results(df)
 
 
 def load_chunks() -> List[Chunk]:
