@@ -312,14 +312,15 @@ def _get_language():
     """Get language setting from config"""
     asr_language = load_key("asr.language")
     lang_map = {
-        'zh': 'Chinese', 'en': 'English', 'ja': 'Japanese', 'ko': 'Korean',
-        'yue': 'Cantonese', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
-        'it': 'Italian', 'ru': 'Russian', 'ar': 'Arabic', 'pt': 'Portuguese',
-        'th': 'Thai', 'vi': 'Vietnamese', 'id': 'Indonesian', 'tr': 'Turkish',
-        'hi': 'Hindi', 'ms': 'Malay', 'nl': 'Dutch', 'sv': 'Swedish',
-        'da': 'Danish', 'fi': 'Finnish', 'pl': 'Polish', 'cs': 'Czech',
-        'fil': 'Filipino', 'fa': 'Persian', 'el': 'Greek', 'hu': 'Hungarian',
-        'mk': 'Macedonian', 'ro': 'Romanian',
+        'zh': 'Chinese',
+        'en': 'English',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'ru': 'Russian',
     }
     return lang_map.get(asr_language, None)
 
