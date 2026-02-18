@@ -96,7 +96,7 @@ __all__ = [
     "Sentence",
     "Correction",
     "_2_CLEANED_CHUNKS",
-    "_3_1_SPLIT_BY_NLP",
+    "_3_1_SPLIT_BY_PUNCTUATION",
     "_3_2_SPLIT_BY_MEANING_RAW",
     "_3_2_SPLIT_BY_MEANING",
     "_4_1_TERMINOLOGY",
