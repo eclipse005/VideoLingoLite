@@ -21,7 +21,7 @@ def convert_video_to_audio(video_file: str):
         ], check=True, stderr=subprocess.PIPE)
         rprint(f"[green]🎬➡️🎵 Converted <{video_file}> to <{_RAW_AUDIO_FILE}> with FFmpeg\n[/green]")
 
-def split_audio(audio_file: str, target_len: float = 30*60, win: float = 60) -> List[Tuple[float, float]]:
+def split_audio(audio_file: str, target_len: float = 3*60, win: float = 60) -> List[Tuple[float, float]]:
     ## 在 [target_len-win, target_len+win] 区间内用 pydub 检测静默，切分音频
     rprint(f"[blue]🎙️ Starting audio segmentation {audio_file} {target_len} {win}[/blue]")
     audio = AudioSegment.from_file(audio_file)

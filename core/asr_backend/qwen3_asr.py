@@ -387,6 +387,10 @@ def transcribe_batch_for_text(vocal_audio_file, segments, progress=None, task_id
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
+    # Update progress: loading model
+    if progress and task_id is not None:
+        progress.update(task_id, completed=0, description="[cyan]正在加载 ASR 模型...")
+
     model = _load_qwen_asr_model()
     language = _get_language()
 
@@ -394,13 +398,17 @@ def transcribe_batch_for_text(vocal_audio_file, segments, progress=None, task_id
         texts = []
         total = len(segments)
 
+        # Update progress: starting transcription
+        if progress and task_id is not None:
+            progress.update(task_id, completed=5, description=f"[cyan]正在转录音频... (0/{total})")
+
         for i, (start, end) in enumerate(segments, 1):
             text = transcribe_text_only(model, vocal_audio_file, start, end, language)
             texts.append(text)
 
-            # Update progress (0% - 45% for transcription stage)
+            # Update progress (5% - 45% for transcription stage)
             if progress and task_id is not None:
-                percent = int((i / total) * 45)
+                percent = 5 + int((i / total) * 40)
                 progress.update(task_id, completed=percent, description=f"[cyan]正在转录音频... ({i}/{total})")
 
             # Clean up after each segment to prevent memory leak
@@ -490,6 +498,10 @@ def align_batch_with_text(vocal_audio_file, segments, texts, progress=None, task
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
+    # Update progress: loading model
+    if progress and task_id is not None:
+        progress.update(task_id, completed=45, description="[cyan]正在加载对齐模型...")
+
     model = _load_aligner_model()
     language = _get_language()
 
@@ -497,13 +509,17 @@ def align_batch_with_text(vocal_audio_file, segments, texts, progress=None, task
         results = []
         total = len(segments)
 
+        # Update progress: starting alignment
+        if progress and task_id is not None:
+            progress.update(task_id, completed=50, description=f"[cyan]正在对齐音频... (0/{total})")
+
         for i, ((start, end), text) in enumerate(zip(segments, texts), 1):
             result = align_with_text(model, vocal_audio_file, start, end, text, language)
             results.append(result)
 
-            # Update progress (45% - 95% for alignment stage)
+            # Update progress (50% - 95% for alignment stage)
             if progress and task_id is not None:
-                percent = 45 + int((i / total) * 50)
+                percent = 50 + int((i / total) * 45)
                 progress.update(task_id, completed=percent, description=f"[cyan]正在对齐音频... ({i}/{total})")
 
             # Clean up after each segment to prevent memory leak
@@ -552,7 +568,6 @@ def transcribe_batch(vocal_audio_file, segments):
         # Stage 1: Transcription (text only)
         rprint(f"[blue]📝 Stage 1: ASR 转录 ({len(segments)} segments)[/blue]")
         texts = transcribe_batch_for_text(vocal_audio_file, segments, progress, task_id)
-        progress.update(task_id, completed=45, description="[cyan]转录完成，正在加载对齐模型...")
 
         # Stage 2: Alignment (timestamps)
         rprint(f"[blue]🔗 Stage 2: 强制对齐 ({len(segments)} segments)[/blue]")
