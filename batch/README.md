@@ -2,7 +2,7 @@
 
 [English](./README.md) | [简体中文](./README.zh.md)
 
-在使用批处理模式前，请确保你已经使用过 Streamlit 模式并正确设置了 `config.yaml` 中的参数。
+在使用批处理模式前，请确保你已经使用过 Web UI 并正确设置了 `config.yaml` 中的参数。
 
 ## 使用方法
 
@@ -57,4 +57,4 @@
 - 如需重试：
   1. 将 `ERROR` 下的单个视频文件夹移至根目录
   2. 重命名为 `output`
-  3. 使用 Streamlit 模式重新执行
+  3. 使用 Web UI 重新执行

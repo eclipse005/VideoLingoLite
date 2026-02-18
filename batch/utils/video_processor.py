@@ -1,5 +1,4 @@
 import os
-from core.st_utils.imports_and_utils import *
 from core.utils.onekeycleanup import cleanup
 from core.utils import load_key
 import shutil
@@ -16,7 +15,7 @@ SAVE_DIR = 'batch/output'
 ERROR_OUTPUT_DIR = 'batch/output/ERROR'
 YTB_RESOLUTION_KEY = "ytb_resolution"
 
-def process_video(file, dubbing=False, is_retry=False):
+def process_video(file, is_retry=False):
     if not is_retry:
         prepare_output_folder(OUTPUT_DIR)
 
@@ -93,7 +92,3 @@ def process_and_align_subtitles():
     sentences = _5_split_sub.split_for_sub_main(sentences)
     _6_gen_sub.align_timestamp_main(sentences)
     return {'sentences': sentences}
-
-def gen_audio_tasks():
-    _8_1_audio_task.gen_audio_task_main()
-    _8_2_dub_chunks.gen_dub_chunks()

@@ -4,6 +4,7 @@ from typing import List
 
 from core.utils import *
 from core._2_asr import load_chunks
+from core.utils.progress_callback import report_progress
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from core.utils.models import _3_1_SPLIT_BY_NLP, _3_2_SPLIT_BY_MEANING, Sentence
@@ -210,6 +211,8 @@ def parallel_split_sentences(sentences: List[Sentence], max_length: int, max_wor
                         new_sentences[index] = [sentence]
 
                     progress.update(task, advance=1)
+                    # 报告细粒度进度
+                    report_progress(progress.tasks[0].completed, total, f"切分句子 {progress.tasks[0].completed}/{total}")
         else:
             # 没有需要切分的句子，直接跳过
             pass

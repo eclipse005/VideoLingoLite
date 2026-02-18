@@ -1,14 +1,42 @@
-from ruamel.yaml import YAML
-import threading
 import re
 import math
 import pandas as pd
+from .config_manager import load_key, update_key, update_keys
 
-CONFIG_PATH = 'config.yaml'
-lock = threading.Lock()
 
-yaml = YAML()
-yaml.preserve_quotes = True
+# -----------------------
+# Hotword groups initialization
+# -----------------------
+
+def init_hotword_groups():
+    """
+    初始化热词分组，如果没有 groups 则创建默认分组
+    Returns: 是否进行了初始化
+    """
+    groups = load_key('asr_term_correction.groups', default=None)
+    active_group_id = load_key('asr_term_correction.active_group_id', default=None)
+
+    # 如果已经有分组结构，直接返回
+    if groups is not None and len(groups) > 0:
+        if active_group_id is None:
+            # 有分组但没有 active_group_id，设置第一个为激活分组
+            update_key('asr_term_correction.active_group_id', groups[0]['id'])
+        return False
+
+    # 创建默认分组
+    default_group = {
+        'id': 'group-0',
+        'name': '默认分组',
+        'keyterms': []
+    }
+
+    updates = {
+        'asr_term_correction.groups': [default_group],
+        'asr_term_correction.active_group_id': 'group-0'
+    }
+
+    update_keys(updates)
+    return True
 
 # -----------------------
 # Safe CSV reading with encoding detection
@@ -37,44 +65,6 @@ def safe_read_csv(filepath, **kwargs):
     # If all encodings fail, raise the original error
     raise UnicodeDecodeError(f"Could not read {filepath} with any common encoding")
 
-# -----------------------
-# load & update config
-# -----------------------
-
-def load_key(key):
-    with lock:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as file:
-            data = yaml.load(file)
-
-    keys = key.split('.')
-    value = data
-    for k in keys:
-        if isinstance(value, dict) and k in value:
-            value = value[k]
-        else:
-            raise KeyError(f"Key '{k}' not found in configuration")
-    return value
-
-def update_key(key, new_value):
-    with lock:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as file:
-            data = yaml.load(file)
-
-        keys = key.split('.')
-        current = data
-        for k in keys[:-1]:
-            if isinstance(current, dict) and k in current:
-                current = current[k]
-            else:
-                return False
-
-        if isinstance(current, dict) and keys[-1] in current:
-            current[keys[-1]] = new_value
-            with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
-                yaml.dump(data, file)
-            return True
-        else:
-            raise KeyError(f"Key '{keys[-1]}' not found in configuration")
         
 # basic utils
 def get_joiner(language):

@@ -6,6 +6,7 @@ from typing import List
 from core.translate_lines import translate_lines
 from core._4_1_summarize import search_things_to_note_in_prompt
 from core.utils import *
+from core.utils.progress_callback import report_progress
 from core.utils.models import *
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
@@ -111,6 +112,8 @@ def translate_all(sentences: List[Sentence]) -> List[Sentence]:
             for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
                 progress.update(task, advance=1)
+                # 报告细粒度进度
+                report_progress(progress.tasks[0].completed, total, f"翻译句子 {progress.tasks[0].completed}/{total}")
 
     results.sort(key=lambda x: x[0])  # Sort results based on original order
 

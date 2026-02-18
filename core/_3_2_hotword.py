@@ -40,21 +40,6 @@ SENTENCES_TOOLS_DEFINITION = [
     {
         "type": "function",
         "function": {
-            "name": "get_context",
-            "description": "获取某句子的上下文（前后各N句）",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "sentence_idx": {"type": "integer"},
-                    "context_count": {"type": "integer", "default": 2}
-                },
-                "required": ["sentence_idx"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "batch_replace",
             "description": "批量执行多处替换。在所有句子中查找并替换多种错误形式",
             "parameters": {
@@ -89,101 +74,92 @@ SENTENCES_TOOLS_DEFINITION = [
                 "required": ["summary"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyze_frame",
+            "description": "分析视频在指定时间戳的画面内容，识别屏幕上显示的文字（如图表标题、界面标签、字幕等）。当你难以判断正确的术语时，可以调用此工具查看画面辅助决策。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "timestamp": {
+                        "type": "number",
+                        "description": "视频时间戳（秒）"
+                    }
+                },
+                "required": ["timestamp"]
+            }
+        }
     }
 ]
 
 
 # ==================== System Prompt ====================
 
-def build_system_prompt(terms_with_meanings: List[dict]) -> str:
-    """构建 System Prompt（完全复用 agent_correct.py）"""
+def build_system_prompt(terms_with_meanings: List[dict], asr_language: str) -> str:
+    """构建通用的 System Prompt"""
     terms_info = "\n".join([
-        f"  - {t['name']}" + (f": {t['meaning']}" if t['meaning'] else "")
+        f"  - {t['name']}" + (f"（{t['meaning']}）" if t['meaning'] else "")
         for t in terms_with_meanings
     ])
 
     return f"""你是一个专业的 ASR（自动语音识别）术语矫正专家。
 
 ## 任务
-矫正文本中被语音识别错误的专业术语。
+音频转录中常因口音、杂音将专业术语误识别为发音相近的普通词汇。你需要通过上下文分析和视觉辅助，将这些错误还原为术语列表中的正确表达。
 
-## 术语列表及含义
+## 音频语言
+{asr_language}
+
+## 术语库
 {terms_info}
 
-## ⚠️ 重要限制（必须遵守）
-**只能矫正上述术语列表中的术语**，不要矫正其他内容。
-- 如果文本中没有上述术语的错误形式，直接调用 finish
-- 不要自创术语或矫正不在列表中的内容
-- 只处理指定的 {len(terms_with_meanings)} 个术语
-- **复数形式也允许**：根据矫正前的文本判断（如 abc s → ABCs）
+## 核心判断方法
 
-## 可用工具
-1. read_sentences - 读取句子内容
-2. get_context - 查看某句的上下文（前后几句）
-3. batch_replace - 批量替换（在所有句子中执行多个替换规则）
-4. finish - 完成矫正
+对每个可疑词，问自己：**快速把这个词读出来，听起来像不像术语库中的某个术语？**
 
-## 高效工作流程（重要！）
+如果发音相似，且上下文中该术语出现是合理的，就替换。
 
-1. **先全局扫描**：用 read_sentences 查看句子内容
-2. **记录所有疑似错误**：在心中/草稿中记录所有发现的错误位置和形式
-3. **批量处理**：阅读完成后，使用 batch_replace 一次性完成所有替换
-4. **最后调用 finish**
+## ⚠️ 重要原则
+
+1. **只矫正术语库中的术语**，不要矫正其他内容
+2. **必须发音相似且上下文合理才替换**
+3. **不确定时不替换**
+4. **如果没有发现错误，直接调用 finish**
+
+## 视觉辅助 (analyze_frame) 调用准则
+
+当判断困难时，可调用 analyze_frame(timestamp) 查看画面辅助决策。
+
+- timestamp：该术语所在句子的时间戳
+- 画面内容可能包含相关信息时才使用
+- 如果仅凭音频上下文就能确定，无需调用视觉辅助
+
+## 工作流程
+
+1. 用 read_sentences 读取所有句子（注意每句都有时间戳 [start-end]）
+2. 通读全文，理解整体在讨论什么领域
+3. 逐个术语思考：这个术语的发音，在文中有没有被错误识别的形式？
+4. 如果判断困难，可调用 analyze_frame(timestamp) 查看画面辅助决策
+5. 收集所有发现的错误对，用一次 batch_replace 完成替换
+6. 调用 finish
 
 ### 批量操作示例
 
-**推荐方式：使用 batch_replace**
-如果发现多种错误模式，用一次 batch_replace 完成所有替换：
+假设术语库中有某技术术语和某产品名称，在转录文本中发现：
+- "错误形式1" 读起来像 "术语1"，且上下文在讨论相关技术
+- "错误形式2" 读起来像 "术语2"，且上下文在讨论相关产品
+
 ```
 batch_replace(replacements=[
-  {{"old_text": "L L M", "new_text": "LLM"}},
-  {{"old_text": "j son", "new_text": "JSON"}},
-  {{"old_text": "A P I", "new_text": "API"}}
+  {{"old_text": "错误形式1", "new_text": "术语1"}},
+  {{"old_text": "错误形式2", "new_text": "术语2"}}
 ])
 ```
-
-### 使用 batch_replace 的关键原则（重要！）
-
-**一次提交所有规则，包括复数形式**：
-- 如果术语在文本中有复数出现，必须为单数和复数各写一条规则
-- 不要先替换再回头修复复数，一次到位
-
-示例：假设术语是 "ABC"，文本中发现错误形式 "A B C" 和 "A B Cs"
-```
-batch_replace(replacements=[
-  {{"old_text": "A B C", "new_text": "ABC"}},
-  {{"old_text": "A B Cs", "new_text": "ABCs"}}
-])
-```
-
-错误做法：
-- 只提交 {{"old_text": "A B Cs", "new_text": "ABC"}}（丢失复数）
-- 先提交单数规则，后续再补充复数规则（浪费轮次）
-
-## 重要原则
 
 ### 复数形式
-- 根据上下文判断是否需要复数形式
-- 如果语境是复数（these/those/all/multiple/several 等标记），替换时使用复数形式
-
-示例：
-- "these L L M models" → 替换为 "these LLM models"（复数）
-- "a L L M model" → 替换为 "a LLM model"（单数）
-
-### 谨慎修正
-- 只修改明确是 ASR 误识别的情况
-- 如果某个词在当前上下文中是合理的，不要修改
-
-示例：
-- "I can see the point" → "see" 是正确的，不要改成 "C" 或 "sea"
-- "We use API calls" → "API" 是正确的，不需要修改
-
-## 常见 ASR 错误模式参考
-- 空格插入：字母间被插入空格（L L M → LLM）
-- 大小写错误：首字母未大写或全小写（json → JSON）
-- 同音近音：发音相似的错误替换
-
-请开始工作，记住：批量处理，不要逐个处理。
+如果术语有复数形式出现，单数和复数各写一条规则，一次到位。
 """
 
 
@@ -211,9 +187,12 @@ def _parse_terms(terms_config: List[str]) -> List[dict]:
 class SentenceToolExecutor:
     """Sentence 对象的工具执行器"""
 
-    def __init__(self, sentences: List[Sentence]):
+    def __init__(self, sentences: List[Sentence], video_path: Optional[str] = None):
         self.sentences = sentences
         self.changes: List[Dict] = []
+        self.video_path = video_path
+        self.vision_calls: List[Dict] = []  # 记录视觉辅助调用
+        self.last_vision_call: Optional[Dict] = None  # 最后一次视觉辅助调用（用于标记后续替换）
 
     def read_sentences(self, start_idx: int = None, end_idx: int = None) -> str:
         """读取句子内容，返回全部或指定索引范围"""
@@ -224,8 +203,8 @@ class SentenceToolExecutor:
         if end_idx is None:
             end_idx = total
 
-        # 限制最多显示 100 句
-        MAX_DISPLAY = 100
+        # 限制最多显示 500 句
+        MAX_DISPLAY = 500
         truncated = False
         actual_end = end_idx
 
@@ -235,10 +214,11 @@ class SentenceToolExecutor:
 
         result = []
         for i in range(start_idx, min(actual_end, total)):
-            result.append(f"第{i}句: {self.sentences[i].text}")
+            s = self.sentences[i]
+            # 显示时间戳，方便 LLM 调用 analyze_frame
+            result.append(f"第{i}句 [{s.start:.1f}s-{s.end:.1f}s]: {s.text}")
 
         output = "\n".join(result)
-
         if truncated:
             remaining = total - actual_end
             output += f"\n\n[共 {total} 句，已显示到第 {actual_end} 句，剩余 {remaining} 句。"
@@ -246,17 +226,6 @@ class SentenceToolExecutor:
 
         return output
 
-    def get_context(self, sentence_idx: int, context_count: int = 2) -> str:
-        """获取某句子的上下文"""
-        start = max(0, sentence_idx - context_count)
-        end = min(len(self.sentences), sentence_idx + context_count + 1)
-
-        result = []
-        for i in range(start, end):
-            marker = ">>> " if i == sentence_idx else "    "
-            result.append(f"{marker}第{i}句: {self.sentences[i].text}")
-
-        return "\n".join(result)
 
     def batch_replace(self, replacements: list) -> str:
         """批量替换术语（只修改文本，不动 chunks 和时间戳）"""
@@ -272,17 +241,22 @@ class SentenceToolExecutor:
                 continue
 
             # 在所有句子中查找并替换
+            rule_changes = 0
             for sent_idx, sentence in enumerate(self.sentences):
                 changes_count = self._replace_in_sentence(
                     sentence, sent_idx, old_text, new_text
                 )
-                total_changes += changes_count
+                rule_changes += changes_count
+            total_changes += rule_changes
 
             results.append({
                 "old_text": old_text,
                 "new_text": new_text,
-                "count": total_changes
+                "count": rule_changes
             })
+
+        # 清除视觉辅助标记（只标记紧跟在视觉辅助后的替换）
+        self.last_vision_call = None
 
         return json.dumps({
             "success": True,
@@ -295,36 +269,45 @@ class SentenceToolExecutor:
         old_text: str, new_text: str
     ) -> int:
         """在单个句子中查找并替换（记录 Correction 并修改文本）"""
-        changes_count = 0
+        # 先收集所有匹配，避免在循环中修改文本导致位置漂移
+        matches = [
+            m for m in re.finditer(re.escape(old_text), sentence.text)
+            if self._is_word_boundary(sentence.text, m.start(), m.end() - m.start())
+        ]
 
-        for match in re.finditer(re.escape(old_text), sentence.text):
+        # 从后往前替换，不影响前面的位置
+        for match in reversed(matches):
             start, end = match.span()
 
-            if self._is_word_boundary(sentence.text, start, end - start):
-                # 记录矫正（在修改文本之前记录位置）
-                sentence.corrections.append(Correction(
-                    old_text=old_text,
-                    new_text=new_text,
-                    start_idx=start,
-                    end_idx=end
-                ))
+            # 记录矫正（在修改文本之前记录位置）
+            sentence.corrections.append(Correction(
+                old_text=old_text,
+                new_text=new_text,
+                start_idx=start,
+                end_idx=end
+            ))
 
-                # 执行替换
-                sentence.text = (
-                    sentence.text[:start] +
-                    new_text +
-                    sentence.text[end:]
-                )
-                changes_count += 1
+            # 执行替换
+            sentence.text = (
+                sentence.text[:start] +
+                new_text +
+                sentence.text[end:]
+            )
 
-                # 保留旧的 changes 记录（用于统计输出）
-                self.changes.append({
-                    "sentence_idx": sent_idx,
-                    "old_text": old_text,
-                    "new_text": new_text
-                })
+            # 保留旧的 changes 记录（用于统计输出）
+            change_record = {
+                "sentence_idx": sent_idx,
+                "old_text": old_text,
+                "new_text": new_text
+            }
+            # 如果紧跟在视觉辅助调用之后，标记为使用了视觉辅助
+            if self.last_vision_call:
+                change_record["vision_assisted"] = True
+                change_record["vision_timestamp"] = self.last_vision_call["timestamp"]
+                change_record["vision_result"] = self.last_vision_call["result"]
+            self.changes.append(change_record)
 
-        return changes_count
+        return len(matches)
 
     def _is_word_boundary(self, text: str, pos: int, length: int) -> bool:
         """
@@ -365,6 +348,87 @@ class SentenceToolExecutor:
             "summary": summary,
             "is_finish": True
         }, ensure_ascii=False)
+
+    def analyze_frame(self, timestamp: float) -> str:
+        """
+        分析视频指定时间戳的画面内容
+
+        Args:
+            timestamp: 视频时间戳（秒）
+
+        Returns:
+            画面中识别到的内容，或错误信息（JSON格式）
+        """
+        from core.utils.ask_gpt import ask_gpt_vision
+        import subprocess
+        from pathlib import Path
+
+        # 验证 video_path
+        if not self.video_path:
+            return json.dumps({
+                "error": "视频文件路径未设置",
+                "suggestion": "请确保视频文件已正确加载"
+            }, ensure_ascii=False)
+
+        # 验证 timestamp
+        if timestamp < 0:
+            return json.dumps({
+                "error": f"无效的时间戳: {timestamp}",
+                "suggestion": "时间戳必须 >= 0"
+            }, ensure_ascii=False)
+
+        video_path = self.video_path
+
+        # 创建输出目录
+        output_dir = Path("output/log/pic")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # 文件名: 帧时间戳.png
+        output_path = output_dir / f"frame_{timestamp:.1f}s.png"
+
+        # 用 ffmpeg 提取单帧
+        try:
+            subprocess.run([
+                "ffmpeg", "-ss", str(timestamp),
+                "-i", str(video_path),
+                "-vframes", "1",
+                "-q:v", "2",
+                "-y", str(output_path)
+            ], check=True, capture_output=True, timeout=60)
+        except FileNotFoundError:
+            return json.dumps({
+                "error": "ffmpeg 未安装或不在 PATH 中",
+                "suggestion": "请安装 ffmpeg 并确保其在系统 PATH 中"
+            }, ensure_ascii=False)
+        except subprocess.CalledProcessError as e:
+            return json.dumps({
+                "error": f"ffmpeg 执行失败",
+                "suggestion": "请检查视频文件是否存在且格式有效",
+                "stderr": e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)
+            }, ensure_ascii=False)
+        except subprocess.TimeoutExpired:
+            return json.dumps({
+                "error": "ffmpeg 执行超时",
+                "suggestion": "视频文件可能损坏或时间戳超出视频长度"
+            }, ensure_ascii=False)
+
+        # 调用 Vision API
+        try:
+            result = ask_gpt_vision(str(output_path), "请分析这张图片")
+            # 记录成功的视觉辅助调用
+            vision_call = {
+                "timestamp": timestamp,
+                "result": result[:100] + "..." if len(result) > 100 else result
+            }
+            self.vision_calls.append(vision_call)
+            # 设置标记，用于关联后续的术语替换
+            self.last_vision_call = vision_call
+            return result
+        except Exception as e:
+            return json.dumps({
+                "error": f"Vision API 调用失败: {str(e)}",
+                "suggestion": "请检查 API 密钥配置或网络连接"
+            }, ensure_ascii=False)
 
 
 # ==================== 主入口函数 ====================
@@ -514,16 +578,30 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
     Returns:
         List[Sentence]: 矫正后的 Sentence 对象列表
     """
+    # 0. 初始化热词分组（如果需要）
+    from core.utils.config_utils import init_hotword_groups
+    init_hotword_groups()
+
     # 1. 检查开关
     enabled = load_key("asr_term_correction.enabled")
     if not enabled:
         rprint("[yellow]⏭️ 术语矫正已禁用，跳过[/yellow]")
         return sentences
 
-    # 2. 加载术语配置
-    terms_config = load_key("asr_term_correction.terms")
+    # 2. 加载激活分组的热词配置
+    active_group_id = load_key("asr_term_correction.active_group_id")
+    groups = load_key("asr_term_correction.groups") or []
+
+    # 找到激活分组
+    active_group = next((g for g in groups if g["id"] == active_group_id), None)
+
+    if not active_group:
+        rprint("[yellow]⚠️ 未找到激活的热词分组，跳过矫正[/yellow]")
+        return sentences
+
+    terms_config = active_group.get("keyterms", [])
     if not terms_config:
-        rprint("[yellow]⏭️ 未配置术语，跳过矫正[/yellow]")
+        rprint(f"[yellow]⏭️ 分组 '{active_group['name']}' 中未配置热词，跳过矫正[/yellow]")
         return sentences
 
     # 3. 解析术语列表
@@ -536,14 +614,20 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
     for sent in sentences:
         sent.original_text = sent.text
 
-    # 5. 创建工具执行器
-    tool_executor = SentenceToolExecutor(sentences)
+    # 5. 获取视频文件路径
+    from core._1_ytdlp import find_video_files
+    video_path = find_video_files()
 
-    # 6. 构建系统提示词
-    system_prompt = build_system_prompt(terms_with_meanings)
+    # 6. 创建工具执行器
+    tool_executor = SentenceToolExecutor(sentences, video_path=video_path)
 
-    # 7. 调用 LLM Agent
-    user_task = f"请矫正这 {len(sentences)} 个句子中的术语错误"
+    # 7. 构建系统提示词（传入 asr_language）
+    asr_language = load_key("asr.language")
+    system_prompt = build_system_prompt(terms_with_meanings, asr_language)
+
+    # 8. 调用 LLM Agent
+    term_names = ", ".join(t['name'] for t in terms_with_meanings)
+    user_task = f"请检查这 {len(sentences)} 个句子，找出以下术语的语音识别错误并矫正：{term_names}"
 
     result = ask_gpt_with_tools(
         system_prompt=system_prompt,
@@ -554,7 +638,7 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
         log_title="hotword_correction"
     )
 
-    # 8. 输出统计
+    # 9. 输出统计
     if result and result.get("is_finish"):
         changes_count = result.get("changes_count", 0)
         if changes_count > 0:
@@ -567,28 +651,61 @@ def correct_terms_in_sentences(sentences: List[Sentence]) -> List[Sentence]:
                 rprint(f"  {change}: {count} 处")
 
             # 保存矫正记录到文件（与控制台输出一致）
-            _save_correction_log(stats, changes_count)
+            _save_correction_log(tool_executor.changes, changes_count)
         else:
             rprint("[green]✅ 未发现需要矫正的错误[/green]")
     else:
         rprint("[yellow]⚠️ LLM 未正常完成，返回原始句子[/yellow]")
 
-    # 9. 同步 chunks（基于 corrections 重建）
+    # 10. 同步 chunks（基于 corrections 重建）
     _rebuild_chunks_from_corrections(sentences)
 
     return sentences
 
 
-def _save_correction_log(stats, changes_count):
+def _save_correction_log(changes, changes_count):
     """保存矫正日志到 output/log/hotword_correct.txt"""
+    from collections import Counter
+
     log_path = "output/log/hotword_correct.txt"
 
     with open(log_path, 'w', encoding='utf-8') as f:
         if changes_count > 0:
             f.write(f"✅ 矫正完成: {changes_count} 处修改\n")
+
+            # 构建统计信息
+            stats = Counter(f"{c['old_text']} → {c['new_text']}" for c in changes)
+
+            # 分离有/无视觉辅助的矫正
+            vision_assisted_changes = [c for c in changes if c.get('vision_assisted')]
+            normal_changes = [c for c in changes if not c.get('vision_assisted')]
+
+            # 显示所有矫正（带视觉辅助标记）
             f.write("\n")
             for change, count in stats.most_common():
-                f.write(f"  {change}: {count} 处\n")
+                # 检查这个矫正是否使用了视觉辅助
+                vision_item = next((c for c in vision_assisted_changes
+                                   if c['old_text'] == change.split(' → ')[0]
+                                   and c['new_text'] == change.split(' → ')[1]), None)
+                if vision_item:
+                    f.write(f"  {change}: {count} 处 📷\n")
+                else:
+                    f.write(f"  {change}: {count} 处\n")
+
+            # 视觉辅助详情
+            if vision_assisted_changes:
+                f.write(f"\n📷 视觉辅助详情:\n")
+                vision_unique = {}
+                for c in vision_assisted_changes:
+                    key = f"{c['old_text']} → {c['new_text']}"
+                    if key not in vision_unique:
+                        vision_unique[key] = c['vision_result']
+
+                for change, result in vision_unique.items():
+                    f.write(f"  [{change}]\n")
+                    f.write(f"    → 识别: {result}\n")
+                f.write(f"\n  帧图片已保存至: output/log/pic/\n")
+
         else:
             f.write("✅ 未发现需要矫正的错误\n")
 

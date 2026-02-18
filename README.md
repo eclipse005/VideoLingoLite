@@ -12,7 +12,7 @@
 
 | 分支 | ASR 引擎 | 语言支持 | 适用场景 |
 |------|----------|----------|----------|
-| **main** (当前) | **Gemini + Parakeet** | **25 种欧洲语言** | **欧洲语言转录** |
+| **main** (当前) | **Custom API + Parakeet** | **25 种欧洲语言** | **欧洲语言转录** |
 | [feature/qwen3-asr](https://github.com/eclipse005/VideoLingoLite/tree/feature/qwen3-asr) | Qwen3-ASR | 52 种语言 + 22 中文方言 | 中日韩等多语言支持 |
 
 ---
@@ -76,12 +76,12 @@ uv sync
 
 ### 启动应用
 
-**Windows 用户**：双击 `OneKeyStart.bat`
-
 **跨平台方式**：
 ```bash
-uv run python -m streamlit run st.py
+uv run python start.py
 ```
+
+启动后访问 http://localhost:8000 使用 Web UI
 
 ### 配置 API
 
@@ -134,9 +134,9 @@ uv run python -m streamlit run st.py
 
 ## 系统要求
 
-### ASR 服务器模式
+### 自定义 ASR 模式
 - Python 3.10+
-- 本地 ASR 服务（如 Whisper、Gemini 等）
+- 用户自定义 ASR API 端点（配置在 `core/asr_backend/custom_asr.py`）
 
 ### 本地模式（Parakeet）
 - Python 3.10+
@@ -151,7 +151,7 @@ uv run python -m streamlit run st.py
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `asr.runtime` | `gemini` | ASR 引擎：gemini（本地服务器）/ parakeet（本地 GPU） |
+| `asr.runtime` | `parakeet` | ASR 引擎：custom（自定义 API）/ parakeet（本地 GPU） |
 | `asr.language` | `en` | 源语言 ISO 639-1 代码（如 en, zh, ja） |
 | `target_language` | `English` | 目标语言（自然语言描述） |
 | `max_workers` | `8` | 并发处理数（本地 LLM 建议设为 1） |

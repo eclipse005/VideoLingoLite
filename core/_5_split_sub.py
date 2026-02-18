@@ -4,6 +4,7 @@ import math
 import concurrent.futures
 
 from core.utils import *
+from core.utils.progress_callback import report_progress
 from core.utils.models import *
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
@@ -225,6 +226,8 @@ def split_for_sub_main(sentences: List[Sentence]) -> List[Sentence]:
                     split_result_list = future.result()
                     new_sentences[index] = split_result_list
                     progress.update(task, advance=1)
+                    # 报告细粒度进度
+                    report_progress(progress.tasks[0].completed, total_to_split, f"拆分对齐 {progress.tasks[0].completed}/{total_to_split}")
 
         # 展平拆分对齐后的句子列表
         sentences = [s for sublist in new_sentences for s in sublist]

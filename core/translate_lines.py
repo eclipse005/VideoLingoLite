@@ -1,14 +1,14 @@
-from core.prompts import generate_shared_prompt, get_prompt_faithfulness, get_prompt_expressiveness
+from core.prompts import generate_shared_prompt, get_prompt_faithfulness, get_prompt_expressiveness, get_prompt_one_step
 from rich.panel import Panel
 from rich.console import Console
 from core.utils import *
 console = Console()
 
 def valid_translate_result(result: dict, required_keys: list, required_sub_keys: list):
-    # Check for the required key
+    # Check for required key
     if not all(key in result for key in required_keys):
         return {"status": "error", "message": f"Missing required key(s): {', '.join(set(required_keys) - set(result.keys()))}"}
-    
+
     # Check for required sub-keys in all items
     for key in result:
         if not all(sub_key in result[key] for sub_key in required_sub_keys):
@@ -19,7 +19,29 @@ def valid_translate_result(result: dict, required_keys: list, required_sub_keys:
 def translate_lines(lines, previous_content_prompt, after_cotent_prompt, things_to_note_prompt, summary_prompt, index = 0):
     shared_prompt = generate_shared_prompt(previous_content_prompt, after_cotent_prompt, summary_prompt, things_to_note_prompt)
 
-    # Retry translation if the length of the original text and the translated text are not the same, or if the specified key is missing
+    # ========== One-Step Translation Mode ==========
+    one_step_translate = load_key('one_step_translate')
+    if one_step_translate:
+        def valid_one_step(response_data):
+            return valid_translate_result(response_data, [str(i) for i in range(1, len(lines.split('\n'))+1)], ['translation'])
+
+        prompt = get_prompt_one_step(lines, shared_prompt)
+
+        # Retry logic (consistent with two-step translation)
+        for retry in range(3):
+            result = ask_gpt(prompt + " " * retry, resp_type='json', valid_def=valid_one_step, log_title='translate_one_step')
+
+            if len(lines.split('\n')) == len(result):
+                translate_result = "\n".join([result[i]["translation"].replace('\n', ' ').strip() for i in result])
+                return translate_result, lines
+
+            if retry != 2:
+                console.print(f'[yellow]⚠️ One-step translation of block {index} failed, Retry...[/yellow]')
+
+        raise ValueError(f'[red]❌ One-step translation of block {index} failed after 3 retries.[/red]')
+
+    # ========== Two-Step Translation Mode (Original Logic) ==========
+    # Retry translation if length of original text and translated text are not same, or if specified key is missing
     def retry_translation(prompt, length, step_name):
         def valid_faith(response_data):
             return valid_translate_result(response_data, [str(i) for i in range(1, length+1)], ['direct'])
@@ -36,7 +58,7 @@ def translate_lines(lines, previous_content_prompt, after_cotent_prompt, things_
                 console.print(f'[yellow]⚠️ {step_name.capitalize()} translation of block {index} failed, Retry...[/yellow]')
         raise ValueError(f'[red]❌ {step_name.capitalize()} translation of block {index} failed after 3 retries. Please check `output/gpt_log/error.json` for more details.[/red]')
 
-    ## Step 1: Faithful to the Original Text
+    ## Step 1: Faithful to Original Text
     prompt1 = get_prompt_faithfulness(lines, shared_prompt)
     faith_result = retry_translation(prompt1, len(lines.split('\n')), 'faithfulness')
 
@@ -48,12 +70,12 @@ def translate_lines(lines, previous_content_prompt, after_cotent_prompt, things_
     if not reflect_translate:
         # If reflect_translate is False or not set, use faithful translation directly
         translate_result = "\n".join([faith_result[i]["direct"].strip() for i in faith_result])
-        
+
         # 翻译过程中静默，避免干扰进度条
         pass
         return translate_result, lines
 
-    ## Step 2: Express Smoothly  
+    ## Step 2: Express Smoothly
     prompt2 = get_prompt_expressiveness(faith_result, lines, shared_prompt)
     express_result = retry_translation(prompt2, len(lines.split('\n')), 'expressiveness')
 

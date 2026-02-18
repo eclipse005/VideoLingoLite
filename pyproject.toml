@@ -23,8 +23,7 @@ dependencies = [
     # AI & API
     "openai==2.9.0",
     "requests==2.32.5",
-    # 界面与工具
-    "streamlit==1.52.1",
+    # 配置与工具
     "PyYAML==6.0.3",
     "ruamel.yaml==0.18.16",
     "json-repair==0.54.2",
@@ -35,9 +34,13 @@ dependencies = [
     "numpy==2.2.6",
     "audio-separator[gpu]==0.41.0",
     "rich==14.2.0",
-    "spacy==3.8.11",
     "pip==25.3",
     "onnx2torch==1.5.15",
+    # Web API (新增)
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "typer>=0.21.1",
 ]
 
 [project.optional-dependencies]

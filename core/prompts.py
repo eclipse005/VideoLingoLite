@@ -294,3 +294,53 @@ Pre-processed {src_lang} Subtitles ([br] indicates split points): {src_part}
 Note: Start you answer with ```json and end with ```, do not add any other text.
 '''.strip()
     return align_prompt
+
+
+## ================================================================
+# 一步翻译
+# ================================================================
+
+def get_prompt_one_step(lines, shared_prompt):
+    TARGET_LANGUAGE = load_key("target_language")
+    line_splits = lines.split('\n')
+
+    json_dict = {}
+    for i, line in enumerate(line_splits, 1):
+        json_dict[f"{i}"] = {"origin": line, "translation": f"{TARGET_LANGUAGE} translation {i}."}
+    json_format = json.dumps(json_dict, indent=2, ensure_ascii=False)
+
+    src_language = load_key("asr.language")
+
+    prompt_one_step = f'''
+## Role
+You are a professional Netflix subtitle translator, fluent in both {src_language} and {TARGET_LANGUAGE}, as well as their respective cultures.
+Your expertise lies in producing high-quality translations that are:
+- Accurate and faithful to original meaning (信)
+- Natural and fluent in target language expression (达)
+- Appropriate in style and tone for content (雅)
+
+## Task
+Translate the following {src_language} subtitles into {TARGET_LANGUAGE} line by line.
+
+{shared_prompt}
+
+## Translation Principles
+1. Accurately convey original meaning without arbitrary additions or omissions
+2. Use idiomatic {TARGET_LANGUAGE} that flows naturally
+3. Use professional terms correctly and consistently
+4. Consider background and contextual relationships
+5. Match tone to content type (casual for tutorials, professional for technical content, formal for documentaries)
+
+## Input
+<subtitles>
+{lines}
+</subtitles>
+
+## Output in only JSON format and no other text
+```json
+{json_format}
+```
+
+Note: Start your answer with ```json and end with ```, do not add any other text.
+'''
+    return prompt_one_step.strip()

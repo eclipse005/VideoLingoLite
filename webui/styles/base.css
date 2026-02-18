@@ -1,0 +1,187 @@
+/**
+ * 基础样式 - CSS 变量、重置、排版
+ */
+
+/* ===== CSS 变量 ===== */
+:root {
+  /* 色彩系统 */
+  --apple-bg-primary: #ffffff;
+  --apple-bg-secondary: #f5f5f7;
+  --apple-bg-tertiary: #e8e8ed;
+
+  --apple-text-primary: #1d1d1f;
+  --apple-text-secondary: #86868b;
+  --apple-text-tertiary: #a1a1a6;
+
+  --apple-blue: #0071e3;
+  --apple-blue-hover: #0077ed;
+  --apple-blue-active: #0062cc;
+
+  --apple-orange: #ff9500;
+  --apple-orange-bg: #fff7ed;
+
+  --apple-border-light: #d2d2d7;
+  --apple-border-lighter: #e8e8ed;
+
+  /* 字体系统 */
+  --apple-font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+  /* 间距系统 */
+  --apple-section-spacing: 120px;
+  --apple-section-spacing-mobile: 80px;
+  --apple-content-max-width: 980px;
+  --apple-content-padding: 24px;
+
+  /* 圆角系统 */
+  --apple-radius-button: 980px;
+  --apple-radius-card: 18px;
+  --apple-radius-card-large: 28px;
+
+  /* 动画 */
+  --apple-transition-fast: 0.3s ease;
+  --apple-transition-smooth: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 阴影系统 */
+  --apple-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --apple-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --apple-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* ===== 基础重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.apple-style {
+  font-family: var(--apple-font-stack);
+  background-color: var(--apple-bg-primary);
+  color: var(--apple-text-primary);
+  line-height: 1.47059;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* ===== 排版系统 ===== */
+.apple-heading-hero {
+  font-size: clamp(40px, 5vw, 56px);
+  line-height: 1.07143;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--apple-text-primary);
+}
+
+.apple-heading-large {
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.08349;
+  font-weight: 600;
+  letter-spacing: 0.007em;
+  color: var(--apple-text-primary);
+}
+
+.apple-heading-medium {
+  font-size: clamp(24px, 3vw, 32px);
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--apple-text-primary);
+}
+
+.apple-heading-small {
+  font-size: 21px;
+  line-height: 1.23536;
+  font-weight: 600;
+  letter-spacing: 0.011em;
+  color: var(--apple-text-primary);
+}
+
+.apple-body-large {
+  font-size: 21px;
+  line-height: 1.381;
+  font-weight: 400;
+  letter-spacing: -0.031em;
+  color: var(--apple-text-secondary);
+}
+
+.apple-body {
+  font-size: 17px;
+  line-height: 1.47059;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  color: var(--apple-text-secondary);
+}
+
+.apple-body-small {
+  font-size: 14px;
+  line-height: 1.42859;
+  font-weight: 400;
+  letter-spacing: -0.016em;
+  color: var(--apple-text-secondary);
+}
+
+/* ===== 按钮系统 ===== */
+.apple-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.17648;
+  letter-spacing: -0.022em;
+  text-align: center;
+  text-decoration: none;
+  border-radius: var(--apple-radius-button);
+  border: none;
+  cursor: pointer;
+  transition: all var(--apple-transition-fast);
+  background-color: var(--apple-blue);
+  color: #ffffff;
+  min-height: 44px;
+}
+
+.apple-button:hover {
+  background-color: var(--apple-blue-hover);
+  transform: scale(1.02);
+}
+
+.apple-button:active {
+  background-color: var(--apple-blue-active);
+  transform: scale(0.98);
+}
+
+.apple-button-secondary {
+  background-color: transparent;
+  color: var(--apple-blue);
+  border: 1px solid var(--apple-blue);
+}
+
+.apple-button-secondary:hover {
+  background-color: rgba(0, 113, 227, 0.08);
+}
+
+.apple-button-ghost {
+  background-color: transparent;
+  color: var(--apple-text-primary);
+  border: none;
+}
+
+.apple-button-ghost:hover {
+  background-color: var(--apple-bg-secondary);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  :root {
+    --apple-section-spacing: var(--apple-section-spacing-mobile);
+    --apple-content-padding: 20px;
+  }
+}

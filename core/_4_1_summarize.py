@@ -107,7 +107,6 @@ def get_summary(sentences: List[Sentence]):
     }
     if len(custom_terms) > 0:
         rprint(f"📖 已加载自定义术语：{len(custom_terms)} 条")
-        rprint("📝 术语内容：", json.dumps(custom_terms_json, indent=2, ensure_ascii=False))
     summary_prompt = get_summary_prompt(src_content, custom_terms_json)
 
     def valid_summary(response_data):

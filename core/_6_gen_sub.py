@@ -23,13 +23,6 @@ SUBTITLE_OUTPUT_CONFIGS_TRANSCRIPT_ONLY = [
     ('src.srt', ['Source'])
 ]
 
-SUBTITLE_OUTPUT_CONFIGS = [
-    ('src.srt', ['Source']),
-    ('trans.srt', ['Translation']),
-    ('src_trans.srt', ['Source', 'Translation']),
-    ('trans_src.srt', ['Translation', 'Source'])
-]
-
 
 def convert_to_srt_format(start_time: float, end_time: float) -> str:
     """Convert time (in seconds) to the format: hours:minutes:seconds,milliseconds"""

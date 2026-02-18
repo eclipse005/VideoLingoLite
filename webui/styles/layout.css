@@ -1,0 +1,131 @@
+/**
+ * 布局样式 - 导航栏、容器、Hero区域
+ */
+
+/* ===== 容器系统 ===== */
+.apple-container {
+  max-width: var(--apple-content-max-width);
+  margin: 0 auto;
+  padding: 0 var(--apple-content-padding);
+}
+
+.apple-section {
+  padding: var(--apple-section-spacing) 0;
+}
+
+/* ===== 导航栏 ===== */
+.apple-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--apple-border-lighter);
+}
+
+.apple-navbar-content {
+  max-width: var(--apple-content-max-width);
+  margin: 0 auto;
+  padding: 0 var(--apple-content-padding);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--apple-transition-fast);
+  font-size: 14px;
+  color: var(--apple-text-primary);
+}
+
+.nav-button:hover {
+  background-color: var(--apple-bg-secondary);
+}
+
+.nav-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.nav-button .badge {
+  display: none;
+  padding: 2px 6px;
+  font-size: 11px;
+  background-color: var(--apple-blue);
+  color: white;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.nav-button .badge.required {
+  background-color: var(--apple-orange);
+}
+
+.nav-button .badge.show {
+  display: inline-block;
+}
+
+.nav-button.settings-required {
+  color: #f97316;
+  background-color: var(--apple-orange-bg);
+}
+
+.nav-button.settings-required:hover {
+  background-color: #ffedd5;
+}
+
+.nav-button.configured {
+  color: var(--apple-text-secondary);
+}
+
+/* ===== Hero 区域 ===== */
+.hero-section {
+  text-align: center;
+  margin-bottom: 64px;
+  padding-top: 32px;
+}
+
+.hero-description {
+  max-width: 600px;
+  margin: 16px auto 0;
+}
+
+/* ===== 底部 ===== */
+.footer-text {
+  text-align: center;
+  color: var(--apple-text-tertiary);
+}
+
+.footer-text p {
+  margin: 0;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .nav-buttons {
+    gap: 8px;
+  }
+
+  .nav-button span {
+    display: none;
+  }
+}

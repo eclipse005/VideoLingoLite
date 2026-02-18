@@ -232,3 +232,8 @@ CLAUDE.md
 *.wav.bak
 raw_download/
 custom_terms*.csv
+
+# ==================== API Runtime Files ====================
+api/state.json
+api/uploads/
+api/logs/
