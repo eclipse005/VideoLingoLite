@@ -65,23 +65,19 @@ def transcribe():
 
         # Combine results (keep multiple segments) - use aligned version for processing
         combined_result = {'segments': []}
-        combined_raw_result = {'segments': []}  # Raw version for asr.json
         segment_count = 0
         for aligned, raw in all_results:
             for segment in aligned.get('segments', []):
                 combined_result['segments'].append(segment)
                 segment_count += 1
-            for segment in raw.get('segments', []):
-                combined_raw_result['segments'].append(segment)
         rprint(f"[cyan]📊 Total segments in combined_result: {segment_count}[/cyan]")
         combined_result['language'] = all_results[0][0].get('language', 'unknown') if all_results else 'unknown'
-        combined_raw_result['language'] = all_results[0][1].get('language', 'unknown') if all_results else 'unknown'
 
-        # Save ASR result to JSON (use raw version for debugging)
+        # Save ASR result to JSON (use aligned version with punctuation)
         asr_json_path = "output/log/asr.json"
         os.makedirs(os.path.dirname(asr_json_path), exist_ok=True)
         with open(asr_json_path, 'w', encoding='utf-8') as f:
-            json.dump(combined_raw_result, f, indent=2, ensure_ascii=False)
+            json.dump(combined_result, f, indent=2, ensure_ascii=False)
         rprint(f"[green]💾 ASR result saved to: {asr_json_path}[/green]")
     else:
         raise ValueError(f"Unsupported ASR runtime: {asr_runtime}")
