@@ -400,7 +400,8 @@ def transcribe_batch_for_text(vocal_audio_file, segments, progress=None):
             # Update progress (0% - 45% for transcription stage)
             if progress:
                 percent = int((i / total) * 45)
-                progress.update(progress.tasks[0], completed=percent, description=f"[cyan]正在转录音频... ({i}/{total})")
+                task_id = list(progress.tasks.keys())[0]  # Get task_id from tasks dict
+                progress.update(task_id, completed=percent, description=f"[cyan]正在转录音频... ({i}/{total})")
 
             # Clean up after each segment to prevent memory leak
             gc.collect()
@@ -502,7 +503,8 @@ def align_batch_with_text(vocal_audio_file, segments, texts, progress=None):
             # Update progress (45% - 95% for alignment stage)
             if progress:
                 percent = 45 + int((i / total) * 50)
-                progress.update(progress.tasks[0], completed=percent, description=f"[cyan]正在对齐音频... ({i}/{total})")
+                task_id = list(progress.tasks.keys())[0]  # Get task_id from tasks dict
+                progress.update(task_id, completed=percent, description=f"[cyan]正在对齐音频... ({i}/{total})")
 
             # Clean up after each segment to prevent memory leak
             gc.collect()
