@@ -15,6 +15,7 @@ from core.utils import rprint, timer, load_key
 from core.utils.models import _3_1_SPLIT_BY_PUNCTUATION, Chunk, Sentence
 from core.utils.sentence_splitting import group_words_into_sentences_dicts, is_sentence_terminator
 from core.utils.config_utils import get_joiner
+from core.spacy_utils import split_by_pause
 
 
 def load_asr_json() -> dict:
@@ -147,7 +148,14 @@ def split_by_punctuation() -> List[Sentence]:
 
     rprint(f"[blue]   → {len(sentences)} sentences[/blue]")
 
-    # 3. 保存到文件
+    # 3. 停顿切分（如果启用）
+    pause_threshold = load_key("pause_split_threshold", default=0)
+    if pause_threshold and pause_threshold > 0:
+        rprint(f"[blue]🔍 Stage 1+: 停顿切分 (阈值: {pause_threshold}s)[/blue]")
+        sentences = split_by_pause(sentences, pause_threshold)
+        rprint(f"[blue]   → {len(sentences)} sentences after pause split[/blue]")
+
+    # 4. 保存到文件
     os.makedirs(os.path.dirname(_3_1_SPLIT_BY_PUNCTUATION), exist_ok=True)
     with open(_3_1_SPLIT_BY_PUNCTUATION, 'w', encoding='utf-8') as f:
         for s in sentences:

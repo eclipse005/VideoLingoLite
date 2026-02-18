@@ -160,8 +160,6 @@ def convert_app_config_to_yaml(config: AppConfig):
         # 批量更新所有配置
         update_keys(updates)
 
-        logger.info("配置已成功保存到 config.yaml")
-
     except Exception as e:
         import traceback
         traceback.print_exc()

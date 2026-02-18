@@ -302,11 +302,11 @@ const SettingsManager = {
       });
     }
 
-    // 保存设置按钮
-    const saveBtn = document.getElementById('saveSettingsBtn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => this.saveSettings());
-    }
+    // 保存设置按钮（已通过 onclick 绑定，这里不再重复绑定）
+    // const saveBtn = document.getElementById('saveSettingsBtn');
+    // if (saveBtn) {
+    //   saveBtn.addEventListener('click', () => this.saveSettings());
+    // }
 
     // 高级设置展开/折叠
     const advancedToggle = document.getElementById('advancedToggle');
@@ -394,7 +394,11 @@ const SettingsManager = {
         vocal_separation: {
           enabled: document.getElementById('vocalSeparation')?.checked ?? this.data.vocalSeparation.enabled
         },
-        advanced: this.data.advanced
+        advanced: {
+          max_workers: parseInt(document.getElementById('maxWorkers')?.value) || this.data.advanced.max_workers || 16,
+          summary_length: parseInt(document.getElementById('summaryLength')?.value) || this.data.advanced.summary_length || 8000,
+          pause_split_threshold: parseFloat(document.getElementById('pauseSplitThreshold')?.value) ?? this.data.advanced.pause_split_threshold ?? 1
+        }
       };
 
       // 调用后端 API 保存配置
@@ -907,13 +911,13 @@ const SettingsManager = {
                 <div class="form-row">
                   <div class="form-group">
                     <label>LLM 并发数</label>
-                    <input type="number" class="apple-input" value="16" min="1" max="32">
+                    <input type="number" id="maxWorkers" class="apple-input" value="${this.data.advanced.max_workers || 16}" min="1" max="32">
                     <small class="form-hint">本地 LLM 建议设置为 1</small>
                   </div>
 
                   <div class="form-group">
                     <label>摘要长度限制</label>
-                    <input type="number" class="apple-input" value="8000" min="1000" max="32000" step="1000">
+                    <input type="number" id="summaryLength" class="apple-input" value="${this.data.advanced.summary_length || 8000}" min="1000" max="32000" step="1000">
                     <small class="form-hint">本地 LLM 建议设置为 2000</small>
                   </div>
                 </div>
@@ -925,7 +929,7 @@ const SettingsManager = {
                 <div class="form-row">
                   <div class="form-group">
                     <label>暂停分割阈值（秒）</label>
-                    <input type="number" class="apple-input" value="1.0" min="0" max="5" step="0.1">
+                    <input type="number" id="pauseSplitThreshold" class="apple-input" value="${this.data.advanced.pause_split_threshold ?? 1}" min="0" max="5" step="0.1">
                     <small class="form-hint">词间间隔超过此值时强制分句</small>
                   </div>
                 </div>
@@ -934,7 +938,7 @@ const SettingsManager = {
           </div>
 
           <div class="settings-footer">
-            <button id="saveSettingsBtn" class="apple-button">
+            <button id="saveSettingsBtn" class="apple-button" onclick="window.SettingsManager.saveSettings()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>

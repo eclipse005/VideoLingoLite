@@ -8,19 +8,11 @@
 
 ---
 
-## 分支说明
-
-| 分支 | ASR 引擎 | 语言支持 | 适用场景 |
-|------|----------|----------|----------|
-| **main** (当前) | **Custom API + Parakeet** | **25 种欧洲语言** | **欧洲语言转录** |
-| [feature/qwen3-asr](https://github.com/eclipse005/VideoLingoLite/tree/feature/qwen3-asr) | Qwen3-ASR | 52 种语言 + 22 中文方言 | 中日韩等多语言支持 |
-
----
-
 ## 核心功能
 
 ### 语音转文字
-- **双引擎支持**：本地 ASR 服务器 + 本地 Parakeet（25 种欧洲语言）
+- **Qwen3-ASR 引擎**：本地 GPU 加速，支持中英日韩等 9 种语言
+- **分离架构设计**：转录与对齐分离加载，降低显存占用（峰值显存更小）
 - **人声分离**：嘈杂环境下自动分离人声，大幅提升转录准确率
 - **词级时间戳**：精确到每个词的时间定位
 - **只转录模式**：跳过翻译，仅生成原文字幕
@@ -41,9 +33,10 @@
 - **灵活重跑**：清除缓存即可重新执行特定阶段
 
 ### 多语言支持
+- **9 种语言**：中文、英语、日语、韩语、西班牙语、法语、德语、意大利语、俄语
 - **CJK 优化**：针对中日韩语言的特殊分词和对齐处理
-- **25+ 欧洲语言**：本地 Parakeet 引擎支持
-- **ASR 服务器**：支持通过本地服务器扩展更多语言
+- **自适应分词**：空格分隔语言与 CJK 语言分别优化
+- **智能连接符**：根据语言类型自动添加空格（如英语）或不添加（如中文）
 
 ### 字幕生成
 - **4 种格式**：源语言字幕、翻译字幕、双语字幕（两种顺序）
@@ -76,12 +69,9 @@ uv sync
 
 ### 启动应用
 
-**跨平台方式**：
-```bash
-uv run python start.py
-```
+**Windows 用户**：双击运行 `OneKeyStart.bat`
 
-启动后访问 http://localhost:8000 使用 Web UI
+启动后自动打开浏览器访问 Web UI
 
 ### 配置 API
 
@@ -134,34 +124,14 @@ uv run python start.py
 
 ## 系统要求
 
-### 自定义 ASR 模式
+### 最低配置
 - Python 3.10+
-- 用户自定义 ASR API 端点（配置在 `core/asr_backend/custom_asr.py`）
+- NVIDIA GPU（4GB+ 显存）
+- CUDA 12.x 支持
 
-### 本地模式（Parakeet）
-- Python 3.10+
-- NVIDIA GPU（8GB+ 显存）
-- CUDA 支持
-
----
-
-## 配置选项
-
-在 `config.yaml` 中可调整：
-
-| 配置项 | 默认值 | 说明 |
-|--------|--------|------|
-| `asr.runtime` | `parakeet` | ASR 引擎：custom（自定义 API）/ parakeet（本地 GPU） |
-| `asr.language` | `en` | 源语言 ISO 639-1 代码（如 en, zh, ja） |
-| `target_language` | `English` | 目标语言（自然语言描述） |
-| `max_workers` | `8` | 并发处理数（本地 LLM 建议设为 1） |
-| `pause_split_threshold` | `1` | 停顿切分阈值（秒），0 或 null 表示禁用 |
-| `vocal_separation.enabled` | `false` | 是否启用人声分离 |
-| `transcript_only` | `false` | 只转录模式，跳过翻译 |
-| `asr_term_correction.enabled` | `true` | 是否启用术语矫正 |
-| `asr_term_correction.terms` | - | 术语列表，格式 `"术语 : 含义"`（含义可选） |
-| `api_hotword` | - | 术语矫正专用 API 配置 |
-| `spacy_model_map` | - | spaCy 模型映射（多语言支持） |
+### 推荐配置
+- **4GB+ 显存**：使用 Qwen3-ASR-0.6B 模型（速度更快）
+- **8GB+ 显存**：使用 Qwen3-ASR-1.7B 模型（准确率更高）
 
 ---
 
