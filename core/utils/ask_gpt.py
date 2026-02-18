@@ -41,9 +41,6 @@ LOG_TITLE_TO_API = {
 
     # Hotword correction
     'hotword_correction': 'api_hotword',
-
-    # Vision analysis (NEW)
-    'vision_analysis': 'api_vision',
 }
 
 def _save_cache(model, prompt, resp_content, resp_type, resp, message=None, log_title="default"):
@@ -272,64 +269,6 @@ def ask_gpt_with_tools(
     rprint(f"[yellow][{log_title}] LLM 未正常完成（达到最大轮次或停止调用工具）[/yellow]")
     return None
 
-
-# ------------
-# ask gpt with vision (image analysis)
-# ------------
-
-def ask_gpt_vision(
-    image_path: str,
-    prompt: str = "请分析这张图片",
-    log_title: str = "vision_analysis"
-) -> str:
-    """
-    调用 Vision API 分析图片
-
-    Args:
-        image_path: 图片路径（本地路径）
-        prompt: 分析提示词
-        log_title: 日志标题，使用 api_vision 配置
-
-    Returns:
-        API 返回的文字内容
-    """
-    # 检查文件是否存在
-    if not os.path.exists(image_path):
-        raise FileNotFoundError(f"Image file not found: {image_path}")
-
-    # 根据 log_title 确定使用的 API 配置
-    api_config_prefix = _get_api_config_for_log_title(log_title)
-
-    # 检查 API 密钥
-    api_key = load_key(f"{api_config_prefix}.key")
-    if not api_key:
-        raise ValueError(f"API key for {api_config_prefix} is not set")
-
-    model = load_key(f"{api_config_prefix}.model")
-    base_url = load_key(f"{api_config_prefix}.base_url")
-
-    if 'ark' in base_url:
-        base_url = "https://ark.cn-beijing.volces.com/api/v3"
-    elif 'v1' not in base_url:
-        base_url = base_url.strip('/') + '/v1'
-
-    # 读取并转换图片为 base64
-    with open(image_path, "rb") as f:
-        image_base64 = base64.b64encode(f.read()).decode("utf-8")
-
-    # 构建多模态消息
-    messages = [{
-        "role": "user",
-        "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
-            {"type": "text", "text": prompt}
-        ]
-    }]
-
-    client = OpenAI(api_key=api_key, base_url=base_url)
-    response = client.chat.completions.create(model=model, messages=messages, timeout=300)
-
-    return response.choices[0].message.content
 
 
 if __name__ == '__main__':

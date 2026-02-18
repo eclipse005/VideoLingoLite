@@ -75,23 +75,6 @@ SENTENCES_TOOLS_DEFINITION = [
             }
         }
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "analyze_frame",
-            "description": "分析视频在指定时间戳的画面内容，识别屏幕上显示的文字（如图表标题、界面标签、字幕等）。当你难以判断正确的术语时，可以调用此工具查看画面辅助决策。",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "timestamp": {
-                        "type": "number",
-                        "description": "视频时间戳（秒）"
-                    }
-                },
-                "required": ["timestamp"]
-            }
-        }
-    }
 ]
 
 
@@ -107,7 +90,7 @@ def build_system_prompt(terms_with_meanings: List[dict], asr_language: str) -> s
     return f"""你是一个专业的 ASR（自动语音识别）术语矫正专家。
 
 ## 任务
-音频转录中常因口音、杂音将专业术语误识别为发音相近的普通词汇。你需要通过上下文分析和视觉辅助，将这些错误还原为术语列表中的正确表达。
+音频转录中常因口音、杂音将专业术语误识别为发音相近的普通词汇。你需要通过上下文分析，将这些错误还原为术语列表中的正确表达。
 
 ## 音频语言
 {asr_language}
@@ -128,22 +111,13 @@ def build_system_prompt(terms_with_meanings: List[dict], asr_language: str) -> s
 3. **不确定时不替换**
 4. **如果没有发现错误，直接调用 finish**
 
-## 视觉辅助 (analyze_frame) 调用准则
-
-当判断困难时，可调用 analyze_frame(timestamp) 查看画面辅助决策。
-
-- timestamp：该术语所在句子的时间戳
-- 画面内容可能包含相关信息时才使用
-- 如果仅凭音频上下文就能确定，无需调用视觉辅助
-
 ## 工作流程
 
 1. 用 read_sentences 读取所有句子（注意每句都有时间戳 [start-end]）
 2. 通读全文，理解整体在讨论什么领域
 3. 逐个术语思考：这个术语的发音，在文中有没有被错误识别的形式？
-4. 如果判断困难，可调用 analyze_frame(timestamp) 查看画面辅助决策
-5. 收集所有发现的错误对，用一次 batch_replace 完成替换
-6. 调用 finish
+4. 收集所有发现的错误对，用一次 batch_replace 完成替换
+5. 调用 finish
 
 ### 批量操作示例
 
@@ -191,8 +165,6 @@ class SentenceToolExecutor:
         self.sentences = sentences
         self.changes: List[Dict] = []
         self.video_path = video_path
-        self.vision_calls: List[Dict] = []  # 记录视觉辅助调用
-        self.last_vision_call: Optional[Dict] = None  # 最后一次视觉辅助调用（用于标记后续替换）
 
     def read_sentences(self, start_idx: int = None, end_idx: int = None) -> str:
         """读取句子内容，返回全部或指定索引范围"""
@@ -215,7 +187,6 @@ class SentenceToolExecutor:
         result = []
         for i in range(start_idx, min(actual_end, total)):
             s = self.sentences[i]
-            # 显示时间戳，方便 LLM 调用 analyze_frame
             result.append(f"第{i}句 [{s.start:.1f}s-{s.end:.1f}s]: {s.text}")
 
         output = "\n".join(result)
@@ -254,9 +225,6 @@ class SentenceToolExecutor:
                 "new_text": new_text,
                 "count": rule_changes
             })
-
-        # 清除视觉辅助标记（只标记紧跟在视觉辅助后的替换）
-        self.last_vision_call = None
 
         return json.dumps({
             "success": True,
@@ -300,11 +268,6 @@ class SentenceToolExecutor:
                 "old_text": old_text,
                 "new_text": new_text
             }
-            # 如果紧跟在视觉辅助调用之后，标记为使用了视觉辅助
-            if self.last_vision_call:
-                change_record["vision_assisted"] = True
-                change_record["vision_timestamp"] = self.last_vision_call["timestamp"]
-                change_record["vision_result"] = self.last_vision_call["result"]
             self.changes.append(change_record)
 
         return len(matches)
@@ -348,87 +311,6 @@ class SentenceToolExecutor:
             "summary": summary,
             "is_finish": True
         }, ensure_ascii=False)
-
-    def analyze_frame(self, timestamp: float) -> str:
-        """
-        分析视频指定时间戳的画面内容
-
-        Args:
-            timestamp: 视频时间戳（秒）
-
-        Returns:
-            画面中识别到的内容，或错误信息（JSON格式）
-        """
-        from core.utils.ask_gpt import ask_gpt_vision
-        import subprocess
-        from pathlib import Path
-
-        # 验证 video_path
-        if not self.video_path:
-            return json.dumps({
-                "error": "视频文件路径未设置",
-                "suggestion": "请确保视频文件已正确加载"
-            }, ensure_ascii=False)
-
-        # 验证 timestamp
-        if timestamp < 0:
-            return json.dumps({
-                "error": f"无效的时间戳: {timestamp}",
-                "suggestion": "时间戳必须 >= 0"
-            }, ensure_ascii=False)
-
-        video_path = self.video_path
-
-        # 创建输出目录
-        output_dir = Path("output/log/pic")
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        # 文件名: 帧时间戳.png
-        output_path = output_dir / f"frame_{timestamp:.1f}s.png"
-
-        # 用 ffmpeg 提取单帧
-        try:
-            subprocess.run([
-                "ffmpeg", "-ss", str(timestamp),
-                "-i", str(video_path),
-                "-vframes", "1",
-                "-q:v", "2",
-                "-y", str(output_path)
-            ], check=True, capture_output=True, timeout=60)
-        except FileNotFoundError:
-            return json.dumps({
-                "error": "ffmpeg 未安装或不在 PATH 中",
-                "suggestion": "请安装 ffmpeg 并确保其在系统 PATH 中"
-            }, ensure_ascii=False)
-        except subprocess.CalledProcessError as e:
-            return json.dumps({
-                "error": f"ffmpeg 执行失败",
-                "suggestion": "请检查视频文件是否存在且格式有效",
-                "stderr": e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)
-            }, ensure_ascii=False)
-        except subprocess.TimeoutExpired:
-            return json.dumps({
-                "error": "ffmpeg 执行超时",
-                "suggestion": "视频文件可能损坏或时间戳超出视频长度"
-            }, ensure_ascii=False)
-
-        # 调用 Vision API
-        try:
-            result = ask_gpt_vision(str(output_path), "请分析这张图片")
-            # 记录成功的视觉辅助调用
-            vision_call = {
-                "timestamp": timestamp,
-                "result": result[:100] + "..." if len(result) > 100 else result
-            }
-            self.vision_calls.append(vision_call)
-            # 设置标记，用于关联后续的术语替换
-            self.last_vision_call = vision_call
-            return result
-        except Exception as e:
-            return json.dumps({
-                "error": f"Vision API 调用失败: {str(e)}",
-                "suggestion": "请检查 API 密钥配置或网络连接"
-            }, ensure_ascii=False)
 
 
 # ==================== 主入口函数 ====================
@@ -676,35 +558,10 @@ def _save_correction_log(changes, changes_count):
             # 构建统计信息
             stats = Counter(f"{c['old_text']} → {c['new_text']}" for c in changes)
 
-            # 分离有/无视觉辅助的矫正
-            vision_assisted_changes = [c for c in changes if c.get('vision_assisted')]
-            normal_changes = [c for c in changes if not c.get('vision_assisted')]
-
-            # 显示所有矫正（带视觉辅助标记）
+            # 显示所有矫正
             f.write("\n")
             for change, count in stats.most_common():
-                # 检查这个矫正是否使用了视觉辅助
-                vision_item = next((c for c in vision_assisted_changes
-                                   if c['old_text'] == change.split(' → ')[0]
-                                   and c['new_text'] == change.split(' → ')[1]), None)
-                if vision_item:
-                    f.write(f"  {change}: {count} 处 📷\n")
-                else:
-                    f.write(f"  {change}: {count} 处\n")
-
-            # 视觉辅助详情
-            if vision_assisted_changes:
-                f.write(f"\n📷 视觉辅助详情:\n")
-                vision_unique = {}
-                for c in vision_assisted_changes:
-                    key = f"{c['old_text']} → {c['new_text']}"
-                    if key not in vision_unique:
-                        vision_unique[key] = c['vision_result']
-
-                for change, result in vision_unique.items():
-                    f.write(f"  [{change}]\n")
-                    f.write(f"    → 识别: {result}\n")
-                f.write(f"\n  帧图片已保存至: output/log/pic/\n")
+                f.write(f"  {change}: {count} 处\n")
 
         else:
             f.write("✅ 未发现需要矫正的错误\n")
