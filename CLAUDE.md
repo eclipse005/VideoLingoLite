@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**VideoLingoLite** is a lightweight audio/video transcription and translation tool that combines cloud-based (Gemini) and local (Parakeet) ASR with LLM-powered processing.
+**VideoLingoLite** is a lightweight audio/video transcription and translation tool that combines cloud-based (Gemini) and local (Qwen3-ASR) ASR with LLM-powered processing.
 
 **Core Value Proposition**: Streamlined version of VideoLingo, removing unnecessary components while keeping core transcription/translation capabilities.
 
@@ -47,7 +47,7 @@ uv run python -m streamlit run st.py --server.runOnSave true
 The core processing follows a strict sequential pipeline defined by numbered modules in `core/`:
 
 1. **_1_ytdlp.py** - Video file discovery and download (YouTube support)
-2. **_2_asr.py** - ASR transcription (dual backend: Gemini/Parakeet)
+2. **_2_asr.py** - ASR transcription (dual backend: Gemini/Qwen3-ASR)
 3. **_3_1_split_nlp.py** - Stage 1: NLP-based sentence splitting (spaCy)
 4. **_3_2_split_meaning.py** - Stage 2: LLM-powered semantic sentence splitting
 5. **_4_1_summarize.py** - Content summarization and terminology extraction
@@ -78,7 +78,7 @@ The core processing follows a strict sequential pipeline defined by numbered mod
 
 **Dual ASR Backend Architecture**:
 - `core/asr_backend/gemini.py` - Cloud-based, RESTful API, audio chunking with offset correction
-- `core/asr_backend/parakeet_local.py` - Local GPU-only ASR (25 European languages)
+- `core/asr_backend/qwen3_asr.py` - Local GPU-only ASR (9 languages: zh/en/ja/ko/es/fr/de/it/ru)
 
 ### Module Dependencies
 
@@ -121,7 +121,7 @@ _6_gen_sub.py (align_timestamp_main)
 - Advanced settings (marked with `*`) are CLI-only, not exposed in Streamlit UI
 
 **Key Configuration Groups**:
-- `asr.runtime`: 'gemini' (cloud) or 'parakeet' (local GPU)
+- `asr.runtime`: 'gemini' (cloud) or 'qwen' (local GPU)
 - `target_language`: Natural language description for prompts
 - `max_workers`: LLM concurrent requests (set to 1 for local LLMs)
 - `subtitle.max_length`: Per-line character limit (default: 75)
@@ -207,4 +207,4 @@ After processing, `output/` directory contains:
 - **Removed**: Pause-based sentence splitting (reverted to LLM-only semantic splitting)
 - **Removed**: i18n/internationalization (switched to Chinese-only UI)
 - **Enhanced**: Multi-language support for CJK languages in sentence splitting
-- **Enhanced**: Parakeet local attention for long audio
+- **Enhanced**: Qwen3-ASR local attention for long audio
