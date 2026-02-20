@@ -66,8 +66,11 @@ def prepare_output_folder(output_folder):
 
 def process_input_file(file):
     if file.startswith('http'):
-        _1_ytdlp.download_video_ytdlp(file, resolution=load_key(YTB_RESOLUTION_KEY))
-        video_file = _1_ytdlp.find_video_files()
+        # YouTube 下载 - 使用最佳质量
+        import uuid
+        file_id = f"file_{uuid.uuid4().hex[:8]}"
+        _1_ytdlp.download_video_ytdlp(file, output_dir=OUTPUT_DIR, file_id=file_id)
+        video_file = _1_ytdlp.find_video_files(OUTPUT_DIR)
     else:
         input_file = os.path.join('batch', 'input', file)
         output_file = os.path.join(OUTPUT_DIR, file)
