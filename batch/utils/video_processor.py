@@ -68,8 +68,20 @@ def process_input_file(file):
     if file.startswith('http'):
         # YouTube 下载 - 使用最佳质量
         import uuid
+        import shutil
         file_id = f"file_{uuid.uuid4().hex[:8]}"
         _1_ytdlp.download_video_ytdlp(file, output_dir=OUTPUT_DIR, file_id=file_id)
+
+        # 去掉 file_id 前缀，只保留视频标题
+        downloaded_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith(f'{file_id}_')]
+        if downloaded_files:
+            old_path = os.path.join(OUTPUT_DIR, downloaded_files[0])
+            # 去掉 file_id_ 前缀
+            new_filename = downloaded_files[0].replace(f'{file_id}_', '', 1)
+            new_path = os.path.join(OUTPUT_DIR, new_filename)
+            shutil.move(old_path, new_path)
+            console.print(f"[green]Renamed: {downloaded_files[0]} → {new_filename}[/green]")
+
         video_file = _1_ytdlp.find_video_files(OUTPUT_DIR)
     else:
         input_file = os.path.join('batch', 'input', file)
