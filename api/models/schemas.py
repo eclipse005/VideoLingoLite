@@ -39,6 +39,13 @@ class FileType(str, Enum):
     UNKNOWN = "unknown"
 
 
+# ============ 文件来源 ============
+class FileSource(str, Enum):
+    """文件来源"""
+    LOCAL = "local"
+    YOUTUBE = "youtube"
+
+
 # ============ 文件信息 ============
 class FileInfo(BaseModel):
     """文件信息"""
@@ -48,6 +55,7 @@ class FileInfo(BaseModel):
     type: FileType = Field(..., description="文件类型")
     uploaded_at: datetime = Field(default_factory=datetime.now, description="上传时间")
     active_task_id: Optional[str] = Field(None, description="当前活跃任务的ID")
+    source: FileSource = Field(default=FileSource.LOCAL, description="文件来源（local/youtube）")
 
 
 # ============ 任务信息 ============

@@ -18,6 +18,7 @@ const TRANSCRIBE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="n
 const TRANSLATE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>`;
 const EXPORT_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
 const DELETE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+const YOUTUBE_SOURCE_ICON = `<svg class="youtube-source-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor"/></svg>`;
 
 // 任务状态映射
 const STATUS_LABELS = {
@@ -103,6 +104,7 @@ export function renderFileList() {
   fileListElement.innerHTML = files.map(file => {
     const task = getFileTask(file.id);  // 通过 file.id 获取任务
     const taskHtml = renderTaskInfo(task);
+    const sourceIcon = file.source === 'youtube' ? `<span class="source-badge youtube">${YOUTUBE_SOURCE_ICON}</span>` : '';
 
     return `
       <div class="file-item" data-id="${escapeHtml(file.id)}">
@@ -111,7 +113,7 @@ export function renderFileList() {
             ${getFileIcon(file.type)}
           </div>
           <div class="file-details">
-            <div class="file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+            <div class="file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}${sourceIcon}</div>
             <div class="file-meta">${formatFileSize(file.size)}</div>
             ${taskHtml}
           </div>

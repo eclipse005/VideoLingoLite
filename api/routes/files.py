@@ -3,14 +3,15 @@
 处理文件上传、列表、删除等操作
 """
 
-from fastapi import APIRouter, UploadFile, HTTPException, File
+from fastapi import APIRouter, UploadFile, HTTPException, File, BackgroundTasks
 from typing import List
 import os
 import shutil
 import uuid
+import asyncio
 from datetime import datetime
 
-from api.models.schemas import FileInfo, FileType, UploadResponse, TaskInfo
+from api.models.schemas import FileInfo, FileType, FileSource, UploadResponse, TaskInfo
 from api import state_manager
 
 router = APIRouter()
@@ -188,3 +189,187 @@ async def clear_all_files():
     state_manager.clear_all_files()
 
     return {"success": True, "message": "所有文件已清空"}
+
+
+# ============ YouTube 下载接口 ============
+
+@router.post("/files/youtube/parse")
+async def parse_youtube_video(request: dict):
+    """
+    解析 YouTube 视频，获取可用的格式和质量选项
+
+    Request body:
+    {
+        "url": "https://www.youtube.com/watch?v=xxx"
+    }
+
+    Response:
+    {
+        "title": "视频标题",
+        "thumbnail": "缩略图URL",
+        "duration": 600,
+        "uploader": "上传者",
+        "formats": [
+            {
+                "format_id": "137+140",
+                "quality": "2K",
+                "ext": "mp4",
+                "height": 1440,
+                "width": 2560,
+                "filesize": 450000000,
+                "format_selector": "bestvideo[ext=mp4][height<=1440]+bestaudio/best[ext=mp4]",
+                "label": "1440p 2K (MP4) - 429 MB",
+                "is_recommended": false
+            },
+            ...
+        ]
+    }
+    """
+    url = request.get('url', '')
+
+    if not url or not isinstance(url, str):
+        raise HTTPException(status_code=400, detail="无效的 URL")
+
+    url = url.strip()
+
+    if not url.startswith(('http://', 'https://')):
+        raise HTTPException(status_code=400, detail="URL 必须以 http:// 或 https:// 开头")
+
+    # 验证是否是支持的域名
+    supported_domains = ['youtube.com', 'youtu.be', 'm.youtube.com', 'www.youtube.com']
+    if not any(domain in url for domain in supported_domains):
+        raise HTTPException(status_code=400, detail="不支持的网站，仅支持 YouTube")
+
+    try:
+        import core._1_ytdlp as ytdlp_module
+        result = ytdlp_module.parse_video_formats(url)
+        return result
+    except ImportError:
+        raise HTTPException(status_code=500, detail="yt-dlp 未安装")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"解析失败: {str(e)}")
+
+
+@router.post("/files/youtube")
+async def download_youtube_video(request: dict, background_tasks: BackgroundTasks):
+    """
+    下载 YouTube 视频
+
+    Request body:
+    {
+        "url": "https://www.youtube.com/watch?v=xxx",
+        "format_selector": "bestvideo[ext=mp4]+bestaudio/best[ext=mp4]/best"  // 可选
+    }
+
+    Response:
+    {
+        "file_id": "file_xxxxxx",
+        "status": "downloading",
+        "message": "开始下载..."
+    }
+    """
+    url = request.get('url', '')
+    format_selector = request.get('format_selector')
+
+    if not url or not isinstance(url, str):
+        raise HTTPException(status_code=400, detail="无效的 URL")
+
+    url = url.strip()
+
+    if not url.startswith(('http://', 'https://')):
+        raise HTTPException(status_code=400, detail="URL 必须以 http:// 或 https:// 开头")
+
+    # 验证是否是支持的域名
+    supported_domains = ['youtube.com', 'youtu.be', 'm.youtube.com', 'www.youtube.com']
+    if not any(domain in url for domain in supported_domains):
+        raise HTTPException(status_code=400, detail="不支持的网站，仅支持 YouTube")
+
+    # 生成唯一文件ID
+    file_id = f"file_{uuid.uuid4().hex[:8]}"
+
+    # 后台下载任务
+    def download_task():
+        try:
+            import core._1_ytdlp as ytdlp_module
+
+            result = ytdlp_module.download_video_ytdlp(
+                url=url,
+                output_dir=UPLOAD_DIR,
+                file_id=file_id,
+                format_selector=format_selector  # 传递格式选择器
+            )
+
+            # 获取文件信息
+            filepath = result['filepath']
+            if not os.path.exists(filepath):
+                raise FileNotFoundError(f"下载失败：文件不存在 {filepath}")
+
+            filesize = os.path.getsize(filepath)
+            filename = os.path.basename(filepath)
+
+            # 去除 file_id_ 前缀，只显示视频标题（和本地上传保持一致）
+            display_name = filename.replace(f'{file_id}_', '', 1) if filename.startswith(f'{file_id}_') else filename
+
+            # 创建 FileInfo（和本地上传相同的结构）
+            file_info = FileInfo(
+                id=file_id,
+                name=display_name,
+                size=filesize,
+                type=FileType.VIDEO,
+                source=FileSource.YOUTUBE  # 标记来源
+            )
+
+            # 存储到内存
+            files_storage[file_id] = file_info
+            state_manager.add_file(file_id, file_info)
+
+            # 更新进度为完成
+            ytdlp_module._download_progress[file_id] = {
+                'status': 'completed',
+                'progress': 100,
+                'message': '下载完成',
+                'filepath': filepath
+            }
+
+        except Exception as e:
+            import core._1_ytdlp as ytdlp_module
+            ytdlp_module._download_progress[file_id] = {
+                'status': 'error',
+                'progress': 0,
+                'message': f'下载失败: {str(e)}'
+            }
+
+    # 添加后台任务
+    background_tasks.add_task(download_task)
+
+    # 立即返回 file_id（前端开始轮询进度）
+    return {
+        "file_id": file_id,
+        "status": "downloading",
+        "message": "开始下载..."
+    }
+
+
+@router.get("/files/youtube/progress/{file_id}")
+async def get_youtube_download_progress(file_id: str):
+    """
+    获取 YouTube 下载进度
+
+    Response:
+    {
+        "status": "downloading" | "post-processing" | "completed" | "error",
+        "progress": 45.5,
+        "message": "下载中... 45.5%",
+        "speed": 1048576,  # 字节/秒
+        "eta": 120  # 剩余秒数
+    }
+    """
+    import core._1_ytdlp as ytdlp_module
+    progress = ytdlp_module.get_download_progress(file_id)
+
+    # 如果下载完成且文件已添加到 storage，清理进度记录
+    if progress.get('status') == 'completed' and file_id in files_storage:
+        # 但保留一段时间以便前端获取最终状态
+        pass
+
+    return progress

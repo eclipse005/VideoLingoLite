@@ -50,29 +50,100 @@
 
     <!-- 上传区域 -->
     <div class="apple-animate-on-scroll apple-delay-100 upload-section">
-      <div class="upload-area" id="uploadArea">
-        <input type="file" id="fileInput" accept=".mp3,.wav,.m4a,.ogg,.flac,.mp4,.webm,.mkv,.avi,.mov" multiple>
+      <!-- Tab 切换 -->
+      <div class="upload-tabs">
+        <button class="tab-button active" data-tab="local">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          本地文件
+        </button>
+        <button class="tab-button" data-tab="youtube">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+            <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+          </svg>
+          YouTube
+        </button>
+      </div>
 
-        <div class="upload-content">
-          <div class="upload-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+      <!-- 本地文件 Tab -->
+      <div class="tab-content active" id="localTab">
+        <div class="upload-area" id="uploadArea">
+          <input type="file" id="fileInput" accept=".mp3,.wav,.m4a,.ogg,.flac,.mp4,.webm,.mkv,.avi,.mov" multiple>
+
+          <div class="upload-content">
+            <div class="upload-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+
+            <div class="upload-text">
+              <h3 class="upload-title" id="uploadTitle">拖拽上传音视频文件</h3>
+              <p class="upload-hint">支持 .mp3 .wav .m4a .mp4 .webm .mkv .avi .mov 等格式</p>
+            </div>
+
+            <div class="upload-footer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <span>支持多文件上传</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- YouTube Tab -->
+      <div class="tab-content" id="youtubeTab">
+        <div class="youtube-download-area">
+          <div class="youtube-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+              <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor"/>
             </svg>
           </div>
 
-          <div class="upload-text">
-            <h3 class="upload-title" id="uploadTitle">拖拽上传音视频文件</h3>
-            <p class="upload-hint">支持 .mp3 .wav .m4a .mp4 .webm .mkv .avi .mov 等格式</p>
+          <div class="youtube-input-group">
+            <input
+              type="text"
+              id="youtubeUrl"
+              class="youtube-url-input"
+              placeholder="粘贴 YouTube 链接，解析完成后右侧可选画质"
+              autocomplete="off"
+            >
+            <select id="qualitySelect" class="quality-select" disabled>
+              <option value="" disabled selected>画质</option>
+            </select>
           </div>
 
-          <div class="upload-footer">
+          <button id="downloadYoutubeBtn" class="download-button" disabled>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            <span>支持多文件上传</span>
+            下载视频
+          </button>
+
+          <!-- 进度显示 -->
+          <div class="download-progress" id="downloadProgress" style="display: none;">
+            <div class="progress-info">
+              <span id="progressMessage">准备下载...</span>
+              <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+            <div class="progress-details">
+              <span id="progressSpeed">-- MB/s</span>
+              <span id="progressEta">剩余 --:--</span>
+            </div>
           </div>
         </div>
       </div>

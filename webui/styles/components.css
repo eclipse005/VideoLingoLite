@@ -1636,3 +1636,262 @@ input:checked + .slider:before {
 .hotword-group-add-btn:hover svg {
   opacity: 0.8;
 }
+
+/* ===== Tab 切换 ===== */
+.upload-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background-color: #f5f5f7;
+  padding: 4px;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  background-color: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #86868b;
+  cursor: pointer;
+  transition: all var(--apple-transition-fast);
+}
+
+.tab-button:hover {
+  color: #1d1d1f;
+}
+
+.tab-button.active {
+  background-color: #ffffff;
+  color: #1d1d1f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* ===== YouTube 下载区域 ===== */
+.youtube-download-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 48px;
+  border: 2px dashed var(--apple-border-light);
+  border-radius: var(--apple-radius-card-large);
+  background-color: #ffffff;
+}
+
+.youtube-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.youtube-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* URL 输入框和质量选择下拉框组合 */
+.youtube-input-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+  align-items: center;
+}
+
+.youtube-url-input {
+  flex: 1;
+  padding: 14px 18px;
+  border: 1px solid var(--apple-border-light);
+  border-radius: 12px;
+  font-size: 15px;
+  transition: all var(--apple-transition-fast);
+  outline: none;
+}
+
+.youtube-url-input:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+}
+
+.youtube-url-input::placeholder {
+  color: #86868b;
+}
+
+/* 质量选择下拉框 - 下划线样式 */
+.quality-select {
+  min-width: 70px;
+  max-width: 90px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-bottom: 2px solid #c7c7cc;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: var(--apple-font-stack);
+  background-color: transparent;
+  color: var(--apple-text-primary);
+  cursor: pointer;
+  transition: all var(--apple-transition-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238e8e93' d='M2 3.5l3 3 3-3' stroke='%238e8e93' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  text-align: center;
+  text-align-last: center;
+}
+
+.quality-select:hover:not(:disabled) {
+  border-bottom-color: #8e8e93;
+}
+
+.quality-select:focus {
+  outline: none;
+  border-bottom-color: var(--apple-blue);
+  box-shadow: none;
+}
+
+.quality-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-bottom-color: #e5e5ea;
+  color: #86868b;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23d1d1d6' d='M2 3.5l3 3 3-3' stroke='%23d1d1d6' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.quality-select option {
+  padding: 12px 16px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.download-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--apple-transition-fast);
+}
+
+.download-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+}
+
+.download-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.download-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.download-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.download-button .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== 下载进度条 ===== */
+.download-progress {
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+  background-color: #f5f5f7;
+  border-radius: 12px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background-color: #e5e5e7;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff0000 0%, #cc0000 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-details {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #86868b;
+}
+
+/* ===== 文件来源标记 ===== */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.source-badge.youtube {
+  color: #ff0000;
+}
+
+.youtube-source-icon {
+  vertical-align: middle;
+}
+

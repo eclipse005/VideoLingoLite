@@ -152,16 +152,23 @@ async def general_exception_handler(request: Request, exc: Exception):
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """记录所有请求和响应（排除轮询接口以减少日志噪音）"""
-    # 排除轮询接口
-    excluded_paths = ["/api/files", "/api/tasks", "/api/config", "/api/terms"]
-    if request.url.path.startswith("/api") and request.url.path not in excluded_paths:
+    # 排除轮询接口、进度查询接口、YouTube 下载接口
+    excluded_paths = ["/api/files", "/api/tasks", "/api/config", "/api/terms", "/api/files/youtube"]
+    # 检查是否应该记录日志
+    should_log = (
+        request.url.path.startswith("/api") and
+        request.url.path not in excluded_paths and
+        not request.url.path.startswith("/api/files/youtube/progress/")
+    )
+
+    if should_log:
         logger.info(f">>> {request.method} {request.url.path}")
         sys.stdout.flush()
 
     # 让请求通过
     response = await call_next(request)
 
-    if request.url.path.startswith("/api") and request.url.path not in excluded_paths:
+    if should_log:
         logger.info(f"<<< {request.method} {request.url.path} - Status: {response.status_code}")
         sys.stdout.flush()
 

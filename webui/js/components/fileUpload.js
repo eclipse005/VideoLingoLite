@@ -20,7 +20,32 @@ export function initFileUpload() {
     uploadArea.addEventListener('drop', handleDrop);
   }
 
+  // 初始化 Tab 切换
+  initTabSwitch();
+
   // 页面加载时恢复状态（轮询会自动获取文件列表）
+}
+
+/**
+ * 初始化 Tab 切换功能
+ */
+function initTabSwitch() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.dataset.tab;
+
+      // 移除所有 active 状态
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+
+      // 添加 active 状态到当前 Tab
+      button.classList.add('active');
+      document.getElementById(`${targetTab}Tab`).classList.add('active');
+    });
+  });
 }
 
 // 处理文件选择

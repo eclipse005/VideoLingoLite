@@ -8,6 +8,7 @@ import { initFileUpload } from './components/fileUpload.js';
 import { initFileList, updateBadges, renderFileList } from './components/fileList.js';
 import { TermsManager } from './components/terms.js';
 import { SettingsManager } from './components/settings.js';
+import { youtubeDownloader } from './components/youtubeDownload.js';
 import { setFiles, setTasks } from './state.js';
 
 // ===== DOM 元素引用 =====
@@ -51,6 +52,7 @@ function initApp() {
   initFileList();
   TermsManager.init();
   SettingsManager.init();
+  youtubeDownloader.init();
 
   // 更新徽章
   updateBadges();
