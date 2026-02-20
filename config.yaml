@@ -121,7 +121,7 @@ reflect_translate: true
 
 # *One-step translation mode (directly generate final translation, skip reflection)
 # Set to true for faster translation, false for better quality (two-step: literal + free)
-one_step_translate: false
+one_step_translate: true
 
 # *Pause-based split threshold (seconds), null/0 to disable
 pause_split_threshold: 2.0
