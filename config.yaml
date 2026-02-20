@@ -52,7 +52,7 @@ asr:
 
 # Vocal separation for noisy environments
 vocal_separation:
-  enabled: true
+  enabled: false
 
 # VAD-based audio segmentation
 vad:
@@ -68,7 +68,7 @@ transcript_only: false
 
 # Hotword correction
 asr_term_correction:
-  enabled: true
+  enabled: false
   groups:
   - id: group-1
     name: 新建分组
@@ -118,6 +118,10 @@ summary_length: 5000
 
 # *Reflect translation result in original text
 reflect_translate: true
+
+# *One-step translation mode (directly generate final translation, skip reflection)
+# Set to true for faster translation, false for better quality (two-step: literal + free)
+one_step_translate: false
 
 # *Pause-based split threshold (seconds), null/0 to disable
 pause_split_threshold: 2.0
