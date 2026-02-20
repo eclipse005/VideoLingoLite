@@ -39,33 +39,37 @@ def process_batch():
             video_file = row['Video File']
             
             if not pd.isna(row['Status']) and 'Error' in str(row['Status']):
-                console.print(Panel(f"Retrying failed task: {video_file}\nTask {index + 1}/{total_tasks}", 
+                console.print(Panel(f"Retrying failed task: {video_file}\nTask {index + 1}/{total_tasks}",
                                  title="[bold yellow]Retry Task", expand=False))
-                
-                # Restore files from batch/output/ERROR to output
-                error_folder = os.path.join('batch', 'output', 'ERROR', os.path.splitext(video_file)[0])
-                
-                if os.path.exists(error_folder):
-                    # Ensure the output folder exists
-                    os.makedirs('output', exist_ok=True)
-                    
-                    # Copy all contents from ERROR folder for the specific video to output
-                    for item in os.listdir(error_folder):
-                        src_path = os.path.join(error_folder, item)
-                        dst_path = os.path.join('output', item)
-                        
-                        if os.path.isdir(src_path):
-                            if os.path.exists(dst_path):
-                                shutil.rmtree(dst_path)
-                            shutil.copytree(src_path, dst_path)
-                        else:
-                            if os.path.exists(dst_path):
-                                os.remove(dst_path)
-                            shutil.copy2(src_path, dst_path)
-                            
-                    console.print(f"[green]Restored files from ERROR folder for {video_file}")
+
+                # YouTube 链接没有本地文件，跳过恢复步骤
+                if video_file.startswith('http'):
+                    console.print(f"[yellow]YouTube task - skipping file restoration")
                 else:
-                    console.print(f"[yellow]Warning: Error folder not found: {error_folder}")
+                    # Restore files from batch/output/ERROR to output
+                    error_folder = os.path.join('batch', 'output', 'ERROR', os.path.splitext(video_file)[0])
+
+                    if os.path.exists(error_folder):
+                        # Ensure the output folder exists
+                        os.makedirs('output', exist_ok=True)
+
+                        # Copy all contents from ERROR folder for the specific video to output
+                        for item in os.listdir(error_folder):
+                            src_path = os.path.join(error_folder, item)
+                            dst_path = os.path.join('output', item)
+
+                            if os.path.isdir(src_path):
+                                if os.path.exists(dst_path):
+                                    shutil.rmtree(dst_path)
+                                shutil.copytree(src_path, dst_path)
+                            else:
+                                if os.path.exists(dst_path):
+                                    os.remove(dst_path)
+                                shutil.copy2(src_path, dst_path)
+
+                        console.print(f"[green]Restored files from ERROR folder for {video_file}")
+                    else:
+                        console.print(f"[yellow]Warning: Error folder not found: {error_folder}")
             else:
                 console.print(Panel(f"Now processing task: {video_file}\nTask {index + 1}/{total_tasks}", 
                                  title="[bold blue]Current Task", expand=False))

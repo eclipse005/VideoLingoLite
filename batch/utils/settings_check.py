@@ -32,14 +32,19 @@ def check_settings():
         video_file = row['Video File']
         source_language = row['Source Language']
 
+        # 检查是否是有效的输入（本地文件或 YouTube 链接）
         if os.path.isfile(os.path.join(INPUT_FOLDER, video_file)):
             local_video_tasks += 1
+        elif video_file.startswith('http'):
+            # YouTube 链接，不需要检查本地文件
+            console.print(Panel(f"✓ YouTube link detected: {video_file[:50]}...", title=f"[bold blue]Row {index + 2}", expand=False))
         else:
             console.print(Panel(f"Invalid video file 「{video_file}」", title=f"[bold red]Error in row {index + 2}", expand=False))
             all_passed = False
 
     if all_passed:
-        console.print(Panel(f"✅ All settings passed the check!\nDetected {local_video_tasks} local video tasks.", title="[bold green]Success", expand=False))
+        youtube_tasks = len([f for f in df['Video File'] if str(f).startswith('http')])
+        console.print(Panel(f"✅ All settings passed the check!\nDetected {local_video_tasks} local video tasks, {youtube_tasks} YouTube tasks.", title="[bold green]Success", expand=False))
 
     return all_passed
 
